@@ -1,0 +1,26 @@
+[
+  {
+    "reference_class": "Pre-seed / Seed AI and Software Startups (Series A Conversion)",
+    "domain": "venture_capital",
+    "source": "Dealroom / PitchBook / CB Insights Venture Benchmarks (2020-2025)",
+    "empirical_base_rate_percentage": 22.0,
+    "description": "Approximately 18% to 25% of seed-funded tech startups successfully raise a priced Series A within 18-24 months.",
+    "keywords": ["startup", "seed", "pre-seed", "series a", "equity", "runway", "founding engineer"]
+  },
+  {
+    "reference_class": "Senior / Staff Tech Re-employment Timeframe",
+    "domain": "labor_economics",
+    "source": "Bureau of Labor Statistics / Tech Hiring Mobility Index (2024-2025)",
+    "empirical_base_rate_percentage": 78.0,
+    "description": "78% of experienced senior software engineers re-secure equivalent or better compensation within 90 days of active search.",
+    "keywords": ["job search", "staff engineer", "layoff", "re-employment", "hiring market"]
+  },
+  {
+    "reference_class": "Internal Enterprise Innovation Project Commercialization",
+    "domain": "organizational_behavior",
+    "source": "Harvard Business Review / Christensen Innovation Benchmarks",
+    "empirical_base_rate_percentage": 14.0,
+    "description": "Only 12% to 15% of bottom-up enterprise innovation side-projects achieve sustained executive budget allocation.",
+    "keywords": ["internal project", "side project", "enterprise innovation", "20% time", "pitch internal"]
+  }
+]

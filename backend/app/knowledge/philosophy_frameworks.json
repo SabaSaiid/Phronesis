@@ -1,0 +1,36 @@
+[
+  {
+    "id": "stoicism_v1",
+    "framework_name": "Stoic Decision Ethics (Epictetus / Marcus Aurelius)",
+    "field": "hellenistic_philosophy",
+    "source": "Epictetus, Enchiridion & Discourses; Hadot (The Inner Citadel)",
+    "core_idea": "Distinction between what is in our control (prohairesis / internal will, character, effort) and what is not (indifferents / external outcomes, market conditions, reputation). Value resides in reasoned choice, not indifferent outcomes.",
+    "classification_rules": {
+      "internal_control_keywords": [
+        "effort", "preparation", "integrity", "spending", "discipline", "reaction",
+        "savings", "skill acquisition", "daily habits", "ethical boundary", "learning"
+      ],
+      "external_uncontrollable_keywords": [
+        "market", "reputation", "stock price", "funding", "macro", "hiring appetite",
+        "competitor", "other people", "economy", "validation", "status", "valuation"
+      ]
+    },
+    "lens_questions": [
+      {
+        "dimension": "dichotomy_of_control",
+        "question": "Which elements of your decision represent external outcomes you cannot guarantee, and are you mistaking them for things you control?",
+        "target_signal": "Heavy emotional or strategic weight placed on macroeconomic conditions or third-party behavior."
+      },
+      {
+        "dimension": "preferred_indifferents",
+        "question": "Are you subordinating your agency, health, or core principles to acquire or preserve a preferred indifferent (such as title, prestige, or unvested compensation)?",
+        "target_signal": "Hesitation driven primarily by external status markers rather than intrinsic capability."
+      },
+      {
+        "dimension": "premeditatio_malorum",
+        "question": "If the absolute worst-case scenario materializes, what controllable actions can you execute right now to make that scenario completely survivable?",
+        "target_signal": "Unexamined catastrophe thinking that paralyzes forward movement."
+      }
+    ]
+  }
+]

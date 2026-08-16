@@ -1,55 +1,164 @@
 @import "tailwindcss";
 
+@theme {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+
+  --color-marble: #EAE6DD;
+  --color-ink: #1B1F22;
+  --color-parchment: #F5F2EA;
+  --color-verdigris: #5B7A6B;
+  --color-ochre: #B8863B;
+  --color-slate: #8A8578;
+}
+
+:root {
+  /* Phronesis Core Palette Tokens */
+  --color-marble: #EAE6DD;    /* light-mode background — cool stone */
+  --color-ink: #1B1F22;       /* primary text on light; dark-mode background */
+  --color-parchment: #F5F2EA; /* light-mode card surfaces; dark-mode text */
+  --color-verdigris: #5B7A6B; /* primary accent — aged bronze patina */
+  --color-verdigris-hover: #4B685A;
+  --color-verdigris-subtle: rgba(91, 122, 107, 0.12);
+  --color-ochre: #B8863B;     /* secondary accent — used ONLY for VoI callouts */
+  --color-ochre-subtle: rgba(184, 134, 59, 0.12);
+  --color-slate: #8A8578;     /* borders, dividers, muted UI chrome */
+  --color-slate-light: rgba(138, 133, 120, 0.28);
+  --color-slate-subtle: rgba(138, 133, 120, 0.12);
+
+  /* Light-mode semantic tokens */
+  --bg-app: #EAE6DD;
+  --bg-sidebar: #E2DDD2;
+  --bg-surface: #F5F2EA;
+  --bg-surface-raised: #FCFBF7;
+  --bg-input: #FFFFFF;
+  --border-subtle: rgba(138, 133, 120, 0.28);
+  --border-medium: rgba(138, 133, 120, 0.48);
+  --text-main: #1B1F22;
+  --text-muted: #545149;
+  --text-faint: #827E74;
+}
+
+.dark, [data-theme="dark"] {
+  /* Dark-mode semantic tokens */
+  --bg-app: #15181B;
+  --bg-sidebar: #111315;
+  --bg-surface: #1E2226;
+  --bg-surface-raised: #262B30;
+  --bg-input: #181B1E;
+  --border-subtle: rgba(138, 133, 120, 0.22);
+  --border-medium: rgba(138, 133, 120, 0.42);
+  --text-main: #F5F2EA;
+  --text-muted: #B8B3A8;
+  --text-faint: #7E7A70;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  background-color: #070A11;
-  color: #F8FAFC;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom glass & shadow utilities */
-.glass-panel {
-  background: rgba(16, 22, 38, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Typography role classes */
+.font-display {
+  font-family: 'Fraunces', Georgia, serif;
+  font-optical-sizing: auto;
 }
 
-.glass-panel-hover {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.font-body {
+  font-family: 'Source Serif 4', Georgia, serif;
 }
 
-.glass-panel-hover:hover {
-  background: rgba(22, 31, 54, 0.85);
-  border-color: rgba(99, 102, 241, 0.3);
-  transform: translateY(-1px);
+.font-ui {
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, #A5B4FC 0%, #818CF8 50%, #38BDF8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.font-data {
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  font-feature-settings: 'zero' on, 'tnum' on;
 }
 
-.glow-brand {
-  box-shadow: 0 0 35px -5px rgba(99, 102, 241, 0.25);
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--color-verdigris);
+  outline-offset: 2px;
 }
 
-/* Custom scrollbars */
+/* Custom UI cards */
+.phronesis-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.phronesis-card-elevated {
+  background-color: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.875rem;
+}
+
+.phronesis-voi-card {
+  background-color: var(--bg-surface);
+  border: 1.5px solid var(--color-ochre);
+  border-radius: 0.875rem;
+  box-shadow: 0 4px 20px -2px rgba(184, 134, 59, 0.15);
+}
+
+/* Verdigris button style */
+.btn-verdigris {
+  background-color: var(--color-verdigris);
+  color: #F5F2EA;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-verdigris:hover:not(:disabled) {
+  background-color: var(--color-verdigris-hover);
+}
+
+.btn-verdigris:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+/* Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #070A11;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #222E4E;
+  background: var(--border-medium);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #32426E;
+  background: var(--color-slate);
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

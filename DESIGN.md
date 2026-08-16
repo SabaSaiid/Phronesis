@@ -235,3 +235,61 @@ flowchart LR
    - **Opt-In by Default:** History tracking is disabled unless explicitly enabled in user settings.
    - **Export & Purge:** Users can view, download as a single `history.json` export, or permanently wipe their decision records at any time with a single click.
 
+---
+
+## 7. Frontend UI/UX Specification & Design System
+
+### 7.1 Visual Identity & Structural Language
+Phronesis borrows the disciplined structural language of modern AI chat products (minimal chrome, generous whitespace, calm typography, centered reading column of max-width ~720px, restrained purposeful motion) while establishing its own distinct visual identity grounded in practical wisdom, antiquity, and mathematical rigor.
+
+```
+┌───────────────┬────────────────────────────────────────┐
+│  Sidebar      │              Main column               │
+│  (collapsible)│        (max-width ~720px,              │
+│               │         centered, generous margin)     │
+│  Past         │                                        │
+│  decisions    │   [Decision input / extraction-confirm │
+│  (history)    │    / report — one flow, three states]  │
+│               │                                        │
+│  + New        │                                        │
+│  decision     │                                        │
+└───────────────┴────────────────────────────────────────┘
+```
+
+### 7.2 Named Color Token System
+The color palette is grounded in antiquity, stone, ink, aged bronze patina, and illuminated manuscripts:
+
+```css
+--color-marble:    #EAE6DD;  /* Light-mode background — cool stone, not yellow cream */
+--color-ink:       #1B1F22;  /* Primary text on light; dark-mode background */
+--color-parchment: #F5F2EA;  /* Light-mode card surfaces; dark-mode text */
+--color-verdigris: #5B7A6B;  /* Primary accent — aged bronze patina */
+--color-ochre:     #B8863B;  /* Secondary accent — used ONLY for Value-of-Information callouts */
+--color-slate:     #8A8578;  /* Borders, dividers, muted UI chrome */
+```
+
+- **Light Mode:** Marble background (`#EAE6DD`), Ink text (`#1B1F22`), Parchment surfaces (`#F5F2EA`), Verdigris interactive buttons/links, Ochre reserved exclusively for VoI callouts.
+- **Dark Mode:** Ink background (`#15181B`), Parchment text (`#F5F2EA`), Verdigris and Ochre accents maintained.
+
+### 7.3 Three-Role Typography Hierarchy
+1. **Display** (`Fraunces`): Headings, section labels, and Greek subtitles (`φρόνησις`). Used with restraint; never for body paragraphs.
+2. **Body** (`Source Serif 4` & `IBM Plex Sans`): `Source Serif 4` for report text and reflective prose (sustained reading); `IBM Plex Sans` for UI chrome, navigation, buttons, and form labels.
+3. **Utility/Data** (`JetBrains Mono` / `IBM Plex Mono`): Strictly and only for deterministic numbers (expected utility values, state probabilities, sensitivity thresholds $p^*$, minimax regret scores), visually demarcating computed functions from prose.
+
+### 7.4 Three Flow States
+1. **Input State:** A single centered prompt to describe the decision once (not a multi-turn chat composer), accompanied by canonical benchmark dilemma pickers.
+2. **Extraction-Confirm State:** Structured data calibration cards (decision statement, alternatives, payoff utility sliders, prior probabilities with auto-normalization, stated assumptions, goals, constraints).
+3. **Report State:** Distinct un-numbered cards in fixed vertical order representing independent parallel lenses (Psychology, Decision Theory, Hellenistic Philosophy, Critical Thinking, Sourced Attributions), topped with the signature Ochre VoI experiment banner.
+
+### 7.5 Signature Element: Balance-Scale Sensitivity Visualizer
+An interactive balance scale simulating decision sensitivity:
+- Central fulcrum with an authentic tilting crossbeam that physically rotates in real-time as the probability slider $P(S_1)$ moves.
+- Counter-rotated pans holding competing alternatives with live expected utilities rendered in monospace.
+- Ochre-marked inflection point $p^*$ showing the exact threshold where decision judgment tips from one option to the other.
+
+### 7.6 Engineering Standards
+- Responsive collapse: desktop collapsible sidebar (`md:w-64` / `md:w-16`), mobile slide-over drawer with backdrop.
+- Focus states: High-visibility `:focus-visible` rings with Verdigris accent on all interactive controls.
+- Motion restraint: Respects `prefers-reduced-motion` with instant transitions and zero superfluous decorative animations.
+
+

@@ -9,6 +9,10 @@ echo " Starting Phronesis (φρόνησις)"
 echo " Question the decision. Examine the mind."
 echo "=========================================="
 
+# Pre-flight: Clean up any stale processes on ports 8010 and 5180
+lsof -ti:8010 | xargs kill -9 2>/dev/null || true
+lsof -ti:5180 | xargs kill -9 2>/dev/null || true
+
 # Check and start backend on port 8010
 cd "$DIR/backend"
 if [ ! -d "venv" ]; then
@@ -24,7 +28,7 @@ BACKEND_PID=$!
 # Start frontend on port 5180
 echo "🚀 Starting Vite Frontend on http://localhost:5180 ..."
 cd "$DIR/frontend"
-npm run dev -- --host 0.0.0.0 --port 5180 &
+npx vite --host 0.0.0.0 --port 5180 &
 FRONTEND_PID=$!
 
 cleanup() {
@@ -32,13 +36,17 @@ cleanup() {
     echo "Shutting down Phronesis servers..."
     kill $BACKEND_PID 2>/dev/null || true
     kill $FRONTEND_PID 2>/dev/null || true
+    # Kill any orphaned subprocesses on ports 8010 and 5180
+    lsof -ti:8010 | xargs kill -9 2>/dev/null || true
+    lsof -ti:5180 | xargs kill -9 2>/dev/null || true
     exit 0
 }
 
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM EXIT
 
 echo "Phronesis is running!"
 echo "👉 Frontend: http://localhost:5180"
 echo "👉 Backend API: http://localhost:8010"
 echo "👉 API Docs: http://localhost:8010/docs"
 wait
+

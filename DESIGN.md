@@ -183,18 +183,61 @@ stateDiagram-v2
 - **Probability Normalization Guard:** If user manual edits result in $\sum p_j \neq 1.0$, the math engine automatically normalizes $p_j' = \frac{p_j}{\sum p_k}$ and displays a warning banner.
 - **Payoff Clamping:** Payoffs are clamped strictly to $[0, 100]$.
 
-### 5.3 Post-Synthesis Output Validator (Regex / Lexicon Linter)
-Before returning the final synthesis report to the frontend, a deterministic text filter checks for forbidden patterns:
+### 5.3 Two-Stage Post-Synthesis Guardrail Pipeline
+Before returning the final synthesis report to the frontend, the output passes through a two-stage defense in depth to enforce the Non-Negotiable Boundaries ("Must Nevers"):
+
+#### Stage 1: Fast Regex / Lexicon Linter
+A fast first-pass filter catches prescriptive phrasing, near-miss advice, diagnostic labels, and composite scoring:
 ```python
-FORBIDDEN_PATTERNS = [
-    r"\byou should choose\b",
-    r"\byou have (the )?[a-z\-]+ (bias|fallacy)\b",
-    r"\bthe correct (choice|decision) is\b",
-    r"\bscore:? \d+/\d+\b",
-    r"\bwe recommend that you\b"
+FORBIDDEN_PRESCRIPTIVE_PATTERNS = [
+    # Direct prescriptive directives & advice
+    r"\byou\s+should\s+(choose|pick|select|decide|pursue|opt|take|go\s+with)\b",
+    r"\byou\s+must\s+(choose|pick|select|decide|pursue|opt|take|go\s+with)\b",
+    r"\bought\s+to\b",
+    r"\b(it\s+would\s+be\s+|is\s+)?prudent\s+to\b",
+    r"\b(the\s+)?wiser\s+(path|choice|decision|option|course|way|alternative)\b",
+    r"\bwiser\s+to\b",
+    r"\bwe\s+recommend\s+that\s+you\b",
+    r"\bi\s+recommend\s+(that\s+)?you\b",
+    r"\b(i|we)\s+(strongly\s+)?(advise|recommend)\b",
+    r"\badvise(s)?\s+(you|that\s+you|to)\b",
+    r"\brecommend(s|ed)?\s+(that\s+)?(you|pursuing|choosing|selecting|taking)\b",
+    r"\b(my|our)\s+recommendation\s+is\b",
+    r"\bthe\s+only\s+logical\s+(choice|decision|option|path)\b",
+
+    # Declaring winners / objective superiority
+    r"\bthe\s+(correct|optimal|best|better|superior|recommended|wiser)\s+(choice|decision|option|path|course|alternative)\s+is\b",
+    r"\bclearly\s+(the\s+best|the\s+superior|comes\s+out\s+ahead|wins|dominates)\b",
+    r"\b(is|comes\s+out)\s+(as\s+)?clearly\s+superior\b",
+
+    # Diagnostic & personality labeling
+    r"\byou\s+have\s+(the\s+|a\s+)?[a-z\-]+\s+(bias|fallacy|tendency)\b",
+    r"\byou\s+(are\s+suffering|suffer)\s+from\b",
+    r"\byou\s+(are\s+exhibiting|exhibit)\s+(the|a)\b",
+    r"\btextbook\s+(case|example|pattern)\s+of\b",
+    r"\bclassic\s+([a-z\-]+\s+)*(case|example|pattern)\b",
+    r"\b(a\s+)?classic\s+[a-z\-]+\s+pattern\b",
+    r"\bexhibiting\s+a\s+classic\b",
+
+    # Arbitrary scalar scoring / composite index
+    r"\bscore:?\s+\d+/\d+\b",
+    r"\brating:?\s+\d+/\d+\b",
+    r"\bcomposite\s+score:?\s+\d+\b"
 ]
 ```
-If a violation is detected, the report fails safe to a structured template output rendering the raw deterministic layer summaries directly.
+
+#### Stage 2: Constrained LLM Boundary Audit Backstop
+To protect against open-ended natural language paraphrases that evade regex matching, a second constrained LLM pass evaluates the generated markdown against the 5 Non-Negotiable Boundaries:
+1. *Never State a Diagnosis* (observational patterns only, no personal labeling)
+2. *Never Claim Mathematical Prescriptiveness* (heuristics, not life proofs)
+3. *Never Collapse to a Single Score* (no scalar ratings)
+4. *Never Privilege a Single Philosophical School* (parallel lenses)
+5. *Never Assert Psychological Certainty* (hypotheses to inspect)
+
+The LLM is constrained to returning strictly structured JSON: `{"passed": boolean, "offending_sentence": string, "violation_reason": string}`.
+
+#### Fail-Safe Behavior
+If a violation is flagged at either Stage 1 or Stage 2, the pipeline fails safe to `ReportGuardrail.generate_fallback_template(bundle)`, rendering a 100% deterministic structured markdown template from the verified analytical layer outputs.
 
 ---
 

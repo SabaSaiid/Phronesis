@@ -388,9 +388,11 @@ Returns pre-packaged benchmark decisions for instant zero-key testing.
 - **Sentence-Level Grounding:** Every single sentence in the generated report must be strictly traceable to a field or value produced by one of the four analysis layers or the confirmed `StructuredDecision`.
 - **Zero Hallucinated Claims:** The report writer is forbidden from introducing outside facts, personal advice, or ungrounded conclusions. If a claim does not trace back to an engine's output, the synthesis prompt is considered defective.
 
-### 4.3 Strict Caveat-Language Enforcement
-- The backend shall include an automated post-generation validation filter on LLM report outputs.
-- Any output containing prohibited diagnostic strings (e.g. *"You have the X bias"*, *"You must choose Y"*, *"Option A is objectively superior"*) will fail the guardrail and trigger an automatic re-write or fail-safe template rendering.
+### 4.3 Strict Caveat-Language & Non-Negotiable Boundary Enforcement
+- **Two-Stage Defense Pipeline:** The backend shall enforce non-negotiable boundaries using a two-stage post-generation validation pipeline:
+  1. **Stage 1 (Regex / Lexicon Linter):** Fast first-pass filtering catching explicit prescriptive phrasing (*"you should choose"*, *"it would be prudent to"*, *"the wiser path"*, *"clearly comes out ahead"*, *"we advise/recommend"*), diagnostic labels (*"textbook case of"*, *"classic X pattern"*, *"you suffer from"*), and arbitrary composite scores.
+  2. **Stage 2 (Constrained LLM Boundary Audit):** A secondary constrained LLM classifier auditing generated report text strictly against the 5 Non-Negotiable Boundaries (`never diagnose`, `never prescribe`, `never score`, `never privilege single school`, `never assert certainty`), returning a binary pass/fail and the offending sentence.
+- **Fail-Safe Fallback:** Any output failing either Stage 1 or Stage 2 shall fail safe to a 100% deterministic structured template rendering the raw analytical layer summaries directly, preventing ungrounded or non-compliant text from ever reaching the user.
 
 ### 4.4 Latency & Performance
 - Deterministic analysis execution time: $<50\text{ ms}$ for standard $3\times 3$ matrices.

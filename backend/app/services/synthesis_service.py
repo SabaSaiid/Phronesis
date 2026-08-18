@@ -82,13 +82,20 @@ class SynthesisService:
             user_prompt=user_prompt
         )
 
-        # Run Guardrail Linter
-        is_valid, violations = ReportGuardrail.validate_text(raw_report)
-        if not is_valid:
-            print(f"[Guardrail Triggered] Found violations: {violations}. Sanitizing...")
-            final_report = ReportGuardrail.sanitize_or_fallback(raw_report)
+        # Two-Stage Synthesis Guardrail Pipeline
+        # Stage 1: Fast Regex / Lexicon Linter
+        is_regex_valid, regex_violations = ReportGuardrail.validate_text(raw_report)
+        if not is_regex_valid:
+            print(f"[Guardrail Triggered - Stage 1 Regex] Found violations: {regex_violations}. Falling back to structured template.")
+            final_report = ReportGuardrail.generate_fallback_template(bundle)
         else:
-            final_report = raw_report
+            # Stage 2: Constrained LLM Boundary Audit
+            audit_passed, offending_sentence, violation_reason = await ReportGuardrail.audit_boundaries_llm(raw_report)
+            if not audit_passed:
+                print(f"[Guardrail Triggered - Stage 2 LLM Audit] Boundary violation detected: {violation_reason}. Offending: '{offending_sentence}'. Falling back to structured template.")
+                final_report = ReportGuardrail.generate_fallback_template(bundle)
+            else:
+                final_report = raw_report
 
         # Extract primary experiment
         sensitive_var = m.sensitivity_analysis.critical_parameter

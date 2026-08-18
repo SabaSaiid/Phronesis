@@ -191,7 +191,7 @@ class LLMClient:
     def _mock_text_response(user_prompt: str) -> str:
         return (
             "## Summary of Reasoning Dynamics\n\n"
-            "Your decision exhibits a classic tension between Expected Utility maximization and Minimax Regret mitigation. "
+            "Your decision exhibits a structural tension between Expected Utility maximization and Minimax Regret mitigation. "
             "Under probabilistic expectation, the baseline option carries higher utility due to conservative failure probabilities. "
             "However, minimax regret analysis indicates that the transition option minimizes worst-case psychological regret.\n\n"
             "## Sourced Tradeoffs\n"
@@ -201,3 +201,114 @@ class LLMClient:
             "Your decision is hyper-sensitive to whether downside re-employment is truly high friction. "
             "Run a 48-hour market test with 2 discreet informational conversations before committing."
         )
+
+    @classmethod
+    async def audit_report_boundaries(cls, report_text: str) -> Dict[str, Any]:
+        """
+        Stage 2 LLM Audit Pass: Evaluates generated report text strictly against
+        the 5 Non-Negotiable Boundaries from the README.
+        Allowed output: JSON with {passed: bool, offending_sentence: str, violation_reason: str}
+        """
+        provider = (settings.LLM_PROVIDER or "mock").lower()
+        api_key = settings.LLM_API_KEY or os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+
+        if not api_key or provider == "mock":
+            return cls._mock_audit_response(report_text)
+
+        system_prompt = (
+            "You are a strict, automated Quality Assurance Compliance Classifier for Phronesis.\n"
+            "Your ONLY job is to classify whether a synthesized decision report complies with the 5 Non-Negotiable Boundaries or violates any of them.\n\n"
+            "THE 5 NON-NEGOTIABLE BOUNDARIES:\n"
+            "1. Never State a Diagnosis: Must use observational pattern language ('consistent with X'), NEVER personal diagnostic/identity labels ('you suffer from X', 'you have X bias', 'you are exhibiting classic X', 'textbook case of').\n"
+            "2. Never Claim Mathematical Prescriptiveness: Decision theory tools (Expected Utility, Minimax Regret) are heuristics for stress-testing preferences, NEVER proofs of what life choices one ought to make. Must NEVER advise, prescribe, or declare a winner ('you should choose', 'prudent to pick', 'the wiser path', 'Option A clearly comes out ahead').\n"
+            "3. Never Collapse to a Single Score: No scalar ratings, composite indices, or numerical scores (e.g., '87/100', 'Grade A').\n"
+            "4. Never Privilege a Single Philosophical School: Philosophical frameworks are lenses revealing distinct moral vectors, NEVER objective arbiters of right action.\n"
+            "5. Never Assert Psychological Certainty: Cognitive biases are flagged as possible risks to inspect, NEVER certain mental states.\n\n"
+            "OUTPUT FORMAT (STRICT JSON ONLY):\n"
+            "{\n"
+            '  "passed": true | false,\n'
+            '  "offending_sentence": "<verbatim sentence from the text that violated a boundary, or empty string if passed>",\n'
+            '  "violation_reason": "<concise explanation of which boundary was violated, or empty string if passed>"\n'
+            "}"
+        )
+        user_prompt = f"Analyze and classify this generated report:\n\n{report_text}"
+
+        try:
+            if provider == "gemini":
+                from google import genai
+                from google.genai import types
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(
+                    model=settings.LLM_MODEL or "gemini-2.5-flash",
+                    contents=f"{system_prompt}\n\n{user_prompt}",
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.0
+                    )
+                )
+                return json.loads(response.text)
+
+            elif provider == "openai":
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(api_key=api_key)
+                response = await client.chat.completions.create(
+                    model=settings.LLM_MODEL or "gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.0
+                )
+                return json.loads(response.choices[0].message.content)
+
+            elif provider == "anthropic":
+                from anthropic import AsyncAnthropic
+                client = AsyncAnthropic(api_key=api_key)
+                response = await client.messages.create(
+                    model=settings.LLM_MODEL or "claude-3-5-sonnet-20241022",
+                    max_tokens=1000,
+                    system=system_prompt + "\nReturn ONLY valid JSON.",
+                    messages=[{"role": "user", "content": user_prompt}],
+                    temperature=0.0
+                )
+                content = response.content[0].text
+                if content.startswith("```json"):
+                    content = content.replace("```json", "", 1).rsplit("```", 1)[0]
+                elif content.startswith("```"):
+                    content = content.replace("```", "", 1).rsplit("```", 1)[0]
+                return json.loads(content.strip())
+
+        except Exception as e:
+            print(f"[LLMClient Warning] LLM audit failed with error: {e}. Falling back to deterministic audit.")
+            return cls._mock_audit_response(report_text)
+
+        return cls._mock_audit_response(report_text)
+
+    @classmethod
+    def _mock_audit_response(cls, report_text: str) -> Dict[str, Any]:
+        """
+        Deterministic mock/offline compliance classifier.
+        """
+        from app.core.guardrails import FORBIDDEN_PRESCRIPTIVE_PATTERNS
+        import re
+
+        sentences = re.split(r'(?<=[.!?\n])\s+', report_text)
+        for sentence in sentences:
+            s_clean = sentence.strip()
+            if not s_clean:
+                continue
+            for pattern in FORBIDDEN_PRESCRIPTIVE_PATTERNS:
+                if re.search(pattern, s_clean, flags=re.IGNORECASE):
+                    return {
+                        "passed": False,
+                        "offending_sentence": s_clean,
+                        "violation_reason": f"Violated Non-Negotiable Boundaries: matched forbidden pattern '{pattern}'"
+                    }
+
+        return {
+            "passed": True,
+            "offending_sentence": "",
+            "violation_reason": ""
+        }
+

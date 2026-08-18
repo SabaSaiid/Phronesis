@@ -14,6 +14,10 @@ class DecisionTheoryMathEngine:
     Pure deterministic mathematical engine for decision theory.
     - Zero stochasticity or LLM dependencies
     - Exact algebraic solvers for Expected Utility, Minimax Regret, and Sensitivity Analysis
+
+    Authoritative Single Source of Truth: `DESIGN.md` §3.2 (Layer 2: Decision Theory & Math Engine).
+    Any changes to Expected Utility or inflection threshold formulas must stay synchronized
+    with `DESIGN.md` §3.2 and the TypeScript client port in `frontend/src/lib/decisionMath.ts`.
     """
 
     @staticmethod

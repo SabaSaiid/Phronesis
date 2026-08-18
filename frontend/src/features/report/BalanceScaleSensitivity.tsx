@@ -1,6 +1,7 @@
 import React, { useState, useId } from 'react';
 import type { StructuredDecision, SensitivityAnalysisResult } from '../../types';
 import { Scale, RotateCcw, Sparkles } from 'lucide-react';
+import { calculateExpectedUtility } from '../../lib/decisionMath';
 
 interface BalanceScaleSensitivityProps {
   decision: StructuredDecision;
@@ -44,8 +45,8 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
   const u2_s2 = getUtility(alt2.id, state2.id);
 
   const p = sliderP / 100;
-  const eu1 = Math.round((p * u1_s1 + (1 - p) * u1_s2) * 10) / 10;
-  const eu2 = Math.round((p * u2_s1 + (1 - p) * u2_s2) * 10) / 10;
+  const eu1 = calculateExpectedUtility(p, u1_s1, u1_s2);
+  const eu2 = calculateExpectedUtility(p, u2_s1, u2_s2);
 
   const deltaEU = eu1 - eu2; // positive means alt1 is heavier (tips down left)
   const inflectionPct = Math.round(sensitivity.inflection_threshold * 100);

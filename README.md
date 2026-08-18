@@ -72,8 +72,8 @@ flowchart LR
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/phronesis.git
-cd phronesis
+git clone https://github.com/SabaSaiid/Phronesis.git
+cd Phronesis
 
 # Set up Python virtual environment
 cd backend
@@ -143,4 +143,4 @@ phronesis/
 
 ## 📄 License & Governance
 
-Phronesis is open-source under the Apache 2.0 License. It is designed to be fully self-hostable, auditable, and transparent.
+Phronesis is source-available under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) — free to use, modify, and learn from for personal, educational, and other noncommercial purposes. Commercial use requires a separate license from the copyright holder. It is designed to be fully self-hostable, auditable, and transparent.

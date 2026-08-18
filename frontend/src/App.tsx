@@ -182,6 +182,21 @@ export function App() {
     }
   };
 
+  const handleDeleteHistoryItem = (id: string) => {
+    setHistory((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Failed to persist history after deletion:', e);
+      }
+      return updated;
+    });
+    if (currentDecisionId === id) {
+      setCurrentDecisionId(undefined);
+    }
+  };
+
   const handleReset = () => {
     setStep('input');
     setDecision(null);
@@ -204,6 +219,7 @@ export function App() {
         onSelectHistoryItem={handleSelectHistoryItem}
         onSelectBenchmark={handleSelectBenchmark}
         onNewDecision={handleReset}
+        onDeleteHistoryItem={handleDeleteHistoryItem}
         onClearHistory={handleClearHistory}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}

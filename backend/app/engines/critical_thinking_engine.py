@@ -1,5 +1,6 @@
 import json
 import os
+import functools
 from typing import List, Optional
 from app.schemas.decision import (
     StructuredDecision,
@@ -17,6 +18,7 @@ class CriticalThinkingEngine:
     """
 
     @classmethod
+    @functools.lru_cache(maxsize=1)
     def get_base_rates(cls) -> List[dict]:
         kb_path = os.path.join(os.path.dirname(__file__), "..", "knowledge", "base_rates.json")
         with open(kb_path, "r", encoding="utf-8") as f:

@@ -1,5 +1,6 @@
 import json
 import os
+import functools
 from typing import List, Dict, Any
 from app.schemas.decision import StructuredDecision, FlaggedBiasPattern, BiasLayerResult
 
@@ -11,6 +12,7 @@ class BiasPatternEngine:
     """
 
     @classmethod
+    @functools.lru_cache(maxsize=1)
     def get_knowledge_base(cls) -> List[dict]:
         kb_path = os.path.join(os.path.dirname(__file__), "..", "knowledge", "bias_patterns.json")
         with open(kb_path, "r", encoding="utf-8") as f:

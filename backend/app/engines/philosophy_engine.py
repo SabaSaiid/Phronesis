@@ -1,5 +1,6 @@
 import json
 import os
+import functools
 from typing import List, Dict, Any
 from app.schemas.decision import (
     StructuredDecision,
@@ -21,6 +22,7 @@ class PhilosophyEngine:
     """
 
     @classmethod
+    @functools.lru_cache(maxsize=1)
     def get_frameworks(cls) -> List[dict]:
         kb_path = os.path.join(os.path.dirname(__file__), "..", "knowledge", "philosophy_frameworks.json")
         with open(kb_path, "r", encoding="utf-8") as f:

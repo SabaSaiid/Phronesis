@@ -17,7 +17,7 @@ interface SensitivityChartProps {
   sensitivity: SensitivityAnalysisResult;
 }
 
-export const SensitivityChart: React.FC<SensitivityChartProps> = ({
+export const SensitivityChart: React.FC<SensitivityChartProps> = React.memo(({
   decision,
   sensitivity,
 }) => {
@@ -141,4 +141,5 @@ export const SensitivityChart: React.FC<SensitivityChartProps> = ({
       </div>
     </div>
   );
-};
+});
+

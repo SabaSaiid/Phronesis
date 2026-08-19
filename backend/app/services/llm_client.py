@@ -6,7 +6,34 @@ from app.core.config import settings
 class LLMClient:
     """
     Unified LLM Client supporting Gemini, OpenAI, Anthropic, and Mock/Offline fallback.
+    Maintains cached client instances for HTTP connection pooling.
     """
+
+    _clients: Dict[str, Any] = {}
+
+    @classmethod
+    def _get_gemini_client(cls, api_key: str):
+        key = f"gemini_{api_key}"
+        if key not in cls._clients:
+            from google import genai
+            cls._clients[key] = genai.Client(api_key=api_key)
+        return cls._clients[key]
+
+    @classmethod
+    def _get_openai_client(cls, api_key: str):
+        key = f"openai_{api_key}"
+        if key not in cls._clients:
+            from openai import AsyncOpenAI
+            cls._clients[key] = AsyncOpenAI(api_key=api_key)
+        return cls._clients[key]
+
+    @classmethod
+    def _get_anthropic_client(cls, api_key: str):
+        key = f"anthropic_{api_key}"
+        if key not in cls._clients:
+            from anthropic import AsyncAnthropic
+            cls._clients[key] = AsyncAnthropic(api_key=api_key)
+        return cls._clients[key]
 
     @classmethod
     async def generate_structured_json(cls, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
@@ -18,9 +45,8 @@ class LLMClient:
 
         try:
             if provider == "gemini":
-                from google import genai
                 from google.genai import types
-                client = genai.Client(api_key=api_key)
+                client = cls._get_gemini_client(api_key)
                 response = client.models.generate_content(
                     model=settings.LLM_MODEL or "gemini-2.5-flash",
                     contents=f"{system_prompt}\n\nUser Input:\n{user_prompt}",
@@ -32,8 +58,7 @@ class LLMClient:
                 return json.loads(response.text)
 
             elif provider == "openai":
-                from openai import AsyncOpenAI
-                client = AsyncOpenAI(api_key=api_key)
+                client = cls._get_openai_client(api_key)
                 response = await client.chat.completions.create(
                     model=settings.LLM_MODEL or "gpt-4o-mini",
                     messages=[
@@ -46,8 +71,7 @@ class LLMClient:
                 return json.loads(response.choices[0].message.content)
 
             elif provider == "anthropic":
-                from anthropic import AsyncAnthropic
-                client = AsyncAnthropic(api_key=api_key)
+                client = cls._get_anthropic_client(api_key)
                 response = await client.messages.create(
                     model=settings.LLM_MODEL or "claude-3-5-sonnet-20241022",
                     max_tokens=2000,
@@ -80,8 +104,7 @@ class LLMClient:
 
         try:
             if provider == "gemini":
-                from google import genai
-                client = genai.Client(api_key=api_key)
+                client = cls._get_gemini_client(api_key)
                 response = client.models.generate_content(
                     model=settings.LLM_MODEL or "gemini-2.5-flash",
                     contents=f"{system_prompt}\n\nContext Data:\n{user_prompt}"
@@ -89,8 +112,7 @@ class LLMClient:
                 return response.text
 
             elif provider == "openai":
-                from openai import AsyncOpenAI
-                client = AsyncOpenAI(api_key=api_key)
+                client = cls._get_openai_client(api_key)
                 response = await client.chat.completions.create(
                     model=settings.LLM_MODEL or "gpt-4o-mini",
                     messages=[
@@ -102,8 +124,7 @@ class LLMClient:
                 return response.choices[0].message.content
 
             elif provider == "anthropic":
-                from anthropic import AsyncAnthropic
-                client = AsyncAnthropic(api_key=api_key)
+                client = cls._get_anthropic_client(api_key)
                 response = await client.messages.create(
                     model=settings.LLM_MODEL or "claude-3-5-sonnet-20241022",
                     max_tokens=3000,
@@ -235,9 +256,8 @@ class LLMClient:
 
         try:
             if provider == "gemini":
-                from google import genai
                 from google.genai import types
-                client = genai.Client(api_key=api_key)
+                client = cls._get_gemini_client(api_key)
                 response = client.models.generate_content(
                     model=settings.LLM_MODEL or "gemini-2.5-flash",
                     contents=f"{system_prompt}\n\n{user_prompt}",
@@ -249,8 +269,7 @@ class LLMClient:
                 return json.loads(response.text)
 
             elif provider == "openai":
-                from openai import AsyncOpenAI
-                client = AsyncOpenAI(api_key=api_key)
+                client = cls._get_openai_client(api_key)
                 response = await client.chat.completions.create(
                     model=settings.LLM_MODEL or "gpt-4o-mini",
                     messages=[
@@ -263,8 +282,7 @@ class LLMClient:
                 return json.loads(response.choices[0].message.content)
 
             elif provider == "anthropic":
-                from anthropic import AsyncAnthropic
-                client = AsyncAnthropic(api_key=api_key)
+                client = cls._get_anthropic_client(api_key)
                 response = await client.messages.create(
                     model=settings.LLM_MODEL or "claude-3-5-sonnet-20241022",
                     max_tokens=1000,

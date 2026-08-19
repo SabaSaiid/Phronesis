@@ -26,10 +26,12 @@ class LocalStorage:
     """
 
     _db_path: str = DEFAULT_DB_PATH
+    _tables_initialized: bool = False
 
     @classmethod
     def set_db_path(cls, path: str):
         cls._db_path = path
+        cls._tables_initialized = False
 
     @classmethod
     def get_db_path(cls) -> str:
@@ -49,11 +51,14 @@ class LocalStorage:
                 db_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "phronesis.db")
                 os.makedirs(os.path.dirname(db_path), exist_ok=True)
                 cls._db_path = db_path
+                cls._tables_initialized = False
 
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL;")
-        cls._init_tables(conn)
+        if not cls._tables_initialized:
+            cls._init_tables(conn)
+            cls._tables_initialized = True
         return conn
 
     @classmethod

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { StructuredDecision, Assumption, FocusConfig } from '../../types';
 import { FocusSelector } from '../../components/FocusSelector';
 import {
@@ -34,6 +34,11 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
     focused_layers: ['psychology', 'logic', 'philosophy', 'practical'],
     philosophy_frameworks: [],
   });
+
+  // Keep internal model synchronized if external insertions (e.g. Socratic chat actions) occur
+  useEffect(() => {
+    setModel(JSON.parse(JSON.stringify(decision)));
+  }, [decision]);
 
   const handlePayoffChange = (altId: string, stateId: string, utility: number) => {
     const clamped = Math.max(0, Math.min(100, utility));

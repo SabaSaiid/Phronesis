@@ -6,7 +6,7 @@ interface RegretMatrixHeatmapProps {
   minimax: MinimaxRegretResult;
 }
 
-export const RegretMatrixHeatmap: React.FC<RegretMatrixHeatmapProps> = ({
+export const RegretMatrixHeatmap: React.FC<RegretMatrixHeatmapProps> = React.memo(({
   decision,
   minimax,
 }) => {
@@ -97,4 +97,5 @@ export const RegretMatrixHeatmap: React.FC<RegretMatrixHeatmapProps> = ({
       </div>
     </div>
   );
-};
+});
+

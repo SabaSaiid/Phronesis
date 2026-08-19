@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -53,21 +54,24 @@ async def extract_decision(req: ExtractRequest):
 
 @router.post("/analyze/deterministic", response_model=AnalysisBundle)
 async def analyze_deterministic(decision: StructuredDecision):
+    # Launch async rubric matching task concurrently
+    bias_task = asyncio.create_task(RubricMatchingService.match_rubric(decision))
+
     # 1. Math Engine (Pure deterministic)
     math_result = DecisionTheoryMathEngine.compute(decision)
 
-    # 2. Bias Layer (15 Biases with Grounding Tiers)
-    bias_result = await RubricMatchingService.match_rubric(decision)
-
-    # 3. Multi-Framework Philosophy Layer (Stoicism, Utilitarianism, Kantian, Virtue Ethics)
+    # 2. Multi-Framework Philosophy Layer (Stoicism, Utilitarianism, Kantian, Virtue Ethics)
     multi_philosophy = PhilosophyEngine.evaluate(decision)
     legacy_stoic = multi_philosophy.stoic_legacy or StoicPhilosophyEngine.evaluate(decision)
 
-    # 4. Critical Thinking Layer (12 Base Rates + Falsifiability)
+    # 3. Critical Thinking Layer (12 Base Rates + Falsifiability)
     critical_result = CriticalThinkingEngine.evaluate(decision)
 
-    # 5. Longitudinal Context (Threshold-gated: N >= 5)
+    # 4. Longitudinal Context (Threshold-gated: N >= 5)
     longitudinal_ctx = LocalStorage.get_longitudinal_summary(decision.domain)
+
+    # Await async bias rubric matching
+    bias_result = await bias_task
 
     return AnalysisBundle(
         structured_decision=decision,

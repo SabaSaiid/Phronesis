@@ -8,7 +8,7 @@ interface BalanceScaleSensitivityProps {
   sensitivity: SensitivityAnalysisResult;
 }
 
-export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = ({
+export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = React.memo(({
   decision,
   sensitivity,
 }) => {
@@ -420,4 +420,5 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
       </div>
     </div>
   );
-};
+});
+

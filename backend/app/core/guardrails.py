@@ -40,6 +40,8 @@ FORBIDDEN_PRESCRIPTIVE_PATTERNS = [
     r"\bcomposite\s+score:?\s+\d+\b"
 ]
 
+COMPILED_FORBIDDEN_PATTERNS = [re.compile(p, re.IGNORECASE) for p in FORBIDDEN_PRESCRIPTIVE_PATTERNS]
+
 BOUNDARY_RUBRIC_TEXT = """THE 5 NON-NEGOTIABLE BOUNDARIES:
 1. Never State a Diagnosis: Must use observational pattern language ("consistent with X"), NEVER personal diagnostic/identity labels ("you suffer from X", "you have X bias", "you are exhibiting classic X", "textbook case of").
 2. Never Claim Mathematical Prescriptiveness: Decision theory tools (Expected Utility, Minimax Regret) are heuristics for stress-testing preferences, NEVER proofs of what life choices one ought to make. Must NEVER advise, prescribe, or declare a winner ("you should choose", "prudent to pick", "the wiser path", "Option A clearly comes out ahead").
@@ -63,10 +65,10 @@ class ReportGuardrail:
         diagnostic labels, near-misses, and composite scoring.
         """
         violations = []
-        for pattern in FORBIDDEN_PRESCRIPTIVE_PATTERNS:
-            matches = re.findall(pattern, text, flags=re.IGNORECASE)
+        for regex in COMPILED_FORBIDDEN_PATTERNS:
+            matches = regex.findall(text)
             if matches:
-                violations.append(f"Forbidden pattern detected: '{pattern}' (matched: {matches})")
+                violations.append(f"Forbidden pattern detected: '{regex.pattern}' (matched: {matches})")
         return len(violations) == 0, violations
 
     @classmethod
@@ -80,8 +82,8 @@ class ReportGuardrail:
             s_clean = sentence.strip()
             if not s_clean:
                 continue
-            for pattern in FORBIDDEN_PRESCRIPTIVE_PATTERNS:
-                if re.search(pattern, s_clean, flags=re.IGNORECASE):
+            for regex in COMPILED_FORBIDDEN_PATTERNS:
+                if regex.search(s_clean):
                     offenders.append(s_clean)
                     break
         return offenders

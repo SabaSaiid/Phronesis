@@ -1,17 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, type HistoryItem } from './components/Sidebar';
-import { SettingsModal } from './components/SettingsModal';
-import { CommandPalette } from './components/CommandPalette';
-import { ExportModal } from './components/ExportModal';
-import { OrientationModal } from './components/OrientationModal';
-import { MethodologyModal } from './components/MethodologyModal';
-import { SocraticChatDrawer } from './components/SocraticChatDrawer';
 import { ToastProvider, useToast } from './components/Toast';
 import { NarrativeInputView } from './features/input/NarrativeInputView';
-import { CanonicalDilemmasView } from './features/benchmarks/CanonicalDilemmasView';
-import { ModelEditorView } from './features/editor/ModelEditorView';
-import { ReportView } from './features/report/ReportView';
 import type {
   StructuredDecision,
   AnalysisBundle,
@@ -28,10 +19,59 @@ import {
 } from './lib/api';
 import { AlertCircle, Sparkles } from 'lucide-react';
 
+// Lazy-loaded secondary views and modal dialogs for bundle code-splitting
+const CanonicalDilemmasView = lazy(() =>
+  import('./features/benchmarks/CanonicalDilemmasView').then((m) => ({ default: m.CanonicalDilemmasView }))
+);
+const ModelEditorView = lazy(() =>
+  import('./features/editor/ModelEditorView').then((m) => ({ default: m.ModelEditorView }))
+);
+const ReportView = lazy(() =>
+  import('./features/report/ReportView').then((m) => ({ default: m.ReportView }))
+);
+const SocraticChatDrawer = lazy(() =>
+  import('./components/SocraticChatDrawer').then((m) => ({ default: m.SocraticChatDrawer }))
+);
+const SettingsModal = lazy(() =>
+  import('./components/SettingsModal').then((m) => ({ default: m.SettingsModal }))
+);
+const CommandPalette = lazy(() =>
+  import('./components/CommandPalette').then((m) => ({ default: m.CommandPalette }))
+);
+const ExportModal = lazy(() =>
+  import('./components/ExportModal').then((m) => ({ default: m.ExportModal }))
+);
+const OrientationModal = lazy(() =>
+  import('./components/OrientationModal').then((m) => ({ default: m.OrientationModal }))
+);
+const MethodologyModal = lazy(() =>
+  import('./components/MethodologyModal').then((m) => ({ default: m.MethodologyModal }))
+);
+
 const LOCAL_STORAGE_THEME_KEY = 'phronesis_theme';
 const LOCAL_STORAGE_HISTORY_KEY = 'phronesis_history';
 const LOCAL_STORAGE_SIDEBAR_KEY = 'phronesis_sidebar';
 const LOCAL_STORAGE_CHAT_LAYOUT_KEY = 'phronesis_chat_layout';
+
+function safePersistHistory(items: HistoryItem[]) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(items));
+  } catch (e: any) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      const pruned = [
+        ...items.filter((i) => i.isPinned),
+        ...items.filter((i) => !i.isPinned).slice(0, 5),
+      ];
+      try {
+        localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(pruned));
+      } catch (err) {
+        console.warn('Failed to persist history after pruning:', err);
+      }
+    } else {
+      console.warn('Failed to persist history:', e);
+    }
+  }
+}
 
 function AppContent() {
   const { showToast } = useToast();
@@ -225,11 +265,7 @@ function AppContent() {
 
       setHistory((prev) => {
         const updated = [newHistoryItem, ...prev.filter((item) => item.title !== newHistoryItem.title)].slice(0, 20);
-        try {
-          localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(updated));
-        } catch (e) {
-          console.warn('Failed to persist history:', e);
-        }
+        safePersistHistory(updated);
         return updated;
       });
 
@@ -288,11 +324,7 @@ function AppContent() {
   const handleDeleteHistoryItem = (id: string) => {
     setHistory((prev) => {
       const updated = prev.filter((item) => item.id !== id);
-      try {
-        localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(updated));
-      } catch (e) {
-        console.warn('Failed to persist history after deletion:', e);
-      }
+      safePersistHistory(updated);
       return updated;
     });
     if (currentDecisionId === id) {
@@ -305,11 +337,7 @@ function AppContent() {
       const updated = prev.map((item) =>
         item.id === id ? { ...item, isPinned: !item.isPinned } : item
       );
-      try {
-        localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(updated));
-      } catch (e) {
-        console.warn('Failed to persist history after pin toggle:', e);
-      }
+      safePersistHistory(updated);
       return updated;
     });
   };
@@ -451,33 +479,35 @@ function AppContent() {
               />
             )}
 
-            {step === 'benchmarks' && (
-              <CanonicalDilemmasView
-                benchmarks={benchmarks}
-                onSelectBenchmark={handleSelectBenchmark}
-                onBackToInput={() => setStep('input')}
-              />
-            )}
+            <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading view...</div>}>
+              {step === 'benchmarks' && (
+                <CanonicalDilemmasView
+                  benchmarks={benchmarks}
+                  onSelectBenchmark={handleSelectBenchmark}
+                  onBackToInput={() => setStep('input')}
+                />
+              )}
 
-            {step === 'editor' && decision && (
-              <ModelEditorView
-                decision={decision}
-                onUpdateDecision={setDecision}
-                onRunAnalysis={handleRunAnalysis}
-                onBackToInput={() => setStep('input')}
-                isLoading={isLoading}
-              />
-            )}
+              {step === 'editor' && decision && (
+                <ModelEditorView
+                  decision={decision}
+                  onUpdateDecision={setDecision}
+                  onRunAnalysis={handleRunAnalysis}
+                  onBackToInput={() => setStep('input')}
+                  isLoading={isLoading}
+                />
+              )}
 
-            {step === 'report' && bundle && report && (
-              <ReportView
-                bundle={bundle}
-                report={report}
-                onEditModel={() => setStep('editor')}
-                onNewDecision={handleReset}
-                onOpenExport={() => setIsExportModalOpen(true)}
-              />
-            )}
+              {step === 'report' && bundle && report && (
+                <ReportView
+                  bundle={bundle}
+                  report={report}
+                  onEditModel={() => setStep('editor')}
+                  onNewDecision={handleReset}
+                  onOpenExport={() => setIsExportModalOpen(true)}
+                />
+              )}
+            </Suspense>
           </main>
 
           {/* Subtle Disciplined Footer */}
@@ -488,6 +518,33 @@ function AppContent() {
 
         {/* Docked Socratic Deliberation Workspace (Side-by-Side Panel) */}
         {isChatDrawerOpen && chatLayoutMode === 'docked' && (
+          <Suspense fallback={<div className="w-96 border-l border-[var(--border-subtle)] p-6 text-xs text-[var(--text-muted)]">Loading workspace...</div>}>
+            <SocraticChatDrawer
+              isOpen={isChatDrawerOpen}
+              onClose={() => setIsChatDrawerOpen(false)}
+              currentStep={step}
+              decision={decision}
+              bundle={bundle}
+              layoutMode={chatLayoutMode}
+              onChangeLayoutMode={handleChangeChatLayoutMode}
+              onInsertText={(text) => {
+                setExternalTextToAppend(text);
+                showToast({
+                  type: 'info',
+                  title: 'Notes Appended',
+                  description: 'Appended Socratic insights directly to your dilemma input.',
+                });
+              }}
+              onInsertAlternative={handleInsertAlternative}
+              onInsertAssumption={handleInsertAssumption}
+            />
+          </Suspense>
+        )}
+      </div>
+
+      {/* Socratic Deliberation Overlay Drawer / Fullscreen Mode */}
+      {isChatDrawerOpen && chatLayoutMode !== 'docked' && (
+        <Suspense fallback={null}>
           <SocraticChatDrawer
             isOpen={isChatDrawerOpen}
             onClose={() => setIsChatDrawerOpen(false)}
@@ -507,32 +564,8 @@ function AppContent() {
             onInsertAlternative={handleInsertAlternative}
             onInsertAssumption={handleInsertAssumption}
           />
-        )}
-      </div>
-
-      {/* Socratic Deliberation Overlay Drawer / Fullscreen Mode */}
-      {isChatDrawerOpen && chatLayoutMode !== 'docked' && (
-        <SocraticChatDrawer
-          isOpen={isChatDrawerOpen}
-          onClose={() => setIsChatDrawerOpen(false)}
-          currentStep={step}
-          decision={decision}
-          bundle={bundle}
-          layoutMode={chatLayoutMode}
-          onChangeLayoutMode={handleChangeChatLayoutMode}
-          onInsertText={(text) => {
-            setExternalTextToAppend(text);
-            showToast({
-              type: 'info',
-              title: 'Notes Appended',
-              description: 'Appended Socratic insights directly to your dilemma input.',
-            });
-          }}
-          onInsertAlternative={handleInsertAlternative}
-          onInsertAssumption={handleInsertAssumption}
-        />
+        </Suspense>
       )}
-
 
       {/* Pipeline Progress Indicator (During Reasoning Audit) */}
       {isLoading && loadingStage && (
@@ -556,62 +589,65 @@ function AppContent() {
         </div>
       )}
 
-      {/* First-Time Orientation Modal */}
-      <OrientationModal
-        isOpen={isOrientationOpen}
-        onClose={() => {
-          setIsOrientationOpen(false);
-          try {
-            localStorage.setItem('phronesis_orientation_dismissed', 'true');
-          } catch (e) {
-            console.warn('Failed to save orientation dismiss state:', e);
-          }
-        }}
-      />
-
-      {/* Methodology & Lineage Modal */}
-      <MethodologyModal
-        isOpen={isMethodologyOpen}
-        onClose={() => setIsMethodologyOpen(false)}
-      />
-
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onHistoryPurged={() => {
-          handleClearHistory();
-        }}
-      />
-
-      {/* Global Command Palette (⌘K Spotlight) */}
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        history={history}
-        benchmarks={benchmarks}
-        onSelectHistoryItem={handleSelectHistoryItem}
-        onSelectBenchmark={handleSelectBenchmark}
-        onOpenBenchmarksGallery={() => setStep('benchmarks')}
-        onOpenMethodology={() => setIsMethodologyOpen(true)}
-        onNewDecision={handleReset}
-        onToggleTheme={handleToggleTheme}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
-        onEditModel={decision ? () => setStep('editor') : undefined}
-        isDarkMode={isDarkMode}
-        hasActiveReport={!!(bundle && report)}
-      />
-
-      {/* Export & Sharing Modal */}
-      {bundle && report && (
-        <ExportModal
-          isOpen={isExportModalOpen}
-          onClose={() => setIsExportModalOpen(false)}
-          bundle={bundle}
-          report={report}
+      {/* Modals with Suspense */}
+      <Suspense fallback={null}>
+        {/* First-Time Orientation Modal */}
+        <OrientationModal
+          isOpen={isOrientationOpen}
+          onClose={() => {
+            setIsOrientationOpen(false);
+            try {
+              localStorage.setItem('phronesis_orientation_dismissed', 'true');
+            } catch (e) {
+              console.warn('Failed to save orientation dismiss state:', e);
+            }
+          }}
         />
-      )}
+
+        {/* Methodology & Lineage Modal */}
+        <MethodologyModal
+          isOpen={isMethodologyOpen}
+          onClose={() => setIsMethodologyOpen(false)}
+        />
+
+        {/* Settings Modal */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          onHistoryPurged={() => {
+            handleClearHistory();
+          }}
+        />
+
+        {/* Global Command Palette (⌘K Spotlight) */}
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          history={history}
+          benchmarks={benchmarks}
+          onSelectHistoryItem={handleSelectHistoryItem}
+          onSelectBenchmark={handleSelectBenchmark}
+          onOpenBenchmarksGallery={() => setStep('benchmarks')}
+          onOpenMethodology={() => setIsMethodologyOpen(true)}
+          onNewDecision={handleReset}
+          onToggleTheme={handleToggleTheme}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
+          onEditModel={decision ? () => setStep('editor') : undefined}
+          isDarkMode={isDarkMode}
+          hasActiveReport={!!(bundle && report)}
+        />
+
+        {/* Export & Sharing Modal */}
+        {bundle && report && (
+          <ExportModal
+            isOpen={isExportModalOpen}
+            onClose={() => setIsExportModalOpen(false)}
+            bundle={bundle}
+            report={report}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

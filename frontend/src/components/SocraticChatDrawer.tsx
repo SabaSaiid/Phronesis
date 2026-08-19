@@ -1,224 +1,437 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
-  Send,
-  Sparkles,
-  Bot,
-  User,
+  Compass,
   Trash2,
-  Copy,
-  Check,
-  ArrowDownLeft,
-  Compass
+  Maximize2,
+  Minimize2,
+  PanelRightClose,
+  PanelRight,
+  Download,
+  Bot,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
-import type { StructuredDecision } from '../types';
-
-export interface ChatMessage {
-  id: string;
-  sender: 'user' | 'assistant';
-  text: string;
-  timestamp: number;
-  suggestedAction?: {
-    label: string;
-    textToInsert: string;
-  };
-}
+import type {
+  StructuredDecision,
+  AnalysisBundle,
+  DeliberationLensId,
+  ChatLayoutMode,
+  ChatMessage,
+  SuggestedAction
+} from '../types';
+import { sendDeliberationMessage } from '../lib/api';
+import { ChatLensSelector, LENSES } from './chat/ChatLensSelector';
+import { ChatMessageCard } from './chat/ChatMessageCard';
+import { ChatInputBar } from './chat/ChatInputBar';
 
 interface SocraticChatDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   currentStep: 'input' | 'editor' | 'report' | 'benchmarks';
   decision?: StructuredDecision | null;
+  bundle?: AnalysisBundle | null;
+  layoutMode: ChatLayoutMode;
+  onChangeLayoutMode: (mode: ChatLayoutMode) => void;
   onInsertText?: (text: string) => void;
+  onInsertAlternative?: (alt: { name: string; description: string }) => void;
+  onInsertAssumption?: (assump: { text: string; type?: string; testable?: boolean }) => void;
 }
-
-const STEP_PROMPTS = {
-  input: [
-    {
-      label: 'Surface Blind Spots',
-      prompt: 'What are the most common unstated assumptions or blind spots when framing a decision like this?',
-    },
-    {
-      label: 'Brainstorm Alternatives',
-      prompt: 'Help me generate 2 distinct, creative alternatives beyond a simplistic yes/no dilemma.',
-    },
-    {
-      label: 'Stoic Framing',
-      prompt: 'Apply the Stoic dichotomy of control to this situation: what is within my control vs external fate?',
-    },
-    {
-      label: 'Isolate Key Unknown',
-      prompt: 'What single piece of information, if known with 90% certainty, would completely flip this choice?',
-    },
-  ],
-  editor: [
-    {
-      label: 'Calibrate Utilities',
-      prompt: 'How should I think about setting utility ratings (0-100) to avoid extreme overconfidence?',
-    },
-    {
-      label: 'Check Base Rates',
-      prompt: 'What empirical base-rates should I keep in mind before locking in prior probabilities?',
-    },
-    {
-      label: 'Steelman Weak Alternative',
-      prompt: 'How can I steel-man the least preferred alternative so I do not dismiss it prematurely?',
-    },
-  ],
-  report: [
-    {
-      label: 'Critique VoI Test',
-      prompt: 'How can I make the suggested 48-hour experiment even cheaper and faster to execute?',
-    },
-    {
-      label: 'Explain Regret Matrix',
-      prompt: 'Explain the difference between maximizing expected utility vs minimizing maximum regret for this specific decision.',
-    },
-    {
-      label: 'Challenge Philosophical Verdict',
-      prompt: 'Where do the Kantian and Utilitarian perspectives clash most sharply in my results?',
-    },
-  ],
-  benchmarks: [
-    {
-      label: 'Compare Scenarios',
-      prompt: 'Which canonical dilemma is most analogous to an asymmetric career transition risk?',
-    },
-    {
-      label: 'Explain Payoff Matrix',
-      prompt: 'How are payoff utilities calculated in the canonical benchmarks?',
-    },
-  ],
-};
 
 export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
   isOpen,
   onClose,
   currentStep,
   decision,
+  bundle,
+  layoutMode,
+  onChangeLayoutMode,
   onInsertText,
+  onInsertAlternative,
+  onInsertAssumption,
 }) => {
+  const [selectedLens, setSelectedLens] = useState<DeliberationLensId>('socratic');
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: 'welcome',
       sender: 'assistant',
-      text: 'Greetings. I am your Socratic deliberation companion. I will not make your choice for you, but I will challenge your framing, probe your unstated assumptions, and help you stress-test trade-offs. What aspects of your dilemma should we examine?',
+      text: 'Greetings. I am your Socratic deliberation companion. I will not make your choice for you, but I will challenge your framing, probe your unstated assumptions, and stress-test trade-offs using multiple philosophical and analytical lenses.\n\nSelect a **Dialectic Lens** above or choose a prompt starter below to begin.',
       timestamp: Date.now(),
+      lens: 'socratic',
+      suggested_followups: [
+        'Surface my blind spots',
+        'Brainstorm creative 3rd alternative',
+        'What single unknown flips this choice?',
+      ],
     },
   ]);
-  const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showContextDetails, setShowContextDetails] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      setTimeout(() => inputRef.current?.focus(), 150);
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isLoading]);
 
-  // Handle escape key
+  // Handle Escape key (only close in drawer or fullscreen mode)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape' && isOpen && layoutMode !== 'docked') {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, layoutMode, onClose]);
 
-  const handleSend = (textToSend?: string) => {
-    const query = textToSend || inputValue.trim();
-    if (!query) return;
-
+  const handleSendMessage = async (text: string) => {
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
-      text: query,
+      text,
       timestamp: Date.now(),
+      lens: selectedLens,
     };
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInputValue('');
-    setIsTyping(true);
+    const newHistory = [...messages, userMsg];
+    setMessages(newHistory);
+    setIsLoading(true);
 
-    // Simulate intelligent Socratic synthesis
-    setTimeout(() => {
-      let reply = '';
-      let suggestedAction: ChatMessage['suggestedAction'] | undefined = undefined;
-      const lower = query.toLowerCase();
-
-      if (lower.includes('blind spot') || lower.includes('unstated assumption')) {
-        reply = `When examining situations with high uncertainty, three frequent blind spots emerge:\n\n1. **Base-Rate Neglect**: Treating your scenario as unique while ignoring historical success/failure frequencies in this reference class.\n2. **False Dichotomy**: Assuming you must choose between extremes rather than staggering commitments with an option to pivot.\n3. **Sunk Cost Entanglement**: Factoring past emotional or capital investments that cannot be recovered.\n\n*Question for you:* Which of your assumptions is least supported by empirical verification?`;
-        suggestedAction = {
-          label: 'Insert Blind Spot Check',
-          textToInsert: ' Key Unknowns: Examining base rates, potential pivot triggers, and non-recoverable commitments.',
+    try {
+      // Build math summary payload if available
+      let mathSummary: Record<string, any> | undefined = undefined;
+      if (bundle && bundle.math_layer) {
+        mathSummary = {
+          preferred_eu_alt:
+            decision?.alternatives.find(
+              (a) => a.id === bundle.math_layer.expected_utility.preferred_alternative_id
+            )?.name || bundle.math_layer.expected_utility.preferred_alternative_id,
+          minimax_regret_choice:
+            decision?.alternatives.find(
+              (a) => a.id === bundle.math_layer.minimax_regret.minimax_regret_choice
+            )?.name || bundle.math_layer.minimax_regret.minimax_regret_choice,
+          inflection_threshold:
+            bundle.math_layer.sensitivity_analysis.inflection_threshold,
         };
-      } else if (lower.includes('alternative') || lower.includes('brainstorm')) {
-        reply = `To broaden your alternative space beyond binary choice:\n\n• **Option C (Parallel De-risking)**: Keep current baseline while committing 10-15 hours/week to a low-exposure trial.\n• **Option D (Conditioned Pivot)**: Commit fully to the high-upside alternative for 90 days with explicit, non-negotiable exit thresholds.\n\n*Which of these mitigates irreversible downside while preserving upside?*`;
-        suggestedAction = {
-          label: 'Insert 3rd Alternative',
-          textToInsert: ' Alternative 3: Hybrid Parallel De-risking (maintain primary baseline with milestone-gated trial exploration over 90 days).',
-        };
-      } else if (lower.includes('stoic') || lower.includes('control')) {
-        reply = `Under the Epictetan **Dichotomy of Control**:\n\n• **Internals (Within Agency)**: Your ethical standards, diligence of preparation, risk calibration, and emotional composure.\n• **Externals (Indifferents)**: Market macroeconomic shifts, counterparty decisions, timeline delays, and competitor actions.\n\n*Stoic Maxim:* Never predicate peace of mind on outcomes governed by external agents.`;
-      } else if (lower.includes('voi') || lower.includes('48-hour') || lower.includes('experiment')) {
-        reply = `A high-leverage 48-hour Value of Information (VoI) experiment must satisfy three criteria:\n\n1. **Cost < $100 & < 4 hours of effort**.\n2. **Definite Falsification**: It must produce observable evidence that could force you to abandon your dominant assumption.\n3. **Direct Contact with Reality**: Customer interview, contract clause audit, or synthetic prototype testing.`;
-        suggestedAction = {
-          label: 'Insert 48h Test Template',
-          textToInsert: ' 48-Hour Falsification Protocol: Conduct 3 structured stakeholder discovery calls to validate whether the core payoff assumption holds true.',
-        };
-      } else if (decision?.decision_statement) {
-        reply = `Reflecting on your current dilemma:\n*"${decision.decision_statement}"*\n\nConsider: If you were advising a trusted colleague in this exact position, what advice would you give them from an objective 3rd-person vantage point? Often our own risk tolerance is distorted by immediate loss aversion.`;
-      } else {
-        reply = `A rigorous decision audit requires examining the payoff asymmetry:\n\n1. What is the **worst-case irreversible outcome** if your optimistic assumption is completely wrong?\n2. What is the **regret ratio** of acting and failing vs remaining passive and missing the inflection point?\n\nHow would you quantify the psychological cost of each?`;
       }
+
+      // Collect flagged biases
+      const flaggedBiases = bundle?.bias_layer.flagged_patterns.map((p) => p.name);
+
+      const resp = await sendDeliberationMessage({
+        messages: newHistory.map((m) => ({
+          id: m.id,
+          sender: m.sender,
+          text: m.text,
+          timestamp: m.timestamp,
+          lens: m.lens,
+        })),
+        current_step: currentStep,
+        lens: selectedLens,
+        structured_decision: decision || null,
+        math_summary: mathSummary,
+        flagged_biases: flaggedBiases,
+      });
 
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         sender: 'assistant',
-        text: reply,
+        text: resp.reply_text,
         timestamp: Date.now(),
-        suggestedAction,
+        lens: (resp.lens_used as DeliberationLensId) || selectedLens,
+        suggested_action: resp.suggested_action || undefined,
+        suggested_followups: resp.suggested_followups,
+        attribution: resp.attribution || undefined,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
-      setIsTyping(false);
-    }, 700);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSend();
+    } catch (err: any) {
+      console.warn('Deliberation API failed, generating fallback response:', err);
+      // Fallback local assistant response
+      const fallbackMsg: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        sender: 'assistant',
+        text: `### Deliberation Inquiry\n\nWhen examining your choice through the **${selectedLens.toUpperCase()}** perspective:\n\n1. What is the single highest-risk assumption in your plan?\n2. What irreversible downside are you willing to accept?\n\n*Dialectic Inquiry:* If external circumstances forced a 50% delay, what adjustment would preserve your core integrity?`,
+        timestamp: Date.now(),
+        lens: selectedLens,
+        suggested_followups: [
+          'Surface my blind spots',
+          'Steelman the alternative path',
+          'Design 48h VoI experiment',
+        ],
+      };
+      setMessages((prev) => [...prev, fallbackMsg]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const handleExecuteAction = (action: SuggestedAction) => {
+    if (action.action_type === 'insert_alternative' && action.alternative_data && onInsertAlternative) {
+      onInsertAlternative(action.alternative_data);
+    } else if (action.action_type === 'insert_assumption' && action.assumption_data && onInsertAssumption) {
+      onInsertAssumption(action.assumption_data);
+    } else if (onInsertText) {
+      onInsertText(action.text_to_insert);
+    }
   };
 
   const handleClear = () => {
     setMessages([
       {
-        id: 'welcome-fresh',
+        id: `welcome-${Date.now()}`,
         sender: 'assistant',
-        text: 'Conversation cleared. Ready for a fresh Socratic inquiry on your active dilemma.',
+        text: 'Dialogue cleared. Ready for fresh Socratic inquiry.',
         timestamp: Date.now(),
+        lens: selectedLens,
+        suggested_followups: [
+          'Surface my blind spots',
+          'Steelman the alternative path',
+          'Apply the Stoic dichotomy of control',
+        ],
       },
     ]);
   };
 
-  const currentPrompts = STEP_PROMPTS[currentStep] || STEP_PROMPTS.input;
+  const handleExportTranscript = () => {
+    const transcript = messages
+      .map((m) => {
+        const time = new Date(m.timestamp).toLocaleTimeString();
+        const role = m.sender === 'user' ? 'YOU' : `SOCRATIC COMPANION (${m.lens || 'socratic'})`;
+        return `### ${role} [${time}]\n\n${m.text}\n`;
+      })
+      .join('\n---\n\n');
+
+    const blob = new Blob([transcript], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `phronesis-socratic-dialogue-${Date.now()}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (!isOpen) return null;
 
+  const currentLensInfo = LENSES.find((l) => l.id === selectedLens) || LENSES[0];
+
+  // Render Inner Content of the Workspace
+  const innerContent = (
+    <div className="h-full flex flex-col justify-between bg-[var(--bg-surface)] overflow-hidden">
+      {/* Header Bar */}
+      <div className="p-3 sm:p-3.5 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-surface-raised)] select-none">
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center shadow-2xs border shrink-0 transition-colors"
+            style={{
+              backgroundColor: `${currentLensInfo.accentColor}15`,
+              borderColor: `${currentLensInfo.accentColor}40`,
+              color: currentLensInfo.accentColor,
+            }}
+          >
+            <Compass className="w-4.5 h-4.5 animate-spin-slow" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center space-x-1.5">
+              <h3 className="font-display font-semibold text-xs sm:text-sm text-[var(--text-main)] truncate">
+                Socratic Deliberation
+              </h3>
+              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] border border-[var(--color-verdigris)]/20 shrink-0">
+                Live
+              </span>
+            </div>
+            <p className="text-[10px] font-ui text-[var(--text-muted)] truncate">
+              {currentLensInfo.label} · {currentStep} workbench
+            </p>
+          </div>
+        </div>
+
+        {/* Header Action Buttons */}
+        <div className="flex items-center space-x-1 shrink-0">
+          {/* Export Transcript */}
+          <button
+            type="button"
+            onClick={handleExportTranscript}
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+            title="Export Dialogue Transcript (.md)"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Clear Session */}
+          <button
+            type="button"
+            onClick={handleClear}
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-400 hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+            title="Clear Dialogue Session"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Layout Switcher: Docked vs Drawer */}
+          <button
+            type="button"
+            onClick={() =>
+              onChangeLayoutMode(layoutMode === 'docked' ? 'drawer' : 'docked')
+            }
+            className="hidden sm:inline-flex p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+            title={layoutMode === 'docked' ? 'Switch to Overlay Drawer' : 'Dock Side-by-Side'}
+          >
+            {layoutMode === 'docked' ? (
+              <PanelRightClose className="w-3.5 h-3.5" />
+            ) : (
+              <PanelRight className="w-3.5 h-3.5" />
+            )}
+          </button>
+
+          {/* Layout Switcher: Fullscreen */}
+          <button
+            type="button"
+            onClick={() =>
+              onChangeLayoutMode(layoutMode === 'fullscreen' ? 'drawer' : 'fullscreen')
+            }
+            className="hidden sm:inline-flex p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+            title={layoutMode === 'fullscreen' ? 'Restore Default Size' : 'Expand Fullscreen'}
+          >
+            {layoutMode === 'fullscreen' ? (
+              <Minimize2 className="w-3.5 h-3.5" />
+            ) : (
+              <Maximize2 className="w-3.5 h-3.5" />
+            )}
+          </button>
+
+          {/* Close Button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+            aria-label="Close Deliberation Workspace"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Active Decision Context Accordion Bar */}
+      {decision?.decision_statement && (
+        <div className="bg-[var(--bg-app)] border-b border-[var(--border-subtle)] px-3 py-1.5 select-none">
+          <button
+            type="button"
+            onClick={() => setShowContextDetails((prev) => !prev)}
+            className="w-full flex items-center justify-between text-left cursor-pointer group"
+          >
+            <div className="flex items-center space-x-1.5 min-w-0">
+              <span className="text-[var(--color-verdigris)] font-serif text-xs shrink-0">
+                ✦
+              </span>
+              <span className="text-[10.5px] font-ui font-medium text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-colors truncate">
+                Context: {decision.decision_statement}
+              </span>
+            </div>
+            <div className="flex items-center space-x-1 shrink-0 text-[10px] text-[var(--text-faint)]">
+              <span>{decision.alternatives.length} alts</span>
+              {showContextDetails ? (
+                <ChevronUp className="w-3 h-3" />
+              ) : (
+                <ChevronDown className="w-3 h-3" />
+              )}
+            </div>
+          </button>
+
+          {/* Expandable Context Summary */}
+          {showContextDetails && (
+            <div className="mt-2 p-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] font-ui space-y-1.5 animate-fade-in">
+              <div className="font-medium text-[var(--text-main)]">
+                Alternatives in Model:
+              </div>
+              <ul className="list-disc list-inside text-[var(--text-muted)] space-y-0.5 pl-1">
+                {decision.alternatives.map((a) => (
+                  <li key={a.id}>
+                    <strong>{a.name}</strong>: {a.description || 'No description'}
+                  </li>
+                ))}
+              </ul>
+              {bundle?.math_layer && (
+                <div className="pt-1 border-t border-[var(--border-subtle)] text-[10px] font-mono text-[var(--color-verdigris)]">
+                  Top Expected Utility:{' '}
+                  {decision.alternatives.find(
+                    (a) =>
+                      a.id ===
+                      bundle.math_layer.expected_utility.preferred_alternative_id
+                  )?.name || bundle.math_layer.expected_utility.preferred_alternative_id}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Lens Selector Pills */}
+      <ChatLensSelector
+        selectedLens={selectedLens}
+        onSelectLens={(lens) => setSelectedLens(lens)}
+      />
+
+      {/* Messages Stream */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-ui">
+        {messages.map((m) => (
+          <ChatMessageCard
+            key={m.id}
+            message={m}
+            onExecuteAction={handleExecuteAction}
+            onSelectFollowup={(prompt) => handleSendMessage(prompt)}
+          />
+        ))}
+
+        {/* Loading Pulsing Indicator */}
+        {isLoading && (
+          <div className="flex items-center space-x-2 text-[var(--text-muted)] p-2 animate-pulse">
+            <Bot
+              className="w-3.5 h-3.5 animate-spin-slow"
+              style={{ color: currentLensInfo.accentColor }}
+            />
+            <span className="text-xs font-mono">
+              Deliberating with {currentLensInfo.label}...
+            </span>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Bottom Smart Input Bar */}
+      <ChatInputBar
+        onSendMessage={handleSendMessage}
+        isLoading={isLoading}
+        selectedLens={selectedLens}
+        currentStep={currentStep}
+      />
+    </div>
+  );
+
+  // Layout Rendering Modes:
+  // 1. Fullscreen Mode
+  if (layoutMode === 'fullscreen') {
+    return (
+      <div className="fixed inset-0 z-50 bg-[var(--bg-app)] animate-fade-in flex flex-col">
+        {innerContent}
+      </div>
+    );
+  }
+
+  // 2. Docked Side-by-Side Mode (Embedded in App layout)
+  if (layoutMode === 'docked') {
+    return (
+      <aside className="w-full sm:w-[420px] lg:w-[460px] h-[calc(100vh-3.5rem)] sticky top-14 border-l border-[var(--border-strong)] shadow-lg z-20 flex flex-col animate-slide-in-right shrink-0">
+        {innerContent}
+      </aside>
+    );
+  }
+
+  // 3. Drawer Overlay Mode (Default)
   return (
     <div className="fixed inset-0 z-50 overflow-hidden select-none animate-fade-in">
       {/* Backdrop */}
@@ -230,183 +443,10 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
         <aside
-          className="w-screen max-w-md bg-[var(--bg-surface)] border-l border-[var(--border-strong)] shadow-2xl flex flex-col justify-between transform transition-transform ease-in-out duration-300 animate-slide-in-right"
+          className="w-screen max-w-lg bg-[var(--bg-surface)] border-l border-[var(--border-strong)] shadow-2xl flex flex-col justify-between transform transition-transform ease-in-out duration-300 animate-slide-in-right"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="p-4 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-surface-raised)]">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[var(--color-verdigris)]/15 border border-[var(--color-verdigris)]/30 flex items-center justify-center text-[var(--color-verdigris)] shadow-2xs">
-                <Compass className="w-4.5 h-4.5 animate-spin-slow" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-1.5">
-                  <h3 className="font-display font-semibold text-sm text-[var(--text-main)]">
-                    Socratic Companion
-                  </h3>
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] border border-[var(--color-verdigris)]/20">
-                    Ephemeral
-                  </span>
-                </div>
-                <p className="text-[10px] font-ui text-[var(--text-muted)]">
-                  Temporary deliberation & blind spot challenge
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-1">
-              <button
-                type="button"
-                onClick={handleClear}
-                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-400 hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-                title="Clear conversation"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-                aria-label="Close drawer"
-              >
-                <X className="w-4.5 h-4.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Context-Aware Starter Chips */}
-          <div className="p-3 border-b border-[var(--border-subtle)] bg-[var(--bg-app)]">
-            <div className="flex items-center space-x-1.5 mb-2 text-[10px] font-ui font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-              <Sparkles className="w-3 h-3 text-[var(--color-ochre)]" />
-              <span>Prompt Starters ({currentStep})</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {currentPrompts.map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  onClick={() => handleSend(p.prompt)}
-                  className="px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--color-verdigris)]/40 text-[11px] font-ui text-[var(--text-main)] transition-colors cursor-pointer text-left shadow-2xs"
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Messages Stream */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-ui">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`flex flex-col space-y-1.5 ${
-                  m.sender === 'user' ? 'items-end' : 'items-start'
-                }`}
-              >
-                <div className="flex items-center space-x-1.5 text-[10px] text-[var(--text-faint)] font-mono">
-                  {m.sender === 'user' ? (
-                    <>
-                      <span>You</span>
-                      <User className="w-3 h-3 text-[var(--color-ochre)]" />
-                    </>
-                  ) : (
-                    <>
-                      <Bot className="w-3 h-3 text-[var(--color-verdigris)]" />
-                      <span>Socratic Dialogue</span>
-                    </>
-                  )}
-                </div>
-
-                <div
-                  className={`p-3.5 rounded-2xl max-w-[92%] leading-relaxed whitespace-pre-wrap ${
-                    m.sender === 'user'
-                      ? 'bg-[var(--color-verdigris-subtle)] text-[var(--text-main)] border border-[var(--color-verdigris)]/30 rounded-tr-none font-ui'
-                      : 'bg-[var(--bg-surface-raised)] text-[var(--text-main)] border border-[var(--border-subtle)] rounded-tl-none font-body shadow-2xs'
-                  }`}
-                >
-                  {m.text}
-                </div>
-
-                {/* Optional Assistant Actions (Copy / Insert into Narrative) */}
-                {m.sender === 'assistant' && (
-                  <div className="flex items-center space-x-2 pt-0.5 px-1">
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(m.text, m.id)}
-                      className="text-[10px] font-ui text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center space-x-1 cursor-pointer transition-colors"
-                      title="Copy response"
-                    >
-                      {copiedId === m.id ? (
-                        <>
-                          <Check className="w-3 h-3 text-[var(--color-verdigris)]" />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
-
-                    {m.suggestedAction && onInsertText && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onInsertText(m.suggestedAction!.textToInsert);
-                        }}
-                        className="text-[10px] font-ui text-[var(--color-verdigris)] hover:underline flex items-center space-x-1 cursor-pointer"
-                        title="Insert into main dilemma input"
-                      >
-                        <ArrowDownLeft className="w-3 h-3" />
-                        <span>{m.suggestedAction.label}</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className="flex items-center space-x-2 text-[var(--text-muted)] p-2 animate-pulse">
-                <Bot className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
-                <span className="text-xs font-mono">Deliberating Socratic response...</span>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Bottom Input Field */}
-          <div className="p-3 border-t border-[var(--border-subtle)] bg-[var(--bg-surface-raised)]">
-            <div className="relative flex items-center">
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask a question or challenge assumptions..."
-                className="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-xl py-2.5 pl-3.5 pr-10 text-xs font-ui text-[var(--text-main)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--color-verdigris)] transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => handleSend()}
-                disabled={!inputValue.trim() || isTyping}
-                className={`absolute right-1.5 p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  inputValue.trim() && !isTyping
-                    ? 'text-[var(--color-verdigris)] hover:bg-[var(--color-verdigris-subtle)]'
-                    : 'text-[var(--text-faint)] cursor-not-allowed'
-                }`}
-                title="Send inquiry"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-[var(--text-faint)] font-mono mt-2 px-1">
-              <span>Private in-memory session</span>
-              <span>ESC to close</span>
-            </div>
-          </div>
+          {innerContent}
         </aside>
       </div>
     </div>

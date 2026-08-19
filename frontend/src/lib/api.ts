@@ -7,7 +7,9 @@ import type {
   FlagFeedbackRequest,
   OutcomeRetroRequest,
   DrillDownRequest,
-  DrillDownResponse
+  DrillDownResponse,
+  DeliberationRequest,
+  DeliberationResponse
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -163,3 +165,17 @@ export async function updateMemorySettings(enabled: boolean): Promise<void> {
     throw new Error('Failed to update memory settings');
   }
 }
+
+export async function sendDeliberationMessage(req: DeliberationRequest): Promise<DeliberationResponse> {
+  const res = await fetch(`${API_BASE}/deliberate/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to generate Socratic response');
+  }
+  return res.json();
+}
+

@@ -218,3 +218,36 @@ class HistoryItemSummary(BaseModel):
     has_outcome: bool = False
     chosen_alternative_id: Optional[str] = None
     actual_utility_rating: Optional[float] = None
+
+# Socratic Deliberation Chat Schemas
+class SuggestedActionSchema(BaseModel):
+    action_type: str = Field(default="append_narrative", description="insert_alternative, insert_assumption, append_narrative, test_protocol")
+    label: str
+    text_to_insert: str
+    alternative_data: Optional[Dict[str, Any]] = None
+    assumption_data: Optional[Dict[str, Any]] = None
+
+class ChatMessageSchema(BaseModel):
+    id: str
+    sender: str  # "user" | "assistant"
+    text: str
+    timestamp: Optional[int] = None
+    lens: Optional[str] = "socratic"
+    suggested_action: Optional[SuggestedActionSchema] = None
+    suggested_followups: Optional[List[str]] = Field(default_factory=list)
+
+class DeliberationRequest(BaseModel):
+    messages: List[ChatMessageSchema]
+    current_step: Optional[str] = "input"
+    lens: Optional[str] = "socratic"
+    structured_decision: Optional[StructuredDecision] = None
+    math_summary: Optional[Dict[str, Any]] = None
+    flagged_biases: Optional[List[str]] = Field(default_factory=list)
+
+class DeliberationResponse(BaseModel):
+    reply_text: str
+    suggested_action: Optional[SuggestedActionSchema] = None
+    suggested_followups: List[str] = Field(default_factory=list)
+    attribution: Optional[SourceAttribution] = None
+    lens_used: str = "socratic"
+

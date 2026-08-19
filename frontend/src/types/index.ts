@@ -235,3 +235,66 @@ export interface OutcomeRetroRequest {
   actual_utility_rating?: number;
   retrospective_notes?: string;
 }
+
+// Deliberation Chatbox Types
+export type DeliberationLensId =
+  | 'socratic'
+  | 'steelman'
+  | 'stoic'
+  | 'kantian'
+  | 'utilitarian'
+  | 'virtue'
+  | 'voi'
+  | 'bias';
+
+export type ChatLayoutMode = 'drawer' | 'docked' | 'fullscreen';
+
+export interface SuggestedAction {
+  action_type: 'insert_alternative' | 'insert_assumption' | 'append_narrative' | 'test_protocol' | string;
+  label: string;
+  text_to_insert: string;
+  alternative_data?: {
+    name: string;
+    description: string;
+  };
+  assumption_data?: {
+    text: string;
+    type?: string;
+    testable?: boolean;
+  };
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  text: string;
+  timestamp: number;
+  lens?: DeliberationLensId;
+  suggested_action?: SuggestedAction;
+  suggested_followups?: string[];
+  attribution?: SourceAttribution;
+}
+
+export interface DeliberationRequest {
+  messages: Array<{
+    id: string;
+    sender: string;
+    text: string;
+    timestamp?: number;
+    lens?: string;
+  }>;
+  current_step?: string;
+  lens?: DeliberationLensId;
+  structured_decision?: StructuredDecision | null;
+  math_summary?: Record<string, any>;
+  flagged_biases?: string[];
+}
+
+export interface DeliberationResponse {
+  reply_text: string;
+  suggested_action?: SuggestedAction | null;
+  suggested_followups: string[];
+  attribution?: SourceAttribution | null;
+  lens_used: string;
+}
+

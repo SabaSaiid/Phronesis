@@ -17,7 +17,8 @@ import type {
   AnalysisBundle,
   ReportResponse,
   BenchmarkItem,
-  FocusConfig
+  FocusConfig,
+  ChatLayoutMode
 } from './types';
 import {
   fetchBenchmarks,
@@ -30,6 +31,7 @@ import { AlertCircle, Sparkles } from 'lucide-react';
 const LOCAL_STORAGE_THEME_KEY = 'phronesis_theme';
 const LOCAL_STORAGE_HISTORY_KEY = 'phronesis_history';
 const LOCAL_STORAGE_SIDEBAR_KEY = 'phronesis_sidebar';
+const LOCAL_STORAGE_CHAT_LAYOUT_KEY = 'phronesis_chat_layout';
 
 function AppContent() {
   const { showToast } = useToast();
@@ -47,6 +49,11 @@ function AppContent() {
   const [isMethodologyOpen, setIsMethodologyOpen] = useState(false);
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
   const [externalTextToAppend, setExternalTextToAppend] = useState<string | undefined>(undefined);
+  const [chatLayoutMode, setChatLayoutMode] = useState<ChatLayoutMode>(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_CHAT_LAYOUT_KEY);
+    return (saved as ChatLayoutMode) || 'drawer';
+  });
+
 
   // Layout & Theme State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -307,6 +314,84 @@ function AppContent() {
     });
   };
 
+  const handleInsertAlternative = useCallback((alt: { name: string; description: string }) => {
+    const newId = `alt_${Date.now()}`;
+    const newAlt = {
+      id: newId,
+      name: alt.name,
+      description: alt.description || '',
+    };
+    setDecision((prev) => {
+      if (!prev) {
+        return {
+          decision_statement: 'New Socratic Decision',
+          alternatives: [newAlt],
+          states_of_world: [
+            { id: 's1', name: 'Optimistic State', prior_probability: 0.5 },
+            { id: 's2', name: 'Conservative State', prior_probability: 0.5 },
+          ],
+          payoff_matrix: [
+            { alternative_id: newId, state_id: 's1', utility: 75.0 },
+            { alternative_id: newId, state_id: 's2', utility: 45.0 },
+          ],
+          goals: [],
+          constraints: [],
+          assumptions: [],
+          unknowns: [],
+        };
+      }
+      const newCells = prev.states_of_world.map((s) => ({
+        alternative_id: newId,
+        state_id: s.id,
+        utility: 50.0,
+        narrative: 'Initialized from Socratic suggestion',
+      }));
+      return {
+        ...prev,
+        alternatives: [...prev.alternatives, newAlt],
+        payoff_matrix: [...prev.payoff_matrix, ...newCells],
+      };
+    });
+    if (step === 'input') {
+      setStep('editor');
+    }
+    showToast({
+      type: 'success',
+      title: 'Alternative Added',
+      description: `Added "${alt.name}" to your decision model.`,
+    });
+  }, [step, showToast]);
+
+  const handleInsertAssumption = useCallback((assump: { text: string; type?: string; testable?: boolean }) => {
+    const newAssumption = {
+      id: `a_${Date.now()}`,
+      text: assump.text,
+      type: assump.type || 'empirical',
+      testable: assump.testable !== false,
+    };
+    setDecision((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        assumptions: [...prev.assumptions, newAssumption],
+      };
+    });
+    showToast({
+      type: 'success',
+      title: 'Assumption Added',
+      description: 'Added testable assumption to calibration workbench.',
+    });
+  }, [showToast]);
+
+  const handleChangeChatLayoutMode = useCallback((mode: ChatLayoutMode) => {
+    setChatLayoutMode(mode);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_CHAT_LAYOUT_KEY, mode);
+    } catch (e) {
+      console.warn('Failed to save chat layout mode:', e);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex">
       {/* Collapsible / Responsive Sidebar */}
@@ -332,72 +417,122 @@ function AppContent() {
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
 
-      {/* Main Reading & Interaction Column Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header
-          onReset={handleReset}
-          currentStep={step}
-          onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
-          isDarkMode={isDarkMode}
-          onToggleTheme={handleToggleTheme}
-          onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
-          onToggleChat={() => setIsChatDrawerOpen((prev) => !prev)}
-          isChatOpen={isChatDrawerOpen}
-        />
+      {/* Main Content Area: Supports Docked Split-Screen Mode */}
+      <div className="flex-1 flex min-w-0">
+        {/* Primary Reading & Interaction Column Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <Header
+            onReset={handleReset}
+            currentStep={step}
+            onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
+            isDarkMode={isDarkMode}
+            onToggleTheme={handleToggleTheme}
+            onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
+            onToggleChat={() => setIsChatDrawerOpen((prev) => !prev)}
+            isChatOpen={isChatDrawerOpen}
+          />
 
-        <main className="flex-1 pb-16">
-          {error && (
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-4">
-              <div className="p-3.5 rounded-xl bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)] text-xs text-[var(--text-main)] flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 text-[var(--color-ochre)] shrink-0" />
-                <span className="font-ui">{error}</span>
+          <main className="flex-1 pb-16">
+            {error && (
+              <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-4">
+                <div className="p-3.5 rounded-xl bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)] text-xs text-[var(--text-main)] flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-[var(--color-ochre)] shrink-0" />
+                  <span className="font-ui">{error}</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {step === 'input' && (
-            <NarrativeInputView
-              onExtract={handleExtract}
-              isLoading={isLoading}
-              externalTextToAppend={externalTextToAppend}
-              onClearExternalText={() => setExternalTextToAppend(undefined)}
-            />
-          )}
+            {step === 'input' && (
+              <NarrativeInputView
+                onExtract={handleExtract}
+                isLoading={isLoading}
+                externalTextToAppend={externalTextToAppend}
+                onClearExternalText={() => setExternalTextToAppend(undefined)}
+              />
+            )}
 
-          {step === 'benchmarks' && (
-            <CanonicalDilemmasView
-              benchmarks={benchmarks}
-              onSelectBenchmark={handleSelectBenchmark}
-              onBackToInput={() => setStep('input')}
-            />
-          )}
+            {step === 'benchmarks' && (
+              <CanonicalDilemmasView
+                benchmarks={benchmarks}
+                onSelectBenchmark={handleSelectBenchmark}
+                onBackToInput={() => setStep('input')}
+              />
+            )}
 
-          {step === 'editor' && decision && (
-            <ModelEditorView
-              decision={decision}
-              onUpdateDecision={setDecision}
-              onRunAnalysis={handleRunAnalysis}
-              onBackToInput={() => setStep('input')}
-              isLoading={isLoading}
-            />
-          )}
+            {step === 'editor' && decision && (
+              <ModelEditorView
+                decision={decision}
+                onUpdateDecision={setDecision}
+                onRunAnalysis={handleRunAnalysis}
+                onBackToInput={() => setStep('input')}
+                isLoading={isLoading}
+              />
+            )}
 
-          {step === 'report' && bundle && report && (
-            <ReportView
-              bundle={bundle}
-              report={report}
-              onEditModel={() => setStep('editor')}
-              onNewDecision={handleReset}
-              onOpenExport={() => setIsExportModalOpen(true)}
-            />
-          )}
-        </main>
+            {step === 'report' && bundle && report && (
+              <ReportView
+                bundle={bundle}
+                report={report}
+                onEditModel={() => setStep('editor')}
+                onNewDecision={handleReset}
+                onOpenExport={() => setIsExportModalOpen(true)}
+              />
+            )}
+          </main>
 
-        {/* Subtle Disciplined Footer */}
-        <footer className="border-t border-[var(--border-subtle)] py-6 text-center text-xs text-[var(--text-faint)] font-mono">
-          <p>Phronesis (φρόνησις) · Auditable Human Judgment Under Uncertainty</p>
-        </footer>
+          {/* Subtle Disciplined Footer */}
+          <footer className="border-t border-[var(--border-subtle)] py-6 text-center text-xs text-[var(--text-faint)] font-mono">
+            <p>Phronesis (φρόνησις) · Auditable Human Judgment Under Uncertainty</p>
+          </footer>
+        </div>
+
+        {/* Docked Socratic Deliberation Workspace (Side-by-Side Panel) */}
+        {isChatDrawerOpen && chatLayoutMode === 'docked' && (
+          <SocraticChatDrawer
+            isOpen={isChatDrawerOpen}
+            onClose={() => setIsChatDrawerOpen(false)}
+            currentStep={step}
+            decision={decision}
+            bundle={bundle}
+            layoutMode={chatLayoutMode}
+            onChangeLayoutMode={handleChangeChatLayoutMode}
+            onInsertText={(text) => {
+              setExternalTextToAppend(text);
+              showToast({
+                type: 'info',
+                title: 'Notes Appended',
+                description: 'Appended Socratic insights directly to your dilemma input.',
+              });
+            }}
+            onInsertAlternative={handleInsertAlternative}
+            onInsertAssumption={handleInsertAssumption}
+          />
+        )}
       </div>
+
+      {/* Socratic Deliberation Overlay Drawer / Fullscreen Mode */}
+      {isChatDrawerOpen && chatLayoutMode !== 'docked' && (
+        <SocraticChatDrawer
+          isOpen={isChatDrawerOpen}
+          onClose={() => setIsChatDrawerOpen(false)}
+          currentStep={step}
+          decision={decision}
+          bundle={bundle}
+          layoutMode={chatLayoutMode}
+          onChangeLayoutMode={handleChangeChatLayoutMode}
+          onInsertText={(text) => {
+            setExternalTextToAppend(text);
+            showToast({
+              type: 'info',
+              title: 'Notes Appended',
+              description: 'Appended Socratic insights directly to your dilemma input.',
+            });
+          }}
+          onInsertAlternative={handleInsertAlternative}
+          onInsertAssumption={handleInsertAssumption}
+        />
+      )}
+
 
       {/* Pipeline Progress Indicator (During Reasoning Audit) */}
       {isLoading && loadingStage && (
@@ -420,22 +555,6 @@ function AppContent() {
           </div>
         </div>
       )}
-
-      {/* Socratic Deliberation / Temp Chat Companion Drawer */}
-      <SocraticChatDrawer
-        isOpen={isChatDrawerOpen}
-        onClose={() => setIsChatDrawerOpen(false)}
-        currentStep={step}
-        decision={decision}
-        onInsertText={(text) => {
-          setExternalTextToAppend(text);
-          showToast({
-            type: 'info',
-            title: 'Notes Appended',
-            description: 'Appended Socratic insights directly to your dilemma input.',
-          });
-        }}
-      />
 
       {/* First-Time Orientation Modal */}
       <OrientationModal

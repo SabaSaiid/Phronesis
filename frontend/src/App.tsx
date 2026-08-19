@@ -6,6 +6,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { ExportModal } from './components/ExportModal';
 import { OrientationModal } from './components/OrientationModal';
 import { MethodologyModal } from './components/MethodologyModal';
+import { SocraticChatDrawer } from './components/SocraticChatDrawer';
 import { ToastProvider, useToast } from './components/Toast';
 import { NarrativeInputView } from './features/input/NarrativeInputView';
 import { CanonicalDilemmasView } from './features/benchmarks/CanonicalDilemmasView';
@@ -44,6 +45,8 @@ function AppContent() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isMethodologyOpen, setIsMethodologyOpen] = useState(false);
+  const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
+  const [externalTextToAppend, setExternalTextToAppend] = useState<string | undefined>(undefined);
 
   // Layout & Theme State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -107,12 +110,15 @@ function AppContent() {
     setError(null);
   }, []);
 
-  // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘E)
+  // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘J)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsCommandPaletteOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
+        e.preventDefault();
+        setIsChatDrawerOpen((prev) => !prev);
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'n' && !e.shiftKey) {
         e.preventDefault();
         handleReset();
@@ -335,11 +341,13 @@ function AppContent() {
           isDarkMode={isDarkMode}
           onToggleTheme={handleToggleTheme}
           onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
+          onToggleChat={() => setIsChatDrawerOpen((prev) => !prev)}
+          isChatOpen={isChatDrawerOpen}
         />
 
         <main className="flex-1 pb-16">
           {error && (
-            <div className="max-w-[760px] mx-auto px-4 mt-4">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-4">
               <div className="p-3.5 rounded-xl bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)] text-xs text-[var(--text-main)] flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-[var(--color-ochre)] shrink-0" />
                 <span className="font-ui">{error}</span>
@@ -351,6 +359,8 @@ function AppContent() {
             <NarrativeInputView
               onExtract={handleExtract}
               isLoading={isLoading}
+              externalTextToAppend={externalTextToAppend}
+              onClearExternalText={() => setExternalTextToAppend(undefined)}
             />
           )}
 
@@ -410,6 +420,22 @@ function AppContent() {
           </div>
         </div>
       )}
+
+      {/* Socratic Deliberation / Temp Chat Companion Drawer */}
+      <SocraticChatDrawer
+        isOpen={isChatDrawerOpen}
+        onClose={() => setIsChatDrawerOpen(false)}
+        currentStep={step}
+        decision={decision}
+        onInsertText={(text) => {
+          setExternalTextToAppend(text);
+          showToast({
+            type: 'info',
+            title: 'Notes Appended',
+            description: 'Appended Socratic insights directly to your dilemma input.',
+          });
+        }}
+      />
 
       {/* First-Time Orientation Modal */}
       <OrientationModal

@@ -12,6 +12,8 @@ interface NarrativeInputViewProps {
   onExtract: (narrative: string) => Promise<void>;
   onSelectBenchmark?: (bm: BenchmarkItem) => void;
   isLoading: boolean;
+  externalTextToAppend?: string;
+  onClearExternalText?: () => void;
 }
 
 const STARTER_DILEMMAS = [
@@ -43,9 +45,20 @@ const LOADING_STEPS = [
 export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   onExtract,
   isLoading,
+  externalTextToAppend,
+  onClearExternalText,
 }) => {
   const [narrative, setNarrative] = useState('');
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+
+  useEffect(() => {
+    if (externalTextToAppend) {
+      setNarrative((prev) =>
+        prev ? `${prev.trim()}\n\n${externalTextToAppend.trim()}` : externalTextToAppend.trim()
+      );
+      onClearExternalText?.();
+    }
+  }, [externalTextToAppend, onClearExternalText]);
 
   useEffect(() => {
     let interval: any;
@@ -77,7 +90,7 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-[760px] mx-auto px-4 py-8 sm:py-12 space-y-6 animate-fade-in">
+    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6 animate-fade-in">
       {/* Centered Editorial Hero Greeting */}
       <div className="text-center space-y-3 pt-2 sm:pt-4">
         <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-main)] leading-tight">

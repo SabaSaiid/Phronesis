@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Sun, Moon, Share2, Plus } from 'lucide-react';
+import { Menu, Sun, Moon, Share2, Plus, MessageSquareQuote } from 'lucide-react';
 
 interface HeaderProps {
   onReset: () => void;
@@ -8,6 +8,8 @@ interface HeaderProps {
   isDarkMode: boolean;
   onToggleTheme: () => void;
   onOpenExport?: () => void;
+  onToggleChat?: () => void;
+  isChatOpen?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +19,8 @@ export const Header: React.FC<HeaderProps> = ({
   isDarkMode,
   onToggleTheme,
   onOpenExport,
+  onToggleChat,
+  isChatOpen,
 }) => {
   const steps = [
     { key: 'input', label: '1. Describe' },
@@ -28,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-[var(--bg-app)]/85 backdrop-blur-md border-b border-[var(--border-subtle)] transition-colors">
-      <div className="max-w-[760px] mx-auto px-4 h-14 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         {/* Left: Mobile Drawer Toggle */}
         <div className="flex items-center space-x-3">
           <button
@@ -72,8 +76,30 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-1" />
         )}
 
-        {/* Right: Export, Theme Toggle & New Button */}
+        {/* Right: Export, Socratic Deliberation Chat, Theme Toggle & New Button */}
         <div className="flex items-center space-x-1.5">
+          {/* Socratic Deliberation Chat Trigger */}
+          {onToggleChat && (
+            <button
+              type="button"
+              onClick={onToggleChat}
+              className={`
+                px-2.5 py-1 rounded-lg text-xs font-ui font-medium transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs
+                ${
+                  isChatOpen
+                    ? 'bg-[var(--color-verdigris)] text-white shadow-xs'
+                    : 'text-[var(--text-main)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--color-verdigris)]/50'
+                }
+              `}
+              title="Socratic Deliberation Chat (⌘J)"
+              aria-label="Toggle Socratic Companion"
+            >
+              <MessageSquareQuote className={`w-3.5 h-3.5 ${isChatOpen ? 'text-white' : 'text-[var(--color-verdigris)]'}`} />
+              <span className="hidden sm:inline">Deliberate</span>
+              <span className="hidden md:inline text-[9px] font-mono opacity-60 ml-0.5">⌘J</span>
+            </button>
+          )}
+
           {/* Export Report Trigger (Visible on Report view) */}
           {currentStep === 'report' && onOpenExport && (
             <button

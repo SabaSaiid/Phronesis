@@ -123,7 +123,7 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-[760px] mx-auto px-4 py-8 space-y-6 animate-fade-in">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6 animate-fade-in">
       {/* Top Navigation & Action Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div>

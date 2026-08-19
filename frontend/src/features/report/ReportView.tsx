@@ -1095,7 +1095,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-[760px] mx-auto px-4 py-8 space-y-8 animate-fade-in">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in">
       {/* Sticky Table of Contents Sub-Nav */}
       <div className="sticky top-14 z-20 py-2 px-3 rounded-2xl bg-[var(--bg-surface-glass)] backdrop-blur-md border border-[var(--border-subtle)] shadow-sm flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
         <div className="flex items-center space-x-1 text-xs font-ui">

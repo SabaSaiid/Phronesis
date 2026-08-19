@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, type HistoryItem } from './components/Sidebar';
 import { SettingsModal } from './components/SettingsModal';
+import { CommandPalette } from './components/CommandPalette';
+import { ExportModal } from './components/ExportModal';
+import { ToastProvider, useToast } from './components/Toast';
 import { NarrativeInputView } from './features/input/NarrativeInputView';
 import { ModelEditorView } from './features/editor/ModelEditorView';
 import { ReportView } from './features/report/ReportView';
@@ -23,7 +26,8 @@ const LOCAL_STORAGE_THEME_KEY = 'phronesis_theme';
 const LOCAL_STORAGE_HISTORY_KEY = 'phronesis_history';
 const LOCAL_STORAGE_SIDEBAR_KEY = 'phronesis_sidebar';
 
-export function App() {
+function AppContent() {
+  const { showToast } = useToast();
   const [step, setStep] = useState<'input' | 'editor' | 'report'>('input');
   const [benchmarks, setBenchmarks] = useState<BenchmarkItem[]>([]);
   const [decision, setDecision] = useState<StructuredDecision | null>(null);
@@ -33,6 +37,8 @@ export function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Layout & Theme State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -83,9 +89,38 @@ export function App() {
       });
   }, []);
 
-  const handleToggleTheme = () => {
+  const handleToggleTheme = useCallback(() => {
     setIsDarkMode((prev) => !prev);
-  };
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setStep('input');
+    setDecision(null);
+    setBundle(null);
+    setReport(null);
+    setCurrentDecisionId(undefined);
+    setError(null);
+  }, []);
+
+  // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘E)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'n' && !e.shiftKey) {
+        e.preventDefault();
+        handleReset();
+        showToast({
+          type: 'info',
+          title: 'New Decision',
+          description: 'Cleared workspace for fresh analysis.',
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleReset, showToast]);
 
   const handleExtract = async (narrative: string) => {
     setIsLoading(true);
@@ -97,8 +132,18 @@ export function App() {
       setReport(null);
       setCurrentDecisionId(undefined);
       setStep('editor');
+      showToast({
+        type: 'success',
+        title: 'Model Extracted',
+        description: 'Alternatives and probability matrices initialized.',
+      });
     } catch (err: any) {
       setError(err.message || 'Extraction failed. Please try again.');
+      showToast({
+        type: 'error',
+        title: 'Extraction Error',
+        description: err.message || 'Failed to extract decision parameters.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -111,6 +156,11 @@ export function App() {
     setReport(null);
     setCurrentDecisionId(bm.id);
     setStep('editor');
+    showToast({
+      type: 'info',
+      title: 'Canonical Dilemma Loaded',
+      description: `Loaded "${bm.title}" into the calibration workbench.`,
+    });
   };
 
   const handleRunAnalysis = async () => {
@@ -136,6 +186,7 @@ export function App() {
           : decision.decision_statement,
         timestamp: Date.now(),
         previewText: decision.decision_statement,
+        isPinned: false,
         data: {
           decision,
           bundle: analysisBundle,
@@ -144,7 +195,7 @@ export function App() {
       };
 
       setHistory((prev) => {
-        const updated = [newHistoryItem, ...prev.filter((item) => item.title !== newHistoryItem.title)].slice(0, 15);
+        const updated = [newHistoryItem, ...prev.filter((item) => item.title !== newHistoryItem.title)].slice(0, 20);
         try {
           localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(updated));
         } catch (e) {
@@ -154,8 +205,18 @@ export function App() {
       });
 
       setStep('report');
+      showToast({
+        type: 'success',
+        title: 'Audit Complete',
+        description: 'Deterministic solvers and 4-lens philosophy dossier ready.',
+      });
     } catch (err: any) {
       setError(err.message || 'Analysis run failed.');
+      showToast({
+        type: 'error',
+        title: 'Audit Error',
+        description: err.message || 'Reasoning audit encountered an issue.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -172,6 +233,11 @@ export function App() {
       } else if (item.data.decision) {
         setStep('editor');
       }
+      showToast({
+        type: 'info',
+        title: 'Dossier Loaded',
+        description: `Opened "${item.title}".`,
+      });
     }
   };
 
@@ -182,6 +248,11 @@ export function App() {
     } catch (e) {
       console.warn('Failed to clear history:', e);
     }
+    showToast({
+      type: 'info',
+      title: 'History Cleared',
+      description: 'All past local decision records removed.',
+    });
   };
 
   const handleDeleteHistoryItem = (id: string) => {
@@ -199,13 +270,18 @@ export function App() {
     }
   };
 
-  const handleReset = () => {
-    setStep('input');
-    setDecision(null);
-    setBundle(null);
-    setReport(null);
-    setCurrentDecisionId(undefined);
-    setError(null);
+  const handleTogglePinHistoryItem = (id: string) => {
+    setHistory((prev) => {
+      const updated = prev.map((item) =>
+        item.id === id ? { ...item, isPinned: !item.isPinned } : item
+      );
+      try {
+        localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Failed to persist history after pin toggle:', e);
+      }
+      return updated;
+    });
   };
 
   return (
@@ -222,11 +298,13 @@ export function App() {
         onSelectBenchmark={handleSelectBenchmark}
         onNewDecision={handleReset}
         onDeleteHistoryItem={handleDeleteHistoryItem}
+        onTogglePinHistoryItem={handleTogglePinHistoryItem}
         onClearHistory={handleClearHistory}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}
         currentDecisionId={currentDecisionId}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
 
       {/* Main Reading & Interaction Column Area */}
@@ -237,11 +315,13 @@ export function App() {
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
           isDarkMode={isDarkMode}
           onToggleTheme={handleToggleTheme}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
         />
 
         <main className="flex-1 pb-16">
           {error && (
-            <div className="max-w-[720px] mx-auto px-4 mt-4">
+            <div className="max-w-[760px] mx-auto px-4 mt-4">
               <div className="p-3.5 rounded-xl bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)] text-xs text-[var(--text-main)] flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-[var(--color-ochre)] shrink-0" />
                 <span className="font-ui">{error}</span>
@@ -274,6 +354,7 @@ export function App() {
               report={report}
               onEditModel={() => setStep('editor')}
               onNewDecision={handleReset}
+              onOpenExport={() => setIsExportModalOpen(true)}
             />
           )}
         </main>
@@ -292,7 +373,42 @@ export function App() {
           handleClearHistory();
         }}
       />
+
+      {/* Global Command Palette (⌘K Spotlight) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        history={history}
+        benchmarks={benchmarks}
+        onSelectHistoryItem={handleSelectHistoryItem}
+        onSelectBenchmark={handleSelectBenchmark}
+        onNewDecision={handleReset}
+        onToggleTheme={handleToggleTheme}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
+        onEditModel={decision ? () => setStep('editor') : undefined}
+        isDarkMode={isDarkMode}
+        hasActiveReport={!!(bundle && report)}
+      />
+
+      {/* Export & Sharing Modal */}
+      {bundle && report && (
+        <ExportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          bundle={bundle}
+          report={report}
+        />
+      )}
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
 

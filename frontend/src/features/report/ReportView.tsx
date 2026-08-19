@@ -4,6 +4,7 @@ import { submitFlagFeedback } from '../../lib/api';
 import { BalanceScaleSensitivity } from './BalanceScaleSensitivity';
 import { SensitivityChart } from './SensitivityChart';
 import { RegretMatrixHeatmap } from './RegretMatrixHeatmap';
+import { useToast } from '../../components/Toast';
 import {
   Sparkles,
   FlaskConical,
@@ -23,7 +24,8 @@ import {
   ThumbsDown,
   Check,
   Layers,
-  History
+  History,
+  Share2
 } from 'lucide-react';
 
 interface ReportViewProps {
@@ -31,6 +33,7 @@ interface ReportViewProps {
   report: ReportResponse;
   onEditModel: () => void;
   onNewDecision?: () => void;
+  onOpenExport?: () => void;
 }
 
 export const ReportView: React.FC<ReportViewProps> = ({
@@ -38,7 +41,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
   report,
   onEditModel,
   onNewDecision,
+  onOpenExport,
 }) => {
+  const { showToast } = useToast();
   const [showFullMarkdown, setShowFullMarkdown] = useState(false);
   const [showAdvancedCharts, setShowAdvancedCharts] = useState(false);
   const [activePhilosophyTab, setActivePhilosophyTab] = useState<string>('stoicism_v1');
@@ -66,24 +71,100 @@ export const ReportView: React.FC<ReportViewProps> = ({
         ...prev,
         [flagId]: { voted: true, isPositive }
       }));
+      showToast({
+        type: 'success',
+        title: 'Feedback Recorded',
+        description: isPositive ? 'Flag confirmed helpful.' : 'Flag noted for calibration.',
+      });
     } catch (err) {
       console.warn('Feedback submission error:', err);
+      showToast({
+        type: 'error',
+        title: 'Submission Failed',
+        description: 'Could not record calibration feedback.',
+      });
     }
   };
 
   const frameworks = philosophy_multi_layer?.frameworks || [];
 
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
-    <div className="w-full max-w-[720px] mx-auto px-4 py-8 space-y-8">
+    <div className="w-full max-w-[760px] mx-auto px-4 py-8 space-y-8 animate-fade-in">
+      {/* Sticky Table of Contents Sub-Nav */}
+      <div className="sticky top-14 z-20 py-2 px-3 rounded-2xl bg-[var(--bg-surface-glass)] backdrop-blur-md border border-[var(--border-subtle)] shadow-sm flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex items-center space-x-1 text-xs font-ui">
+          <button
+            type="button"
+            onClick={() => scrollToSection('sec-voi')}
+            className="px-2.5 py-1 rounded-lg text-[var(--color-ochre)] hover:bg-[var(--color-ochre-subtle)] font-medium transition-colors whitespace-nowrap cursor-pointer"
+          >
+            VoI Test
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('sec-math')}
+            className="px-2.5 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors whitespace-nowrap cursor-pointer"
+          >
+            Math & Scale
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('sec-bias')}
+            className="px-2.5 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors whitespace-nowrap cursor-pointer"
+          >
+            Cognitive Biases
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('sec-philosophy')}
+            className="px-2.5 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors whitespace-nowrap cursor-pointer"
+          >
+            4 Lenses
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('sec-critical')}
+            className="px-2.5 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors whitespace-nowrap cursor-pointer"
+          >
+            Critical Thinking
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('sec-lineage')}
+            className="px-2.5 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors whitespace-nowrap cursor-pointer"
+          >
+            Citations
+          </button>
+        </div>
+
+        {onOpenExport && (
+          <button
+            type="button"
+            onClick={onOpenExport}
+            className="px-2.5 py-1 rounded-lg text-xs font-ui font-medium text-[var(--color-ochre)] bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30 hover:bg-[var(--color-ochre)]/20 transition-colors flex items-center space-x-1 whitespace-nowrap cursor-pointer shrink-0"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+        )}
+      </div>
+
       {/* Editorial Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div>
           <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] text-xs font-ui font-medium mb-1.5">
             <Compass className="w-3.5 h-3.5" />
-            <span>Auditable Reasoning Report</span>
+            <span>Auditable Reasoning Dossier</span>
           </div>
           <h2 className="font-display text-2xl sm:text-3xl font-semibold text-[var(--text-main)] tracking-tight">
-            Decision Audit & Sensitivity Report
+            Decision Audit & Sensitivity Dossier
           </h2>
           <p className="font-body text-xs sm:text-sm text-[var(--text-muted)] mt-1 leading-relaxed">
             "{structured_decision.decision_statement}"
@@ -116,7 +197,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       )}
 
       {/* Signature Ochre Hero: Value of Information (VoI) Callout */}
-      <section className="phronesis-voi-card p-6 sm:p-7 space-y-4 relative overflow-hidden">
+      <section id="sec-voi" className="phronesis-voi-card p-6 sm:p-7 space-y-4 relative overflow-hidden">
         <div className="flex items-center space-x-2 text-[var(--color-ochre)] text-xs font-ui font-semibold uppercase tracking-wider">
           <FlaskConical className="w-4 h-4 text-[var(--color-ochre)]" />
           <span>Value of Information (VoI) · Recommended Next Test</span>
@@ -134,7 +215,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </p>
         </div>
 
-        <div className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--color-ochre)]/30 text-xs sm:text-sm text-[var(--text-main)] flex items-start space-x-3">
+        <div className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--color-ochre)]/30 text-xs sm:text-sm text-[var(--text-main)] flex items-start space-x-3 shadow-2xs">
           <Target className="w-4 h-4 text-[var(--color-ochre)] shrink-0 mt-0.5" />
           <div className="space-y-1">
             <span className="font-ui font-semibold text-[var(--color-ochre)]">
@@ -148,116 +229,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
       </section>
 
       {/* ========================================================================= */}
-      {/* LAYER CARD: Psychological Lens (Cognitive Bias Pattern Recognition)       */}
-      {/* ========================================================================= */}
-      <section className="phronesis-card p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 rounded-lg bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]">
-              <Brain className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-display font-semibold text-base text-[var(--text-main)]">
-                Psychological Lens: Cognitive Bias Pattern Recognition
-              </h3>
-              <p className="font-body text-xs text-[var(--text-muted)]">
-                Evaluated against peer-reviewed behavioral economics literature
-              </p>
-            </div>
-          </div>
-          <span className="font-data text-xs text-[var(--text-muted)]">
-            {bias_layer.flagged_patterns.length} Flagged
-          </span>
-        </div>
-
-        {bias_layer.flagged_patterns.length === 0 ? (
-          <div className="p-4 rounded-lg bg-[var(--bg-app)] text-xs text-[var(--text-muted)] font-body text-center">
-            No acute cognitive bias triggers detected in current assumptions.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {bias_layer.flagged_patterns.map((pat) => {
-              const fb = feedbackStates[pat.id];
-              const isExplicit = pat.grounding_tier === 'explicit_variable';
-              return (
-                <div
-                  key={pat.id}
-                  className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2.5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h4 className="font-display font-semibold text-sm text-[var(--text-main)]">
-                          {pat.name}
-                        </h4>
-                        <span
-                          className={`font-ui text-[10px] px-2 py-0.5 rounded font-medium ${
-                            isExplicit
-                              ? 'bg-[var(--color-ochre)]/15 text-[var(--color-ochre)] border border-[var(--color-ochre)]/30'
-                              : 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]'
-                          }`}
-                        >
-                          {isExplicit ? 'Explicit Variable' : 'Narrative Nuance'}
-                        </span>
-                      </div>
-                      <div className="font-body text-[11px] text-[var(--text-muted)] italic mt-0.5">
-                        Attributed: {pat.source}
-                      </div>
-                    </div>
-
-                    {/* Discreet Thumbs Up / Down Feedback */}
-                    <div className="flex items-center space-x-1 shrink-0">
-                      {fb?.voted ? (
-                        <span className="font-ui text-[10px] text-[var(--color-verdigris)] flex items-center space-x-1">
-                          <Check className="w-3 h-3" />
-                          <span>Feedback saved</span>
-                        </span>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleFeedback(pat.id, 'bias', true)}
-                            title="Helpful / Accurate Flag"
-                            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-                          >
-                            <ThumbsUp className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleFeedback(pat.id, 'bias', false)}
-                            title="False Positive / Misidentified"
-                            className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-                          >
-                            <ThumbsDown className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <p className="font-body text-xs text-[var(--text-main)] leading-relaxed">
-                    {pat.caveat_analysis}
-                  </p>
-
-                  <div className="p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs">
-                    <span className="font-ui font-semibold text-[var(--color-verdigris)]">
-                      Reframing Inquiry:{' '}
-                    </span>
-                    <span className="font-body text-[var(--text-main)] italic">
-                      "{pat.question_to_surface}"
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* ========================================================================= */}
       {/* LAYER CARD: Decision Theory & Mathematical Analysis                       */}
       {/* ========================================================================= */}
-      <section className="phronesis-card p-6 space-y-6">
+      <section id="sec-math" className="phronesis-card p-6 space-y-6">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
           <div className="flex items-center space-x-2.5">
             <div className="p-1.5 rounded-lg bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]">
@@ -305,7 +279,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         {val} <span className="font-normal text-[var(--text-muted)]">EU</span>
                       </span>
                       {isTop && (
-                        <span className="font-ui text-[10px] px-1.5 py-0.2 rounded bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] font-medium">
+                        <span className="font-ui text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] font-medium">
                           Favored
                         </span>
                       )}
@@ -342,7 +316,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         {maxR} <span className="font-normal text-[var(--text-muted)]">Max R</span>
                       </span>
                       {isMinimax && (
-                        <span className="font-ui text-[10px] px-1.5 py-0.2 rounded bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] font-medium">
+                        <span className="font-ui text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] font-medium">
                           Optimal
                         </span>
                       )}
@@ -396,9 +370,116 @@ export const ReportView: React.FC<ReportViewProps> = ({
       </section>
 
       {/* ========================================================================= */}
+      {/* LAYER CARD: Psychological Lens (Cognitive Bias Pattern Recognition)       */}
+      {/* ========================================================================= */}
+      <section id="sec-bias" className="phronesis-card p-6 space-y-4">
+        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-1.5 rounded-lg bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]">
+              <Brain className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-display font-semibold text-base text-[var(--text-main)]">
+                Psychological Lens: Cognitive Bias Pattern Recognition
+              </h3>
+              <p className="font-body text-xs text-[var(--text-muted)]">
+                Evaluated against peer-reviewed behavioral economics literature
+              </p>
+            </div>
+          </div>
+          <span className="font-data text-xs text-[var(--text-muted)]">
+            {bias_layer.flagged_patterns.length} Flagged
+          </span>
+        </div>
+
+        {bias_layer.flagged_patterns.length === 0 ? (
+          <div className="p-4 rounded-xl bg-[var(--bg-app)] text-xs text-[var(--text-muted)] font-body text-center">
+            No acute cognitive bias triggers detected in current assumptions.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {bias_layer.flagged_patterns.map((pat) => {
+              const fb = feedbackStates[pat.id];
+              const isExplicit = pat.grounding_tier === 'explicit_variable';
+              return (
+                <div
+                  key={pat.id}
+                  className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-display font-semibold text-sm text-[var(--text-main)]">
+                          {pat.name}
+                        </h4>
+                        <span
+                          className={`font-ui text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                            isExplicit
+                              ? 'bg-[var(--color-ochre)]/15 text-[var(--color-ochre)] border border-[var(--color-ochre)]/30'
+                              : 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]'
+                          }`}
+                        >
+                          {isExplicit ? 'Explicit Variable' : 'Narrative Nuance'}
+                        </span>
+                      </div>
+                      <div className="font-body text-[11px] text-[var(--text-muted)] italic mt-0.5">
+                        Attributed: {pat.source}
+                      </div>
+                    </div>
+
+                    {/* Discreet Thumbs Up / Down Feedback */}
+                    <div className="flex items-center space-x-1 shrink-0">
+                      {fb?.voted ? (
+                        <span className="font-ui text-[10px] text-[var(--color-verdigris)] flex items-center space-x-1">
+                          <Check className="w-3 h-3" />
+                          <span>Feedback saved</span>
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleFeedback(pat.id, 'bias', true)}
+                            title="Helpful / Accurate Flag"
+                            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                          >
+                            <ThumbsUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleFeedback(pat.id, 'bias', false)}
+                            title="False Positive / Misidentified"
+                            className="p-1 rounded text-[var(--text-muted)] hover:text-rose-500 hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                          >
+                            <ThumbsDown className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="font-body text-xs text-[var(--text-main)] leading-relaxed">
+                    {pat.caveat_analysis}
+                  </p>
+
+                  <div className="p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs">
+                    <span className="font-ui font-semibold text-[var(--color-verdigris)]">
+                      Reframing Inquiry:{' '}
+                    </span>
+                    <span className="font-body text-[var(--text-main)] italic">
+                      "{pat.question_to_surface}"
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* ========================================================================= */}
       {/* LAYER CARD: Multi-Framework Philosophical Reflection (4 Parallel Lenses)   */}
       {/* ========================================================================= */}
-      <section className="phronesis-card p-6 space-y-4">
+      <section id="sec-philosophy" className="phronesis-card p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
           <div className="flex items-center space-x-2.5">
             <div className="p-1.5 rounded-lg bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]">
@@ -455,7 +536,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         Source: {fw.source}
                       </p>
                     </div>
-                    <span className="font-ui text-[10px] text-[var(--color-verdigris)] px-2 py-0.5 rounded bg-[var(--color-verdigris-subtle)]">
+                    <span className="font-ui text-[10px] text-[var(--color-verdigris)] px-2 py-0.5 rounded-full bg-[var(--color-verdigris-subtle)]">
                       {fw.field}
                     </span>
                   </div>
@@ -518,7 +599,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       {/* ========================================================================= */}
       {/* LAYER CARD: Critical Thinking & Empirical Grounding                       */}
       {/* ========================================================================= */}
-      <section className="phronesis-card p-6 space-y-4">
+      <section id="sec-critical" className="phronesis-card p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
           <div className="flex items-center space-x-2.5">
             <div className="p-1.5 rounded-lg bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]">
@@ -569,7 +650,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       {/* ========================================================================= */}
       {/* LAYER CARD: Intellectual Lineage & Sourced Attributions                   */}
       {/* ========================================================================= */}
-      <section className="phronesis-card p-6 space-y-4">
+      <section id="sec-lineage" className="phronesis-card p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
           <div className="flex items-center space-x-2.5">
             <div className="p-1.5 rounded-lg bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]">
@@ -596,7 +677,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 <span className="font-ui font-semibold text-[var(--text-main)]">
                   {src.referenced_item}
                 </span>
-                <span className="font-ui text-[10px] text-[var(--color-verdigris)] px-2 py-0.5 rounded bg-[var(--color-verdigris-subtle)]">
+                <span className="font-ui text-[10px] text-[var(--color-verdigris)] px-2 py-0.5 rounded-full bg-[var(--color-verdigris-subtle)]">
                   {src.field}
                 </span>
               </div>
@@ -642,16 +723,29 @@ export const ReportView: React.FC<ReportViewProps> = ({
           <span>Calibrate Inputs & Re-run</span>
         </button>
 
-        {onNewDecision && (
-          <button
-            type="button"
-            onClick={onNewDecision}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl btn-verdigris font-ui font-medium text-xs flex items-center justify-center space-x-2 shadow-sm transition-all cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Analyze Another Decision</span>
-          </button>
-        )}
+        <div className="flex items-center space-x-2 w-full sm:w-auto">
+          {onOpenExport && (
+            <button
+              type="button"
+              onClick={onOpenExport}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl font-ui text-xs font-medium text-[var(--color-ochre)] bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30 hover:bg-[var(--color-ochre)]/20 transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Export Dossier</span>
+            </button>
+          )}
+
+          {onNewDecision && (
+            <button
+              type="button"
+              onClick={onNewDecision}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl btn-verdigris font-ui font-medium text-xs flex items-center justify-center space-x-2 shadow-sm transition-all cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Analyze Another Decision</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

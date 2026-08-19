@@ -51,8 +51,7 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
   const deltaEU = eu1 - eu2; // positive means alt1 is heavier (tips down left)
   const inflectionPct = Math.round(sensitivity.inflection_threshold * 100);
 
-  // Tilt angle: left heavy = positive rotation (down on left, up on right)
-  // Let beam angle be in degrees: -15deg to +15deg
+  // Tilt angle: left heavy = negative rotation in SVG coords (down on left)
   const maxTilt = 14;
   const tiltAngle = Math.max(-maxTilt, Math.min(maxTilt, -(deltaEU / 25) * maxTilt));
 
@@ -102,20 +101,19 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
 
         <div className="flex items-center space-x-2 text-xs">
           <span className="text-[var(--text-muted)]">Tipping threshold:</span>
-          <span className="font-data font-semibold text-[var(--color-ochre)] px-2 py-0.5 rounded bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30">
+          <span className="font-data font-semibold text-[var(--color-ochre)] px-2 py-0.5 rounded-full bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30">
             p* = {inflectionPct}%
           </span>
         </div>
       </div>
 
       {/* SVG Balance Scale Visual */}
-      <div className="relative w-full overflow-hidden rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] p-4 flex flex-col items-center justify-center">
+      <div className="relative w-full overflow-hidden rounded-2xl bg-[var(--bg-app)] border border-[var(--border-subtle)] p-4 flex flex-col items-center justify-center shadow-xs">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           className="w-full max-w-[500px] h-auto select-none"
           style={{ overflow: 'visible' }}
         >
-          {/* Gradients and Filters */}
           <defs>
             <linearGradient id="bronzeBeam" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#8A8578" />
@@ -129,7 +127,6 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
           </defs>
 
           {/* Central Pillar & Pedestal Stand */}
-          {/* Base pedestal */}
           <path
             d="M 220,195 L 300,195 L 290,180 L 230,180 Z"
             fill="var(--color-slate)"
@@ -272,10 +269,10 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
           />
         </svg>
 
-        {/* Pan Labels & Mono Values Overlay */}
-        <div className="w-full grid grid-cols-2 gap-4 mt-1 pt-2 border-t border-[var(--border-subtle)] text-xs">
+        {/* Pan Labels & Values */}
+        <div className="w-full grid grid-cols-2 gap-3.5 mt-1 pt-2 border-t border-[var(--border-subtle)] text-xs">
           {/* Left Alternative Info */}
-          <div className={`p-2.5 rounded-lg transition-all ${
+          <div className={`p-3 rounded-xl transition-all ${
             isAlt1Winning
               ? 'bg-[var(--bg-surface-raised)] border border-[var(--color-verdigris)] shadow-sm'
               : 'bg-[var(--bg-surface)] border border-[var(--border-subtle)] opacity-80'
@@ -285,7 +282,7 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
                 {alt1.name}
               </span>
               {isAlt1Winning && (
-                <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-[var(--color-verdigris)] text-[#F5F2EA]">
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded-full bg-[var(--color-verdigris)] text-[#F5F2EA]">
                   Favored
                 </span>
               )}
@@ -299,7 +296,7 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
           </div>
 
           {/* Right Alternative Info */}
-          <div className={`p-2.5 rounded-lg transition-all ${
+          <div className={`p-3 rounded-xl transition-all ${
             isAlt2Winning
               ? 'bg-[var(--bg-surface-raised)] border border-[var(--color-verdigris)] shadow-sm'
               : 'bg-[var(--bg-surface)] border border-[var(--border-subtle)] opacity-80'
@@ -309,7 +306,7 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
                 {alt2.name}
               </span>
               {isAlt2Winning && (
-                <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-[var(--color-verdigris)] text-[#F5F2EA]">
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded-full bg-[var(--color-verdigris)] text-[#F5F2EA]">
                   Favored
                 </span>
               )}
@@ -325,7 +322,7 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
       </div>
 
       {/* Interactive Probability Slider */}
-      <div className="space-y-3 p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+      <div className="space-y-3 p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
         <div className="flex items-center justify-between text-xs">
           <label htmlFor={sliderId} className="font-ui font-medium text-[var(--text-main)] flex items-center space-x-1.5">
             <span>Simulate Probability of State:</span>
@@ -336,7 +333,7 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
           </div>
         </div>
 
-        {/* Custom Range Slider with Inflection Marker */}
+        {/* Range Slider with Ochre Inflection Marker */}
         <div className="relative pt-1 pb-3">
           <input
             id={sliderId}
@@ -348,28 +345,28 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
             className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-[var(--bg-app)] accent-[var(--color-verdigris)] border border-[var(--border-subtle)] focus-visible:ring-2 focus-visible:ring-[var(--color-verdigris)]"
           />
 
-          {/* Tipping Point Ochre Marker on Slider Track */}
+          {/* Tipping Point Marker */}
           {inflectionPct >= 0 && inflectionPct <= 100 && (
             <div
               className="absolute top-0 flex flex-col items-center pointer-events-none transform -translate-x-1/2"
               style={{ left: `${inflectionPct}%` }}
             >
               <div className="w-2.5 h-2.5 rotate-45 bg-[var(--color-ochre)] shadow-sm mt-0.5" />
-              <div className="mt-4 px-1.5 py-0.5 rounded bg-[var(--bg-surface-raised)] border border-[var(--color-ochre)] text-[10px] font-data text-[var(--color-ochre)] whitespace-nowrap shadow-sm">
+              <div className="mt-4 px-1.5 py-0.5 rounded-full bg-[var(--bg-surface-raised)] border border-[var(--color-ochre)] text-[10px] font-data text-[var(--color-ochre)] whitespace-nowrap shadow-sm">
                 p* = {inflectionPct}%
               </div>
             </div>
           )}
         </div>
 
-        {/* Preset Quick-Buttons */}
+        {/* Preset Buttons */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-subtle)] text-xs">
           <div className="flex items-center space-x-2">
             <span className="text-[11px] text-[var(--text-muted)] font-ui">Presets:</span>
             <button
               type="button"
               onClick={() => setSliderP(initialP)}
-              className="px-2 py-1 rounded bg-[var(--bg-app)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] text-[11px] font-data text-[var(--text-main)] transition-colors"
+              className="px-2 py-1 rounded-lg bg-[var(--bg-app)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] text-[11px] font-data text-[var(--text-main)] transition-colors cursor-pointer"
             >
               Initial Prior ({initialP}%)
             </button>
@@ -377,17 +374,24 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
               <button
                 type="button"
                 onClick={() => setSliderP(inflectionPct)}
-                className="px-2 py-1 rounded bg-[var(--color-ochre-subtle)] hover:bg-[var(--color-ochre)]/20 border border-[var(--color-ochre)]/40 text-[11px] font-data text-[var(--color-ochre)] font-medium transition-colors"
+                className="px-2 py-1 rounded-lg bg-[var(--color-ochre-subtle)] hover:bg-[var(--color-ochre)]/20 border border-[var(--color-ochre)]/40 text-[11px] font-data text-[var(--color-ochre)] font-medium transition-colors cursor-pointer"
               >
                 At Tipping Point ({inflectionPct}%)
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setSliderP(50)}
+              className="px-2 py-1 rounded-lg bg-[var(--bg-app)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] text-[11px] font-data text-[var(--text-main)] transition-colors cursor-pointer"
+            >
+              50 / 50
+            </button>
           </div>
 
           <button
             type="button"
             onClick={() => setSliderP(initialP)}
-            className="flex items-center space-x-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+            className="flex items-center space-x-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
           >
             <RotateCcw className="w-3 h-3" />
             <span>Reset</span>
@@ -396,7 +400,7 @@ export const BalanceScaleSensitivity: React.FC<BalanceScaleSensitivityProps> = (
       </div>
 
       {/* Dynamic Analytical Verdict */}
-      <div className="p-3.5 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] text-xs text-[var(--text-muted)] flex items-start space-x-2.5">
+      <div className="p-3.5 rounded-2xl bg-[var(--bg-app)] border border-[var(--border-subtle)] text-xs text-[var(--text-muted)] flex items-start space-x-2.5">
         <Sparkles className="w-4 h-4 text-[var(--color-verdigris)] shrink-0 mt-0.5" />
         <div className="leading-relaxed font-body">
           {isBalanced ? (

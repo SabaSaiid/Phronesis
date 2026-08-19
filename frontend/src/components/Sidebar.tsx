@@ -10,7 +10,10 @@ import {
   BookOpen,
   Trash2,
   X,
-  Settings
+  Settings,
+  Search,
+  Pin,
+  Command
 } from 'lucide-react';
 import type { BenchmarkItem } from '../types';
 import { formatRelativeTime } from '../lib/formatTime';
@@ -20,6 +23,7 @@ export interface HistoryItem {
   title: string;
   timestamp: number;
   previewText: string;
+  isPinned?: boolean;
   data: any; // Saved full state or decision
 }
 
@@ -34,11 +38,13 @@ interface SidebarProps {
   onSelectBenchmark: (bm: BenchmarkItem) => void;
   onNewDecision: () => void;
   onDeleteHistoryItem?: (id: string) => void;
+  onTogglePinHistoryItem?: (id: string) => void;
   onClearHistory: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
   currentDecisionId?: string;
   onOpenSettings?: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -52,12 +58,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectBenchmark,
   onNewDecision,
   onDeleteHistoryItem,
+  onTogglePinHistoryItem,
   onClearHistory,
   isDarkMode,
   onToggleTheme,
   currentDecisionId,
   onOpenSettings,
+  onOpenCommandPalette,
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Close mobile drawer on Escape key
@@ -85,13 +94,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const isExpanded = isOpen || isMobileOpen;
 
+  // Filter history & benchmarks by search
+  const cleanQ = searchQuery.toLowerCase().trim();
+  const filteredHistory = history.filter(
+    (h) => h.title.toLowerCase().includes(cleanQ) || (h.previewText && h.previewText.toLowerCase().includes(cleanQ))
+  );
+
+  const pinnedItems = filteredHistory.filter((h) => h.isPinned);
+  const recentItems = filteredHistory.filter((h) => !h.isPinned);
+
+  const filteredBenchmarks = benchmarks.filter(
+    (b) => b.title.toLowerCase().includes(cleanQ) || b.narrative.toLowerCase().includes(cleanQ)
+  );
+
   return (
     <>
       {/* Mobile Backdrop */}
       {isMobileOpen && (
         <div
           onClick={onCloseMobile}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden transition-opacity"
           aria-hidden="true"
         />
       )}
@@ -102,7 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           fixed md:sticky top-0 left-0 z-50 h-screen bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)]
           flex flex-col justify-between transition-all duration-200 ease-in-out select-none
           ${isMobileOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'}
-          ${isOpen ? 'md:w-64' : 'md:w-16'}
+          ${isOpen ? 'md:w-68' : 'md:w-16'}
         `}
       >
         {/* Top Header */}
@@ -114,11 +136,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onNewDecision();
                 onCloseMobile();
               }}
-              className="flex items-center space-x-2.5 cursor-pointer overflow-hidden group text-left focus:outline-hidden"
-              title="Phronesis - Practical Wisdom Under Risk"
+              className="flex items-center space-x-2.5 cursor-pointer overflow-hidden group text-left focus:outline-none"
+              title="Phronesis - Practical Wisdom Under Uncertainty"
             >
-              <div className="w-8 h-8 rounded-lg bg-[var(--color-verdigris)]/15 border border-[var(--color-verdigris)]/30 flex items-center justify-center text-[var(--color-verdigris)] shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-                <Compass className="w-4.5 h-4.5" />
+              <div className="w-8 h-8 rounded-xl bg-[var(--color-verdigris)]/15 border border-[var(--color-verdigris)]/30 flex items-center justify-center text-[var(--color-verdigris)] shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                <Compass className="w-4.5 h-4.5 group-hover:rotate-12 transition-transform" />
               </div>
               <div className="truncate">
                 <div className="flex items-center space-x-1.5">
@@ -130,7 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </span>
                 </div>
                 <div className="text-[10px] text-[var(--text-muted)] font-ui truncate">
-                  Practical Wisdom Under Risk
+                  Practical Wisdom Under Uncertainty
                 </div>
               </div>
             </button>
@@ -158,12 +180,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         ) : (
           /* Collapsed Desktop Header */
-          <div className="p-2 border-b border-[var(--border-subtle)] flex items-center justify-center">
+          <div className="p-2.5 border-b border-[var(--border-subtle)] flex items-center justify-center">
             <button
               type="button"
               onClick={onToggle}
-              className="w-10 h-10 rounded-lg bg-[var(--color-verdigris)]/15 border border-[var(--color-verdigris)]/30 flex items-center justify-center text-[var(--color-verdigris)] hover:scale-105 hover:bg-[var(--color-verdigris)]/25 transition-all shadow-2xs cursor-pointer group"
-              title="Expand sidebar"
+              className="w-10 h-10 rounded-xl bg-[var(--color-verdigris)]/15 border border-[var(--color-verdigris)]/30 flex items-center justify-center text-[var(--color-verdigris)] hover:scale-105 hover:bg-[var(--color-verdigris)]/25 transition-all shadow-xs cursor-pointer group"
+              title="Expand sidebar (Click to open)"
               aria-label="Expand sidebar"
             >
               <Compass className="w-5 h-5 group-hover:rotate-12 transition-transform" />
@@ -171,48 +193,162 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        {/* Action Button: + New Decision */}
+        {/* Action Button: + New Decision & Quick Search Trigger */}
         {isExpanded ? (
-          <div className="p-2.5">
+          <div className="p-2.5 space-y-2 border-b border-[var(--border-subtle)]">
             <button
               type="button"
               onClick={() => {
                 onNewDecision();
                 onCloseMobile();
               }}
-              className="w-full py-2 px-3 rounded-lg text-xs font-ui font-medium flex items-center justify-center space-x-2 bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] text-[var(--text-main)] hover:border-[var(--color-verdigris)]/50 transition-all shadow-2xs cursor-pointer group"
-              title="Start New Decision"
+              className="w-full py-2 px-3 rounded-xl text-xs font-ui font-medium flex items-center justify-between bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] text-[var(--text-main)] hover:border-[var(--color-verdigris)]/60 transition-all shadow-xs cursor-pointer group"
+              title="Start New Decision (⌘N)"
             >
-              <PlusCircle className="w-4 h-4 text-[var(--color-verdigris)] group-hover:rotate-90 transition-transform duration-200 shrink-0" />
-              <span>New Decision</span>
+              <div className="flex items-center space-x-2">
+                <PlusCircle className="w-4 h-4 text-[var(--color-verdigris)] group-hover:rotate-90 transition-transform duration-200 shrink-0" />
+                <span>New Decision</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--bg-app)] text-[var(--text-faint)] border border-[var(--border-subtle)]">
+                ⌘N
+              </span>
             </button>
+
+            {/* Search Input Filter & ⌘K trigger */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search dossiers..."
+                className="w-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-lg py-1.5 pl-8 pr-12 text-xs font-ui text-[var(--text-main)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--color-verdigris)] transition-colors"
+              />
+              {onOpenCommandPalette && (
+                <button
+                  type="button"
+                  onClick={onOpenCommandPalette}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-[10px] font-mono text-[var(--text-faint)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-raised)] transition-colors"
+                  title="Open Spotlight Search (⌘K)"
+                >
+                  ⌘K
+                </button>
+              )}
+            </div>
           </div>
         ) : (
-          <div className="p-2 flex justify-center">
+          <div className="p-2 flex flex-col items-center space-y-2 border-b border-[var(--border-subtle)]">
             <button
               type="button"
               onClick={onNewDecision}
-              className="w-10 h-10 rounded-lg flex items-center justify-center bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] hover:border-[var(--color-verdigris)]/50 text-[var(--color-verdigris)] transition-all shadow-2xs cursor-pointer"
-              title="Start New Decision"
+              className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] hover:border-[var(--color-verdigris)]/60 text-[var(--color-verdigris)] transition-all shadow-xs cursor-pointer"
+              title="Start New Decision (⌘N)"
               aria-label="Start New Decision"
             >
               <PlusCircle className="w-4.5 h-4.5" />
             </button>
+
+            {onOpenCommandPalette && (
+              <button
+                type="button"
+                onClick={onOpenCommandPalette}
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                title="Search Command Palette (⌘K)"
+                aria-label="Search Command Palette"
+              >
+                <Command className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
 
         {/* Middle Navigation: History & Benchmarks */}
         <div className="flex-1 overflow-y-auto px-2 space-y-4 py-2">
+          {/* Pinned Decisions (If any) */}
+          {pinnedItems.length > 0 && isExpanded && (
+            <div>
+              <div className="px-2 mb-1.5 flex items-center justify-between">
+                <span className="text-[11px] font-ui font-semibold uppercase tracking-wider text-[var(--color-ochre)] flex items-center space-x-1.5">
+                  <Pin className="w-3 h-3 fill-current rotate-45" />
+                  <span>Pinned Dossiers</span>
+                </span>
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30 text-[var(--color-ochre)]">
+                  {pinnedItems.length}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                {pinnedItems.map((item) => {
+                  const isActive = currentDecisionId === item.id;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`
+                        group relative flex items-center justify-between rounded-xl transition-all text-xs font-ui
+                        ${isActive
+                          ? 'bg-[var(--color-ochre-subtle)] text-[var(--color-ochre)] font-medium border border-[var(--color-ochre)]/40'
+                          : 'text-[var(--text-main)] hover:bg-[var(--bg-surface)] border border-transparent'
+                        }
+                      `}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectHistoryItem(item);
+                          onCloseMobile();
+                        }}
+                        className="flex-1 text-left p-2 overflow-hidden flex items-start space-x-2 cursor-pointer"
+                        title={item.title}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                            isActive
+                              ? 'bg-[var(--color-ochre)] ring-2 ring-[var(--color-ochre)]/30'
+                              : 'bg-[var(--color-ochre)]'
+                          }`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="truncate text-[11px] font-medium leading-tight">
+                            {item.title}
+                          </div>
+                          {item.timestamp && (
+                            <div className="text-[9px] text-[var(--text-faint)] mt-0.5 font-mono">
+                              {formatRelativeTime(item.timestamp)}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+
+                      {onTogglePinHistoryItem && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTogglePinHistoryItem(item.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded text-[var(--color-ochre)] hover:bg-[var(--bg-surface-raised)] transition-all cursor-pointer"
+                          title="Unpin"
+                        >
+                          <Pin className="w-3 h-3 fill-current rotate-45" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Past Decisions History Section */}
           <div>
             {isExpanded ? (
               <div className="flex items-center justify-between px-2 mb-1.5">
                 <span className="text-[11px] font-ui font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center space-x-1.5">
                   <Clock className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
-                  <span>Past Decisions</span>
-                  {history.length > 0 && (
+                  <span>Recent History</span>
+                  {recentItems.length > 0 && (
                     <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-faint)]">
-                      {history.length}
+                      {recentItems.length}
                     </span>
                   )}
                 </span>
@@ -220,9 +356,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowClearConfirm(true)}
-                    className="text-[10px] text-[var(--text-faint)] hover:text-red-400 p-1 rounded transition-colors cursor-pointer"
-                    title="Clear all history"
-                    aria-label="Clear all history"
+                    className="text-[10px] text-[var(--text-faint)] hover:text-rose-400 p-1 rounded transition-colors cursor-pointer"
+                    title="Clear history"
+                    aria-label="Clear history"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -238,7 +374,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Clear All Confirmation Modal/Card */}
             {isExpanded && showClearConfirm && (
-              <div className="mx-2 mb-2 p-2.5 rounded-lg bg-[var(--bg-surface-raised)] border border-red-500/30 text-xs space-y-2 shadow-xs">
+              <div className="mx-2 mb-2 p-2.5 rounded-xl bg-[var(--bg-surface-raised)] border border-rose-500/30 text-xs space-y-2 shadow-xs">
                 <p className="text-[11px] text-[var(--text-main)] font-medium">
                   Clear all {history.length} decisions?
                 </p>
@@ -249,7 +385,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClearHistory();
                       setShowClearConfirm(false);
                     }}
-                    className="px-2 py-1 rounded text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/30 font-medium transition-colors cursor-pointer"
+                    className="px-2 py-1 rounded text-[10px] bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 font-medium transition-colors cursor-pointer"
                   >
                     Clear All
                   </button>
@@ -267,18 +403,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* History List */}
             {isExpanded ? (
               <div className="space-y-1">
-                {history.length === 0 ? (
+                {recentItems.length === 0 ? (
                   <div className="px-2 py-3 text-center text-[11px] text-[var(--text-faint)] italic font-body">
-                    No past decisions yet.
+                    {searchQuery ? 'No matching decisions found.' : 'No past decisions yet.'}
                   </div>
                 ) : (
-                  history.map((item) => {
+                  recentItems.map((item) => {
                     const isActive = currentDecisionId === item.id;
                     return (
                       <div
                         key={item.id}
                         className={`
-                          group relative flex items-center justify-between rounded-lg transition-all text-xs font-ui
+                          group relative flex items-center justify-between rounded-xl transition-all text-xs font-ui
                           ${isActive
                             ? 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] font-medium border border-[var(--color-verdigris)]/30'
                             : 'text-[var(--text-main)] hover:bg-[var(--bg-surface)] border border-transparent'
@@ -313,20 +449,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           </div>
                         </button>
 
-                        {onDeleteHistoryItem && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteHistoryItem(item.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1.5 mr-1 rounded text-[var(--text-faint)] hover:text-red-400 hover:bg-[var(--bg-surface-raised)] transition-all cursor-pointer"
-                            title="Delete decision"
-                            aria-label="Delete decision"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
+                        <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 pr-1 transition-opacity">
+                          {onTogglePinHistoryItem && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onTogglePinHistoryItem(item.id);
+                              }}
+                              className="p-1 rounded text-[var(--text-faint)] hover:text-[var(--color-ochre)] hover:bg-[var(--bg-surface-raised)] transition-all cursor-pointer"
+                              title="Pin to top"
+                            >
+                              <Pin className="w-3 h-3" />
+                            </button>
+                          )}
+                          {onDeleteHistoryItem && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteHistoryItem(item.id);
+                              }}
+                              className="p-1 rounded text-[var(--text-faint)] hover:text-rose-400 hover:bg-[var(--bg-surface-raised)] transition-all cursor-pointer"
+                              title="Delete decision"
+                              aria-label="Delete decision"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })
@@ -335,7 +486,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ) : (
               /* Collapsed History Icons */
               <div className="flex flex-col items-center space-y-1">
-                {history.map((item) => {
+                {history.slice(0, 8).map((item) => {
                   const isActive = currentDecisionId === item.id;
                   return (
                     <button
@@ -343,7 +494,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       type="button"
                       onClick={() => onSelectHistoryItem(item)}
                       className={`
-                        w-10 h-10 rounded-lg flex items-center justify-center relative transition-all cursor-pointer
+                        w-10 h-10 rounded-xl flex items-center justify-center relative transition-all cursor-pointer
                         ${isActive
                           ? 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] border border-[var(--color-verdigris)]/40 shadow-xs'
                           : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)]'
@@ -363,7 +514,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Canonical Benchmarks Quick-Access (6 Scenarios) */}
+          {/* Canonical Benchmarks Quick-Access */}
           <div>
             {isExpanded ? (
               <div className="px-2 mb-1.5 flex items-center justify-between">
@@ -371,9 +522,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <BookOpen className="w-3.5 h-3.5 text-[var(--color-slate)]" />
                   <span>Canonical Dilemmas</span>
                 </span>
-                {benchmarks.length > 0 && (
+                {filteredBenchmarks.length > 0 && (
                   <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-faint)]">
-                    {benchmarks.length}
+                    {filteredBenchmarks.length}
                   </span>
                 )}
               </div>
@@ -387,7 +538,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {isExpanded ? (
               <div className="space-y-1">
-                {benchmarks.map((bm) => {
+                {filteredBenchmarks.map((bm) => {
                   const isActive = currentDecisionId === bm.id;
                   return (
                     <button
@@ -398,7 +549,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         onCloseMobile();
                       }}
                       className={`
-                        w-full text-left p-2 rounded-lg transition-all text-xs font-ui group flex items-center space-x-2 cursor-pointer
+                        w-full text-left p-2 rounded-xl transition-all text-xs font-ui group flex items-center space-x-2 cursor-pointer
                         ${isActive
                           ? 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] font-medium border border-[var(--color-verdigris)]/30'
                           : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] border border-transparent'
@@ -427,7 +578,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       type="button"
                       onClick={() => onSelectBenchmark(bm)}
                       className={`
-                        w-10 h-10 rounded-lg flex items-center justify-center relative transition-all cursor-pointer
+                        w-10 h-10 rounded-xl flex items-center justify-center relative transition-all cursor-pointer
                         ${isActive
                           ? 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] border border-[var(--color-verdigris)]/40 shadow-xs font-bold'
                           : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)]'
@@ -448,57 +599,80 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Footer: Theme Toggle, Settings & Deterministic Affirmation */}
+        {/* Footer: User Profile Tile (Logically/ChatGPT style), Settings, and Theme Switcher */}
         {isExpanded ? (
-          <div className="p-2.5 border-t border-[var(--border-subtle)] space-y-1.5">
-            <div className="flex items-center space-x-1">
-              {/* Theme switcher */}
+          <div className="p-2.5 border-t border-[var(--border-subtle)] space-y-2 bg-[var(--bg-surface-raised)]">
+            {/* User Profile Card (Reflecting Local & Private Zero Data Leakage) */}
+            <div className="p-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-[var(--color-verdigris)] text-[#F5F2EA] flex items-center justify-center font-display font-bold text-xs shrink-0 shadow-2xs">
+                  S
+                </div>
+                <div className="min-w-0">
+                  <div className="font-ui font-semibold text-xs text-[var(--text-main)] truncate">
+                    Saba Said
+                  </div>
+                  <div className="text-[9px] font-mono text-[var(--color-verdigris)] flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-verdigris)] animate-pulse" />
+                    <span>Local & Private Engine</span>
+                  </div>
+                </div>
+              </div>
+
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-raised)] transition-colors cursor-pointer"
+                  title="Settings & Storage"
+                  aria-label="Settings"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Bottom Controls Row: Theme Toggle & Telemetry badge */}
+            <div className="flex items-center justify-between text-xs font-ui">
               <button
                 type="button"
                 onClick={onToggleTheme}
-                className="flex-1 p-2 rounded-lg text-xs font-ui text-[var(--text-main)] hover:bg-[var(--bg-surface)] border border-transparent hover:border-[var(--border-subtle)] flex items-center space-x-2 transition-colors cursor-pointer"
+                className="flex items-center space-x-1.5 px-2 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer text-[11px]"
                 aria-label="Toggle theme"
               >
                 {isDarkMode ? (
                   <>
                     <Sun className="w-3.5 h-3.5 text-[var(--color-ochre)] shrink-0" />
-                    <span>Light</span>
+                    <span>Light Mode</span>
                   </>
                 ) : (
                   <>
                     <Moon className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0" />
-                    <span>Dark</span>
+                    <span>Dark Mode</span>
                   </>
                 )}
               </button>
 
-              {/* Settings modal trigger */}
-              {onOpenSettings && (
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="p-2 rounded-lg text-xs font-ui text-[var(--text-main)] hover:bg-[var(--bg-surface)] border border-transparent hover:border-[var(--border-subtle)] flex items-center space-x-1 transition-colors cursor-pointer"
-                  title="Settings & Privacy"
-                  aria-label="Settings"
-                >
-                  <Settings className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0" />
-                  <span>Settings</span>
-                </button>
-              )}
-            </div>
-
-            {/* Sourced Attribution Badge */}
-            <div className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] flex items-center space-x-1.5 font-ui">
-              <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0" />
-              <span className="truncate">Deterministic Math & Citations</span>
+              <div className="flex items-center space-x-1 text-[10px] font-mono text-[var(--text-faint)]">
+                <ShieldCheck className="w-3 h-3 text-[var(--color-verdigris)] shrink-0" />
+                <span>V2 Solvers</span>
+              </div>
             </div>
           </div>
         ) : (
+          /* Collapsed Bottom Icons */
           <div className="p-2 border-t border-[var(--border-subtle)] flex flex-col items-center space-y-2">
+            <div
+              className="w-8 h-8 rounded-lg bg-[var(--color-verdigris)] text-[#F5F2EA] flex items-center justify-center font-display font-bold text-xs shadow-2xs"
+              title="Saba Said (Local & Private Storage)"
+            >
+              S
+            </div>
+
             <button
               type="button"
               onClick={onToggleTheme}
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-label="Toggle theme"
             >
@@ -513,20 +687,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={onOpenSettings}
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
                 title="Settings & Privacy"
                 aria-label="Settings"
               >
                 <Settings className="w-4.5 h-4.5" />
               </button>
             )}
-
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors"
-              title="Deterministic Math & Citations (Auditable)"
-            >
-              <ShieldCheck className="w-4.5 h-4.5" />
-            </div>
           </div>
         )}
       </aside>

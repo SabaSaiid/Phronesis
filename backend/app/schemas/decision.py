@@ -32,6 +32,7 @@ class StructuredDecision(BaseModel):
     constraints: List[str] = Field(default_factory=list)
     assumptions: List[Assumption] = Field(default_factory=list)
     unknowns: List[str] = Field(default_factory=list)
+    domain: Optional[str] = "general"
 
     @field_validator("states_of_world")
     def validate_probabilities(cls, states: List[StateOfWorld]) -> List[StateOfWorld]:
@@ -57,6 +58,7 @@ class FlaggedBiasPattern(BaseModel):
     observed_trigger: str
     caveat_analysis: str
     question_to_surface: str
+    grounding_tier: str = Field(default="explicit_variable", description="explicit_variable or narrative_nuance")
 
 class BiasLayerResult(BaseModel):
     flagged_patterns: List[FlaggedBiasPattern] = Field(default_factory=list)
@@ -100,6 +102,19 @@ class StoicAnalysisResult(BaseModel):
     indifferents_analysis: Dict[str, Any]
     surfaced_questions: List[str]
 
+class PhilosophyFrameworkResult(BaseModel):
+    framework_id: str
+    framework_name: str
+    field: str
+    source: str
+    core_idea: str
+    dimension_analysis: Dict[str, Any] = Field(default_factory=dict)
+    surfaced_questions: List[str] = Field(default_factory=list)
+
+class PhilosophyLayerResult(BaseModel):
+    frameworks: List[PhilosophyFrameworkResult] = Field(default_factory=list)
+    stoic_legacy: Optional[StoicAnalysisResult] = None
+
 class FalsifiabilityAuditItem(BaseModel):
     assumption: str
     falsifiability_grade: str # High, Medium, Low
@@ -118,12 +133,20 @@ class CriticalThinkingLayerResult(BaseModel):
     base_rate_check: Optional[BaseRateComparisonItem] = None
     steelmanned_counterargument: Optional[str] = None
 
+class LongitudinalPatternContext(BaseModel):
+    total_decisions_logged: int = 0
+    recurring_bias_counts: Dict[str, int] = Field(default_factory=dict)
+    average_base_rate_divergence_pct: Optional[float] = None
+    summary_text: Optional[str] = None
+
 class AnalysisBundle(BaseModel):
     structured_decision: StructuredDecision
     bias_layer: BiasLayerResult
     math_layer: MathLayerResult
-    philosophy_layer: StoicAnalysisResult
+    philosophy_layer: StoicAnalysisResult # Preserved for backward compatibility
+    philosophy_multi_layer: Optional[PhilosophyLayerResult] = None
     critical_thinking_layer: CriticalThinkingLayerResult
+    longitudinal_context: Optional[LongitudinalPatternContext] = None
 
 class SourceAttribution(BaseModel):
     field: str
@@ -136,9 +159,35 @@ class ReportResponse(BaseModel):
     proposed_experiment: str
     attributed_sources: List[SourceAttribution] = Field(default_factory=list)
     math_summary: Dict[str, Any] = Field(default_factory=dict)
+    longitudinal_summary: Optional[str] = None
 
 class BenchmarkItem(BaseModel):
     id: str
     title: str
     narrative: str
     structured_decision: StructuredDecision
+
+# Feedback & Storage Schemas
+class FlagFeedbackRequest(BaseModel):
+    decision_id: str
+    flag_id: str
+    flag_type: str = "bias" # "bias" or "philosophy"
+    is_positive: bool
+    feedback_reason: Optional[str] = None
+
+class OutcomeRetroRequest(BaseModel):
+    chosen_alternative_id: str
+    actual_utility_rating: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    retrospective_notes: Optional[str] = None
+
+class HistoryItemSummary(BaseModel):
+    id: str
+    timestamp: str
+    domain: str
+    decision_statement: str
+    preferred_eu_alt: Optional[str] = None
+    minimax_regret_choice: Optional[str] = None
+    flagged_bias_ids: List[str] = Field(default_factory=list)
+    has_outcome: bool = False
+    chosen_alternative_id: Optional[str] = None
+    actual_utility_rating: Optional[float] = None

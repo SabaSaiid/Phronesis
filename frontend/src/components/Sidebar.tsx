@@ -9,7 +9,8 @@ import {
   ChevronLeft,
   BookOpen,
   Trash2,
-  X
+  X,
+  Settings
 } from 'lucide-react';
 import type { BenchmarkItem } from '../types';
 import { formatRelativeTime } from '../lib/formatTime';
@@ -37,6 +38,7 @@ interface SidebarProps {
   isDarkMode: boolean;
   onToggleTheme: () => void;
   currentDecisionId?: string;
+  onOpenSettings?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -54,6 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isDarkMode,
   onToggleTheme,
   currentDecisionId,
+  onOpenSettings,
 }) => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -154,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
         ) : (
-          /* Collapsed Desktop Header (clean single button) */
+          /* Collapsed Desktop Header */
           <div className="p-2 border-b border-[var(--border-subtle)] flex items-center justify-center">
             <button
               type="button"
@@ -360,7 +363,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Canonical Benchmarks Quick-Access */}
+          {/* Canonical Benchmarks Quick-Access (6 Scenarios) */}
           <div>
             {isExpanded ? (
               <div className="px-2 mb-1.5 flex items-center justify-between">
@@ -445,28 +448,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Footer: Theme Toggle & Deterministic Affirmation */}
+        {/* Footer: Theme Toggle, Settings & Deterministic Affirmation */}
         {isExpanded ? (
-          <div className="p-2.5 border-t border-[var(--border-subtle)] space-y-2">
-            {/* Theme switcher */}
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              className="w-full p-2 rounded-lg text-xs font-ui text-[var(--text-main)] hover:bg-[var(--bg-surface)] border border-transparent hover:border-[var(--border-subtle)] flex items-center space-x-2 transition-colors cursor-pointer"
-              aria-label="Toggle theme"
-            >
-              {isDarkMode ? (
-                <>
-                  <Sun className="w-4 h-4 text-[var(--color-ochre)] shrink-0" />
-                  <span>Light Mode</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 text-[var(--color-verdigris)] shrink-0" />
-                  <span>Dark Mode</span>
-                </>
+          <div className="p-2.5 border-t border-[var(--border-subtle)] space-y-1.5">
+            <div className="flex items-center space-x-1">
+              {/* Theme switcher */}
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                className="flex-1 p-2 rounded-lg text-xs font-ui text-[var(--text-main)] hover:bg-[var(--bg-surface)] border border-transparent hover:border-[var(--border-subtle)] flex items-center space-x-2 transition-colors cursor-pointer"
+                aria-label="Toggle theme"
+              >
+                {isDarkMode ? (
+                  <>
+                    <Sun className="w-3.5 h-3.5 text-[var(--color-ochre)] shrink-0" />
+                    <span>Light</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0" />
+                    <span>Dark</span>
+                  </>
+                )}
+              </button>
+
+              {/* Settings modal trigger */}
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="p-2 rounded-lg text-xs font-ui text-[var(--text-main)] hover:bg-[var(--bg-surface)] border border-transparent hover:border-[var(--border-subtle)] flex items-center space-x-1 transition-colors cursor-pointer"
+                  title="Settings & Privacy"
+                  aria-label="Settings"
+                >
+                  <Settings className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0" />
+                  <span>Settings</span>
+                </button>
               )}
-            </button>
+            </div>
 
             {/* Sourced Attribution Badge */}
             <div className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] flex items-center space-x-1.5 font-ui">
@@ -489,6 +508,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Moon className="w-4.5 h-4.5 text-[var(--color-verdigris)]" />
               )}
             </button>
+
+            {onOpenSettings && (
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                title="Settings & Privacy"
+                aria-label="Settings"
+              >
+                <Settings className="w-4.5 h-4.5" />
+              </button>
+            )}
 
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors"

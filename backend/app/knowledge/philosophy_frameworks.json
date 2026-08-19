@@ -3,16 +3,16 @@
     "id": "stoicism_v1",
     "framework_name": "Stoic Decision Ethics (Epictetus / Marcus Aurelius)",
     "field": "hellenistic_philosophy",
-    "source": "Epictetus, Enchiridion & Discourses; Hadot (The Inner Citadel)",
-    "core_idea": "Distinction between what is in our control (prohairesis / internal will, character, effort) and what is not (indifferents / external outcomes, market conditions, reputation). Value resides in reasoned choice, not indifferent outcomes.",
+    "source": "Epictetus, Enchiridion & Discourses; Marcus Aurelius, Meditations; Hadot (The Inner Citadel)",
+    "core_idea": "The locus of value resides in reasoned choice (prohairesis / internal will, character, effort) rather than indifferents (external outcomes, market conditions, reputation, wealth).",
     "classification_rules": {
       "internal_control_keywords": [
         "effort", "preparation", "integrity", "spending", "discipline", "reaction",
-        "savings", "skill acquisition", "daily habits", "ethical boundary", "learning"
+        "savings", "skill acquisition", "daily habits", "ethical boundary", "learning", "craft"
       ],
       "external_uncontrollable_keywords": [
         "market", "reputation", "stock price", "funding", "macro", "hiring appetite",
-        "competitor", "other people", "economy", "validation", "status", "valuation"
+        "competitor", "other people", "economy", "validation", "status", "valuation", "luck"
       ]
     },
     "lens_questions": [
@@ -30,6 +30,91 @@
         "dimension": "premeditatio_malorum",
         "question": "If the absolute worst-case scenario materializes, what controllable actions can you execute right now to make that scenario completely survivable?",
         "target_signal": "Unexamined catastrophe thinking that paralyzes forward movement."
+      }
+    ]
+  },
+  {
+    "id": "utilitarianism_v1",
+    "framework_name": "Utilitarian Consequentialism (Bentham / Mill)",
+    "field": "normative_ethics",
+    "source": "Jeremy Bentham (1789), 'Principles of Morals and Legislation'; J.S. Mill (1861), 'Utilitarianism'",
+    "core_idea": "The practical and ethical quality of a decision is measured by its net consequences: maximizing aggregate well-being and flourishing while minimizing suffering and burnout across all affected stakeholders.",
+    "classification_rules": {
+      "stakeholder_keywords": [
+        "team", "family", "partner", "spouse", "children", "users", "customers",
+        "employees", "community", "stakeholders", "clients", "future self"
+      ],
+      "consequence_keywords": [
+        "burnout", "impact", "well-being", "happiness", "health", "sustainability",
+        "collective good", "net benefit", "harm reduction", "long-term welfare"
+      ]
+    },
+    "lens_questions": [
+      {
+        "dimension": "aggregate_utility",
+        "question": "Considering everyone directly and indirectly affected by this choice (family, team, clients, future self), which alternative generates the highest net sum of well-being over a 3-year horizon?",
+        "target_signal": "Decisions evaluated narrowly from an individual perspective without factoring multi-stakeholder externalities."
+      },
+      {
+        "dimension": "distributional_asymmetry",
+        "question": "Does your preferred path concentrate severe, uncompensated downside onto specific individuals (e.g. family stress, team overburden) while concentrating upside exclusively on yourself?",
+        "target_signal": "Asymmetric transfer of stress or execution risk to third parties."
+      }
+    ]
+  },
+  {
+    "id": "kantian_deontology_v1",
+    "framework_name": "Kantian Deontology / Categorical Imperative (Kant)",
+    "field": "moral_philosophy",
+    "source": "Immanuel Kant (1785), 'Groundwork of the Metaphysics of Morals'; Korsgaard (1996), 'Creating the Kingdom of Ends'",
+    "core_idea": "Actions possess intrinsic rightness based on adherence to universalizable duties. Human beings must always be treated as ends in themselves, never merely as instrumental means to an external objective.",
+    "classification_rules": {
+      "duty_keywords": [
+        "promise", "obligation", "duty", "commitment", "contract", "integrity",
+        "honesty", "loyalty", "boundary", "principle", "ethical rule"
+      ],
+      "instrumental_keywords": [
+        "use someone", "leverage people", "means to an end", "exploit", "compromise principles", "cut corners"
+      ]
+    },
+    "lens_questions": [
+      {
+        "dimension": "universalizability",
+        "question": "If every decision-maker facing your exact situation adopted your underlying decision rule as a universal standard, would the broader system remain sound and trustable?",
+        "target_signal": "Making special exceptions for oneself that one would condemn if adopted universally."
+      },
+      {
+        "dimension": "humanity_formulation",
+        "question": "Are you treating any person (including your own long-term health and integrity) merely as an instrumental tool to reach a financial or career milestone?",
+        "target_signal": "Viewing collaborators or personal relationships strictly as transactional instruments."
+      }
+    ]
+  },
+  {
+    "id": "virtue_ethics_v1",
+    "framework_name": "Aristotelian Virtue Ethics (Aristotle)",
+    "field": "classical_philosophy",
+    "source": "Aristotle (c. 350 BCE), 'Nicomachean Ethics'; MacIntyre (1981), 'After Virtue'",
+    "core_idea": "Practical wisdom (phronesis) and flourishing (eudaimonia) emerge from cultivating stable character virtues. Virtue is the balanced golden mean between the extremes of excess and deficiency.",
+    "classification_rules": {
+      "virtue_keywords": [
+        "courage", "discipline", "temperance", "justice", "wisdom", "character",
+        "integrity", "growth", "excellence", "arete", "habits", "identity"
+      ],
+      "extreme_keywords": [
+        "rash", "timid", "cowardice", "reckless", "overreach", "complacent", "excess", "deficiency"
+      ]
+    },
+    "lens_questions": [
+      {
+        "dimension": "character_cultivation",
+        "question": "Independent of whether the external outcome is successful, what kind of person, craftsman, or leader will the daily execution of this alternative train you to become?",
+        "target_signal": "Focusing solely on external accolades while ignoring daily character habits."
+      },
+      {
+        "dimension": "the_golden_mean",
+        "question": "Does this choice represent a balanced expression of practical wisdom (courage tempered with prudence), or does it swing toward paralyzing timidity (deficiency) or reckless gamble (excess)?",
+        "target_signal": "Framing choices as extremes between absolute passivity and reckless overreach."
       }
     ]
   }

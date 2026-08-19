@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, type HistoryItem } from './components/Sidebar';
+import { SettingsModal } from './components/SettingsModal';
 import { NarrativeInputView } from './features/input/NarrativeInputView';
 import { ModelEditorView } from './features/editor/ModelEditorView';
 import { ReportView } from './features/report/ReportView';
@@ -31,6 +32,7 @@ export function App() {
   const [currentDecisionId, setCurrentDecisionId] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Layout & Theme State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -224,6 +226,7 @@ export function App() {
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}
         currentDecisionId={currentDecisionId}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Reading & Interaction Column Area */}
@@ -280,6 +283,15 @@ export function App() {
           <p>Phronesis (φρόνησις) · Auditable Human Judgment Under Uncertainty</p>
         </footer>
       </div>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onHistoryPurged={() => {
+          handleClearHistory();
+        }}
+      />
     </div>
   );
 }

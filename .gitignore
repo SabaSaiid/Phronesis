@@ -7,6 +7,14 @@ backend/.env
 *.pem
 secrets/
 
+# Databases & Local Storage
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+backend/data/
+
 # Python
 __pycache__/
 *.py[cod]

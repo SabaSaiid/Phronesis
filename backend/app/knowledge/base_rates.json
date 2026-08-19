@@ -1,26 +1,98 @@
 [
   {
-    "reference_class": "Pre-seed / Seed AI and Software Startups (Series A Conversion)",
+    "reference_class": "Pre-seed / Seed AI & Software Startups (Series A Conversion)",
     "domain": "venture_capital",
     "source": "Dealroom / PitchBook / CB Insights Venture Benchmarks (2020-2025)",
     "empirical_base_rate_percentage": 22.0,
     "description": "Approximately 18% to 25% of seed-funded tech startups successfully raise a priced Series A within 18-24 months.",
-    "keywords": ["startup", "seed", "pre-seed", "series a", "equity", "runway", "founding engineer"]
+    "keywords": ["startup", "seed", "pre-seed", "series a", "equity", "runway", "founding engineer", "co-founder"]
   },
   {
-    "reference_class": "Senior / Staff Tech Re-employment Timeframe",
+    "reference_class": "Senior / Staff Tech Re-employment Timeframe (<90 Days)",
     "domain": "labor_economics",
     "source": "Bureau of Labor Statistics / Tech Hiring Mobility Index (2024-2025)",
     "empirical_base_rate_percentage": 78.0,
     "description": "78% of experienced senior software engineers re-secure equivalent or better compensation within 90 days of active search.",
-    "keywords": ["job search", "staff engineer", "layoff", "re-employment", "hiring market"]
+    "keywords": ["job search", "staff engineer", "layoff", "re-employment", "hiring market", "tech market"]
   },
   {
     "reference_class": "Internal Enterprise Innovation Project Commercialization",
     "domain": "organizational_behavior",
     "source": "Harvard Business Review / Christensen Innovation Benchmarks",
     "empirical_base_rate_percentage": 14.0,
-    "description": "Only 12% to 15% of bottom-up enterprise innovation side-projects achieve sustained executive budget allocation.",
-    "keywords": ["internal project", "side project", "enterprise innovation", "20% time", "pitch internal"]
+    "description": "Only 12% to 15% of bottom-up enterprise innovation side-projects achieve sustained executive budget allocation beyond year 1.",
+    "keywords": ["internal project", "side project", "enterprise innovation", "20% time", "pitch internal", "skunkworks"]
+  },
+  {
+    "reference_class": "Executive & Director Leadership Transition Success (>18 Months)",
+    "domain": "organizational_behavior",
+    "source": "Corporate Executive Board / Center for Creative Leadership Studies",
+    "empirical_base_rate_percentage": 62.0,
+    "description": "62% of external executive hires and transitions sustain their role beyond 18 months without involuntary departure or restructuring.",
+    "keywords": ["executive", "director", "vp", "c-suite", "head of", "leadership transition", "promotion"]
+  },
+  {
+    "reference_class": "Career Field Pivot Salary Parity (Within 12 Months)",
+    "domain": "labor_economics",
+    "source": "Bureau of Labor Statistics Occupational Mobility Longitudinal Data (2023-2025)",
+    "empirical_base_rate_percentage": 54.0,
+    "description": "54% of professionals pivoting into a distinct occupational discipline achieve compensation parity with their prior role within 12 months.",
+    "keywords": ["career change", "pivot field", "new industry", "retrain", "career shift", "new discipline"]
+  },
+  {
+    "reference_class": "Residential Home Renovation Budget Adherence (<= Budget)",
+    "domain": "personal_finance",
+    "source": "Houzz & Home Overview / Harvard Joint Center for Housing Studies",
+    "empirical_base_rate_percentage": 32.0,
+    "description": "Only 32% of residential renovation projects finish at or below initial budget estimates; 68% experience cost overruns >= 20%.",
+    "keywords": ["renovation", "remodel", "contractor", "home build", "property upgrade", "construction"]
+  },
+  {
+    "reference_class": "Active Retail Stock Picking / Trading (5-Year Index Outperformance)",
+    "domain": "personal_finance",
+    "source": "S&P Indices Versus Active (SPIVA) Scorecard (2024)",
+    "empirical_base_rate_percentage": 8.0,
+    "description": "Only 8% of active retail stock pickers outperform the broad S&P 500 total return index net of fees over a 5-year investment horizon.",
+    "keywords": ["day trading", "stock picking", "angel investment", "beat market", "crypto trading", "individual stocks", "mortgage vs invest"]
+  },
+  {
+    "reference_class": "Large Legacy Software Full Rewrite Schedule Adherence",
+    "domain": "software_engineering",
+    "source": "Standish Group CHAOS Report Benchmarks / IEEE Software Case Studies",
+    "empirical_base_rate_percentage": 16.0,
+    "description": "Only 16% of 'ground-up' complete software rewrites deliver core functionality within the originally allocated timeline.",
+    "keywords": ["rewrite", "re-platform", "legacy migration", "complete overhaul", "ground up rewrite", "refactor"]
+  },
+  {
+    "reference_class": "Early-Stage B2B SaaS Median Annual Logo Retention",
+    "domain": "software_engineering",
+    "source": "OpenView / KeyBanc Capital Markets SaaS Survey Benchmarks",
+    "empirical_base_rate_percentage": 82.0,
+    "description": "Median early-stage B2B SaaS software businesses retain 82% of customer logos annually (18% annual logo churn).",
+    "keywords": ["b2b saas", "churn rate", "software subscription", "customer retention", "saas product"]
+  },
+  {
+    "reference_class": "Self-Directed Habit Maintenance (>6 Months)",
+    "domain": "behavioral_science",
+    "source": "Lally et al. (2010), European Journal of Social Psychology (Habit Formation Studies)",
+    "empirical_base_rate_percentage": 22.0,
+    "description": "22% of individuals initiating self-directed lifestyle or productivity habits sustain adherence past 6 months without external accountability.",
+    "keywords": ["habit", "routine", "daily practice", "workout", "writing habit", "discipline", "self-directed"]
+  },
+  {
+    "reference_class": "Long-Distance Domestic Relocation Satisfaction (>2 Years)",
+    "domain": "lifestyle",
+    "source": "US Census Bureau Geographic Mobility Studies / Allied Van Lines Surveys",
+    "empirical_base_rate_percentage": 69.0,
+    "description": "69% of individuals relocating long-distance for lifestyle reasons remain in their destination city past 24 months without voluntary return.",
+    "keywords": ["relocate", "move city", "new country", "migration", "moving abroad", "relocating", "new town"]
+  },
+  {
+    "reference_class": "Brick-and-Mortar Retail / Hospitality Year-1 Survival",
+    "domain": "business_operations",
+    "source": "Bureau of Labor Statistics Business Employment Dynamics Table 7",
+    "empirical_base_rate_percentage": 72.0,
+    "description": "72% of new physical commercial establishments survive their first 12 months of operation; 50% survive past year 5.",
+    "keywords": ["retail store", "restaurant", "physical location", "commercial lease", "brick and mortar", "cafe", "storefront"]
   }
 ]

@@ -105,11 +105,14 @@ class ReportGuardrail:
         """
         Deterministic, pure template rendering of the analytical bundle directly.
         Guarantees zero ungrounded claims, zero prescriptive advice, and zero diagnostic labeling.
+        Supports multi-framework philosophical lenses, structural grounding tiers, and longitudinal context.
         """
         d = bundle.structured_decision
         m = bundle.math_layer
         b = bundle.bias_layer
-        p = bundle.philosophy_layer
+        p_legacy = bundle.philosophy_layer
+        p_multi = getattr(bundle, "philosophy_multi_layer", None)
+        longitudinal = getattr(bundle, "longitudinal_context", None)
 
         best_eu_alt = m.expected_utility.preferred_alternative_id
         minimax_alt = m.minimax_regret.minimax_regret_choice
@@ -120,9 +123,10 @@ class ReportGuardrail:
 
         bias_bullets = []
         for pat in b.flagged_patterns:
+            tier_badge = "[Explicit Variable]" if getattr(pat, "grounding_tier", "explicit_variable") == "explicit_variable" else "[Narrative Nuance]"
             bias_bullets.append(
-                f"- **{pat.name}** (*Source: {pat.field} — {pat.source}*): "
-                f"Stated reasoning exhibits structural characteristics consistent with {pat.name.lower()}. "
+                f"- **{pat.name}** `{tier_badge}` (*Source: {pat.field} — {pat.source}*): "
+                f"Stated reasoning exhibits characteristics consistent with {pat.name.lower()}. "
                 f"Question to inspect: *{pat.question_to_surface}*"
             )
         biases_formatted = "\n".join(bias_bullets) if bias_bullets else "- No cognitive risk patterns flagged above threshold."
@@ -136,9 +140,31 @@ class ReportGuardrail:
         inflection_pct = int(round(m.sensitivity_analysis.inflection_threshold * 100))
         critical_param = m.sensitivity_analysis.critical_parameter
 
-        stoic_tension = p.indifferents_analysis.get("virtue_and_agency_tension", "")
-        if not stoic_tension and p.surfaced_questions:
-            stoic_tension = p.surfaced_questions[0]
+        # Multi-Framework Philosophy formatting
+        philosophy_sections = []
+        if p_multi and p_multi.frameworks:
+            for fw in p_multi.frameworks:
+                q_text = fw.surfaced_questions[0] if fw.surfaced_questions else fw.core_idea
+                name_display = fw.framework_name
+                if "stoic" in fw.framework_id.lower() and "Stoic Lens" not in name_display:
+                    name_display = f"Stoic Lens ({fw.framework_name})"
+                philosophy_sections.append(
+                    f"- **{name_display}** (*Source: {fw.field} — {fw.source}*):\n"
+                    f"  Reflective Inquiry: *{q_text}*"
+                )
+        else:
+            stoic_tension = p_legacy.indifferents_analysis.get("virtue_and_agency_tension", "")
+            if not stoic_tension and p_legacy.surfaced_questions:
+                stoic_tension = p_legacy.surfaced_questions[0]
+            philosophy_sections.append(
+                f"- **Stoic Lens — Dichotomy of Control** (*Source: {p_legacy.field} — {p_legacy.source}*): {stoic_tension}"
+            )
+        philosophy_formatted = "\n".join(philosophy_sections)
+
+        # Longitudinal context block if present
+        longitudinal_block = ""
+        if longitudinal and longitudinal.summary_text:
+            longitudinal_block = f"\n---\n\n## 4. Longitudinal Decision Patterns (Local Memory)\n{longitudinal.summary_text}\n"
 
         return f"""# Decision Reasoning Audit: {d.decision_statement}
 
@@ -155,15 +181,18 @@ Analysis of the structured decision model reveals a primary structural tension b
 ---
 
 ## 2. Sourced Cognitive & Philosophical Tradeoffs
+### Cognitive Pattern Grounding
 {biases_formatted}
-- **Stoic Lens — Dichotomy of Control** (*Source: {p.field} — {p.source}*): {stoic_tension}
+
+### Multi-Lens Philosophical Reflection
+{philosophy_formatted}
 
 ---
 
 ## 3. High-Leverage Value of Information (VoI) Experiments
 - **Most Critical Variable:** {critical_param}
 - **Proposed Low-Cost Verification:** Run a focused 48-hour informational test on '{critical_param}' before committing resources.
-"""
+{longitudinal_block}"""
 
     @classmethod
     def sanitize_or_fallback(cls, text: str) -> str:

@@ -3,8 +3,8 @@
     "id": "sunk_cost",
     "name": "Sunk Cost Salience",
     "field": "behavioral_economics",
-    "source": "Kahneman & Tversky, Prospect Theory / Arkes & Blumer (1985)",
-    "core_idea": "Weighing a past, unrecoverable investment (time, money, emotional tenure) when deciding about forward-looking actions.",
+    "source": "Kahneman & Tversky (1979); Arkes & Blumer (1985), 'The Psychology of Sunk Cost'",
+    "core_idea": "Weighing past, unrecoverable investments (time, money, emotional tenure) into forward-looking decisions.",
     "signals": [
       "mentions time, money, or tenure already invested",
       "reluctance framed around not wasting past effort rather than future expected utility",
@@ -14,10 +14,10 @@
   },
   {
     "id": "loss_aversion",
-    "name": "Asymmetric Loss Weighting",
+    "name": "Asymmetric Downside Weighting",
     "field": "behavioral_economics",
-    "source": "Tversky & Kahneman (1991), Loss Aversion in Riskless Choice",
-    "core_idea": "Losses loom larger than corresponding gains of equal magnitude in subjective valuation.",
+    "source": "Tversky & Kahneman (1991), 'Loss Aversion in Riskless Choice'",
+    "core_idea": "Losses loom approximately twice as large as corresponding gains of equal magnitude in subjective valuation.",
     "signals": [
       "downside outcome utility severely penalized disproportionate to objective financial buffer",
       "fear of regret from active action dominates passive stagnation risk",
@@ -27,9 +27,9 @@
   },
   {
     "id": "confirmation_bias",
-    "name": "Confirmation Asymmetry / Selective Weighting",
+    "name": "Selective Hypothesis Weighting",
     "field": "cognitive_psychology",
-    "source": "Wason (1960), On the Failure to Eliminate Hypotheses in a Conceptual Task; Nickerson (1998)",
+    "source": "Wason (1960), 'Failure to Eliminate Hypotheses'; Nickerson (1998), 'Confirmation Bias: A Ubiquitous Phenomenon'",
     "core_idea": "Gathering, interpreting, and overweighting evidence that confirms a favored alternative while ignoring counter-evidence.",
     "signals": [
       "heavy detail on favorable outcomes for the preferred option but vague dismissal of alternative upside",
@@ -42,7 +42,7 @@
     "id": "planning_fallacy",
     "name": "Planning Fallacy / Optimism Skew",
     "field": "behavioral_economics",
-    "source": "Kahneman & Tversky (1979), Intuitive Prediction: Biases and Corrective Procedures",
+    "source": "Kahneman & Tversky (1979), 'Intuitive Prediction: Biases and Corrective Procedures'",
     "core_idea": "Systematically underestimating the time, costs, and risks of future actions while overestimating positive outcomes.",
     "signals": [
       "optimistic timeline assumptions that ignore market base rates",
@@ -55,7 +55,7 @@
     "id": "status_quo_bias",
     "name": "Status Quo Inertia",
     "field": "behavioral_economics",
-    "source": "Samuelson & Zeckhauser (1988), Status Quo Bias in Decision Making",
+    "source": "Samuelson & Zeckhauser (1988), 'Status Quo Bias in Decision Making'",
     "core_idea": "A disproportionate preference for maintaining the current state of affairs when alternatives offer higher expected return.",
     "signals": [
       "default option favored primarily because it requires no immediate change or disruption",
@@ -63,5 +63,135 @@
       "stagnation risks downplayed compared to active transition risks"
     ],
     "question_to_surface": "If staying required the exact same physical and psychological disruption as leaving, which option would you choose?"
+  },
+  {
+    "id": "anchoring_adjustment",
+    "name": "Anchoring & Adjustment",
+    "field": "cognitive_psychology",
+    "source": "Tversky & Kahneman (1974), 'Judgment under Uncertainty: Heuristics and Biases'",
+    "core_idea": "Disproportionately relying on an initial reference number or benchmark when estimating uncertain values.",
+    "signals": [
+      "valuation or salary target fixed to a single historical benchmark",
+      "payoff matrix utilities clustered tightly around an arbitrary reference point",
+      "reluctance to adjust estimates sufficiently away from an initial number"
+    ],
+    "question_to_surface": "If your starting reference benchmark had been 40% higher or lower, would your valuation of this option change?"
+  },
+  {
+    "id": "availability_heuristic",
+    "name": "Availability Salience",
+    "field": "cognitive_psychology",
+    "source": "Tversky & Kahneman (1973), 'Availability: A Heuristic for Judging Frequency and Probability'",
+    "core_idea": "Overweighting the probability of events that are easy to recall, recent, or emotionally vivid.",
+    "signals": [
+      "heavy reliance on a single high-profile recent news event or anecdote",
+      "estimating downside probability based on a memorable personal failure",
+      "vivid narrative examples overriding statistical reference classes"
+    ],
+    "question_to_surface": "Are you estimating this risk based on broad historical frequency, or because a vivid recent example is fresh in your memory?"
+  },
+  {
+    "id": "framing_effect",
+    "name": "Gain vs. Loss Framing Skew",
+    "field": "behavioral_economics",
+    "source": "Tversky & Kahneman (1981), 'The Framing of Decisions and the Psychology of Choice'",
+    "core_idea": "Drawing different conclusions from the same information depending on how that information is presented (as a gain vs. as a loss).",
+    "signals": [
+      "options described purely in terms of avoiding potential loss rather than capturing positive value",
+      "choice shifts if phrased as 70% chance of success vs 30% chance of failure",
+      "semantic emphasis on what is lost rather than what is gained"
+    ],
+    "question_to_surface": "If this dilemma were re-described entirely in terms of positive expected returns rather than prevented losses, would your ranking invert?"
+  },
+  {
+    "id": "clustering_illusion",
+    "name": "Clustering Illusion / Hot Hand Fallacy",
+    "field": "cognitive_psychology",
+    "source": "Gilovich, Vallone, & Tversky (1985), 'The Hot Hand in Basketball: On the Misperception of Random Sequences'",
+    "core_idea": "Perceiving causal patterns or streaks in short-term random variations and projecting them as permanent trends.",
+    "signals": [
+      "treating a recent 2-3 month winning streak or growth spurt as guaranteed future momentum",
+      "extrapolating temporary market tailwinds as permanent competitive advantage",
+      "confusing variance with sustained skill"
+    ],
+    "question_to_surface": "If recent short-term momentum is partly random noise, does this choice remain sound over a multi-year horizon?"
+  },
+  {
+    "id": "survivorship_bias",
+    "name": "Survivorship Selection Bias",
+    "field": "statistical_methodology",
+    "source": "Wald (1943); Brown, Goetzmann, Ibbotson, & Ross (1992), 'Survivorship Bias in Performance Studies'",
+    "core_idea": "Over-focusing on successful outcomes of a process while ignoring non-visible failures that used the exact same strategy.",
+    "signals": [
+      "citing high-profile startup/creator winners without accounting for the baseline failure rate",
+      "assuming a strategy works because famous case studies succeeded with it",
+      "omitting failed cohorts from reference sets"
+    ],
+    "question_to_surface": "How many individuals or ventures used this identical strategy and failed quietly without leaving a public record?"
+  },
+  {
+    "id": "overconfidence_effect",
+    "name": "Overconfidence Calibration Gap",
+    "field": "cognitive_psychology",
+    "source": "Lichtenstein, Fischhoff, & Phillips (1982), 'Calibration of Probabilities'",
+    "core_idea": "Subjective confidence in judgments and probability assessments is systematically higher than objective accuracy.",
+    "signals": [
+      "assigning extreme probabilities (e.g. >90% or <10%) without empirical proof",
+      "confidence intervals too narrow to contain plausible real-world shocks",
+      "expressing certainty on complex macro variables"
+    ],
+    "question_to_surface": "If an independent panel of domain experts reviewed your assumptions, what probability would they assign to your preferred outcome?"
+  },
+  {
+    "id": "omission_bias",
+    "name": "Omission vs. Commission Asymmetry",
+    "field": "moral_psychology",
+    "source": "Ritov & Baron (1990), 'Reluctance to Vaccinate: Omission Bias and Ambiguity'; Spranca et al. (1991)",
+    "core_idea": "Judging harmful actions (commission) as worse or less acceptable than equally harmful inactions (omission).",
+    "signals": [
+      "preferring passive stagnation/decline over taking an active step that carries risk",
+      "feeling that making a mistake by acting is morally or psychologically worse than missing an opportunity by inaction",
+      "framing doing nothing as 'safe' even when baseline utility degrades"
+    ],
+    "question_to_surface": "If passive inaction carries the exact same cumulative cost as an active misstep, does staying on the current course still feel safer?"
+  },
+  {
+    "id": "endowment_effect",
+    "name": "Endowment / Divestiture Aversion",
+    "field": "behavioral_economics",
+    "source": "Thaler (1980), 'Toward a Positive Theory of Consumer Choice'; Kahneman, Knetsch, & Thaler (1990)",
+    "core_idea": "Valuing an object, role, or asset more highly merely because one currently possesses it.",
+    "signals": [
+      "demanding significantly higher compensation or upside to relinquish an existing role/asset than one would pay to acquire it",
+      "overweighting personal emotional attachment to current titles, assets, or location",
+      "framing the surrender of current assets as an existential loss"
+    ],
+    "question_to_surface": "If you did not currently hold this role or asset, how much would you objectively spend or sacrifice today to acquire it?"
+  },
+  {
+    "id": "hyperbolic_discounting",
+    "name": "Hyperbolic Present Bias",
+    "field": "behavioral_economics",
+    "source": "Ainslie (1975), 'Specious Reward'; Laibson (1997), 'Golden Eggs and Hyperbolic Discounting'",
+    "core_idea": "Overvaluing immediate payoffs and comfort relative to larger, delayed long-term rewards.",
+    "signals": [
+      "sacrificing long-term compound growth to avoid short-term transition discomfort",
+      "heavily discounting future payoffs beyond 12-24 months",
+      "choosing predictable low-friction immediacy over substantial long-term optionality"
+    ],
+    "question_to_surface": "Are you discounting future 5-year compounding because the next 60 days of transition require uncomfortable effort?"
+  },
+  {
+    "id": "outcome_bias",
+    "name": "Outcome Bias / Hindsight Conflation",
+    "field": "decision_analysis",
+    "source": "Baron & Hershey (1988), 'Outcome Bias in Decision Evaluation'; Fischhoff (1975)",
+    "core_idea": "Evaluating the quality of a past decision solely by its outcome rather than the quality of reasoning under uncertainty at the time.",
+    "signals": [
+      "justifying a high-risk gamble because a past similar gamble happened to work out",
+      "assuming a sound strategy was flawed merely because an unpredictable tail risk materialized",
+      "confusing good luck with good judgment"
+    ],
+    "question_to_surface": "If you separated the quality of your forward reasoning from random luck, would this choice still be justifiable in advance?"
   }
 ]

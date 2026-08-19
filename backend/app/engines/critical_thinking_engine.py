@@ -10,10 +10,10 @@ from app.schemas.decision import (
 
 class CriticalThinkingEngine:
     """
-    Critical Thinking Engine:
-    - Falsifiability audit of stated assumptions
-    - Base-rate reality check against empirical tables
-    - Steelmanning generation
+    Critical Thinking Engine (V2):
+    - Falsifiability audit of stated assumptions (High/Medium/Low grades + verifiable test methods)
+    - Base-rate reality check across 12 empirical reference classes
+    - Steelmanned counterargument synthesis
     """
 
     @classmethod
@@ -30,15 +30,15 @@ class CriticalThinkingEngine:
         audit_items: List[FalsifiabilityAuditItem] = []
         for assump in decision.assumptions:
             text_lower = assump.text.lower()
-            if assump.testable or any(w in text_lower for w in ["job", "market", "re-employment", "hiring", "compensation", "runway"]):
+            if assump.testable or any(w in text_lower for w in ["job", "market", "re-employment", "hiring", "compensation", "runway", "salary", "budget", "contractor", "timeline"]):
                 grade = "High"
-                test_method = "Can be verified within 7-14 days via 2-3 targeted market tests or recruiter informational conversations."
-            elif any(w in text_lower for w in ["stagnat", "skills", "learn", "growth"]):
+                test_method = "Can be verified within 7-14 days via 2-3 targeted market tests, discreet recruiter inquiries, or quote audits."
+            elif any(w in text_lower for w in ["stagnat", "skills", "learn", "growth", "culture", "habit", "burnout"]):
                 grade = "Medium"
-                test_method = "Testable by attempting a concrete 2-week internal AI build or open-source milestone in your current environment."
+                test_method = "Testable by initiating a focused 2-week internal milestone, prototype sprint, or structured time audit."
             else:
                 grade = "Low"
-                test_method = "Subjective value attribution; requires testing personal emotional tolerance rather than an empirical dataset."
+                test_method = "Subjective value attribution; requires personal emotional calibration rather than empirical dataset."
 
             audit_items.append(
                 FalsifiabilityAuditItem(
@@ -51,57 +51,72 @@ class CriticalThinkingEngine:
         if not audit_items:
             audit_items.append(
                 FalsifiabilityAuditItem(
-                    assumption="Finding another equivalent high-paying role in 12-18 months will be difficult.",
+                    assumption="Key forward assumptions can be verified prior to full resource commitment.",
                     falsifiability_grade="High",
-                    test_method="Discreetly test market demand with 3 peer recruiters to establish current response velocity."
+                    test_method="Execute a time-boxed 48-hour informational test on the most sensitive variable."
                 )
             )
 
-        # 2. Base-Rate Check
+        # 2. Base-Rate Check against 12 Reference Classes
         all_text = (
             decision.decision_statement + " " +
             " ".join(a.description for a in decision.alternatives) + " " +
-            " ".join(s.name for s in decision.states_of_world)
+            " ".join(s.name for s in decision.states_of_world) + " " +
+            " ".join(decision.goals) + " " +
+            " ".join(decision.constraints) + " " +
+            " ".join(assump.text for assump in decision.assumptions) + " " +
+            (decision.domain or "")
         ).lower()
 
-        matched_br = None
+        # Match highest keyword overlap
+        best_match = None
+        best_overlap_count = 0
+
         for br in base_rates:
-            if any(k in all_text for k in br.get("keywords", [])):
-                matched_br = br
-                break
-        if not matched_br and base_rates:
-            matched_br = base_rates[0]
+            kw_matches = sum(1 for k in br.get("keywords", []) if k in all_text)
+            if kw_matches > best_overlap_count:
+                best_overlap_count = kw_matches
+                best_match = br
+
+        if not best_match and base_rates:
+            best_match = base_rates[0]
 
         base_rate_item = None
-        if matched_br:
-            user_p = 0.30
+        if best_match:
+            # Estimate user's assumed probability for the primary upside state
+            user_p = 0.35
             for s in decision.states_of_world:
-                if "win" in s.name.lower() or "succeed" in s.name.lower() or "series a" in s.name.lower():
+                s_name = s.name.lower()
+                if any(w in s_name for w in ["win", "succeed", "series a", "finish on time", "growth", "high scale", "beat", "success", "work out"]):
                     user_p = s.prior_probability
                     break
 
-            emp_rate = matched_br["empirical_base_rate_percentage"]
-            divergence_msg = (
-                f"Your estimated success probability ({round(user_p * 100, 1)}%) compares against the "
-                f"historical industry base rate of {emp_rate}%. "
-                f"{'Moderately optimistic relative to reference class.' if user_p * 100 > emp_rate else 'Well aligned with reference class.'}"
-            )
+            emp_rate = best_match["empirical_base_rate_percentage"]
+            user_pct = round(user_p * 100, 1)
+            delta = round(user_pct - emp_rate, 1)
+
+            if delta > 15.0:
+                divergence_desc = f"Your estimated success probability ({user_pct}%) is significantly more optimistic than the empirical base rate of {emp_rate}% (+{delta}% divergence)."
+            elif delta < -15.0:
+                divergence_desc = f"Your estimated probability ({user_pct}%) is significantly more conservative than the empirical base rate of {emp_rate}% ({delta}% divergence)."
+            else:
+                divergence_desc = f"Your estimated probability ({user_pct}%) is closely aligned with the reference class base rate of {emp_rate}%."
 
             base_rate_item = BaseRateComparisonItem(
-                reference_class=matched_br["reference_class"],
-                domain=matched_br["domain"],
-                source=matched_br["source"],
+                reference_class=best_match["reference_class"],
+                domain=best_match["domain"],
+                source=best_match["source"],
                 empirical_base_rate=emp_rate,
-                user_assumption=f"{round(user_p * 100, 1)}% success probability",
-                divergence_flag=divergence_msg
+                user_assumption=f"{user_pct}% estimated upside probability",
+                divergence_flag=divergence_desc
             )
 
         # 3. Steelmanning counterargument (fallback if none generated by LLM)
         if not steelmanned_text:
             steelmanned_text = (
-                "The optimal strategy might not be a binary choice between current stagnation and high-risk early startup. "
-                "By framing this as 'Stay at current job' vs 'Pre-seed seed startup', you might be overlooking a third alternative: "
-                "targeting a well-funded Series B/C scale-up where you get direct frontier AI product ownership with 3+ years of runway."
+                "The optimal decision may not be a binary forced choice between the two primary extremes. "
+                "Evaluate whether a third synthetic option exists: de-risking the critical uncertainty via an incremental trial, "
+                "parallel exploration, or renegotiating the terms before executing a permanent commitment."
             )
 
         return CriticalThinkingLayerResult(

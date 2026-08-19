@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { AnalysisBundle, ReportResponse } from '../../types';
+import { submitFlagFeedback } from '../../lib/api';
 import { BalanceScaleSensitivity } from './BalanceScaleSensitivity';
 import { SensitivityChart } from './SensitivityChart';
 import { RegretMatrixHeatmap } from './RegretMatrixHeatmap';
@@ -17,7 +18,12 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  RotateCcw
+  RotateCcw,
+  ThumbsUp,
+  ThumbsDown,
+  Check,
+  Layers,
+  History
 } from 'lucide-react';
 
 interface ReportViewProps {
@@ -35,8 +41,37 @@ export const ReportView: React.FC<ReportViewProps> = ({
 }) => {
   const [showFullMarkdown, setShowFullMarkdown] = useState(false);
   const [showAdvancedCharts, setShowAdvancedCharts] = useState(false);
+  const [activePhilosophyTab, setActivePhilosophyTab] = useState<string>('stoicism_v1');
+  const [feedbackStates, setFeedbackStates] = useState<Record<string, { voted: boolean; isPositive?: boolean }>>({});
 
-  const { structured_decision, math_layer, bias_layer, philosophy_layer, critical_thinking_layer } = bundle;
+  const {
+    structured_decision,
+    math_layer,
+    bias_layer,
+    philosophy_layer,
+    philosophy_multi_layer,
+    critical_thinking_layer,
+    longitudinal_context
+  } = bundle;
+
+  const handleFeedback = async (flagId: string, flagType: 'bias' | 'philosophy', isPositive: boolean) => {
+    try {
+      await submitFlagFeedback({
+        decision_id: structured_decision.decision_statement,
+        flag_id: flagId,
+        flag_type: flagType,
+        is_positive: isPositive
+      });
+      setFeedbackStates(prev => ({
+        ...prev,
+        [flagId]: { voted: true, isPositive }
+      }));
+    } catch (err) {
+      console.warn('Feedback submission error:', err);
+    }
+  };
+
+  const frameworks = philosophy_multi_layer?.frameworks || [];
 
   return (
     <div className="w-full max-w-[720px] mx-auto px-4 py-8 space-y-8">
@@ -66,6 +101,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Longitudinal Memory Banner (If Gated >= 5 decisions) */}
+      {(longitudinal_context?.summary_text || report.longitudinal_summary) && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--color-verdigris)]/30 space-y-2">
+          <div className="flex items-center space-x-2 text-[var(--color-verdigris)] text-xs font-ui font-semibold">
+            <History className="w-4 h-4" />
+            <span>Longitudinal Decision Memory ({longitudinal_context?.total_decisions_logged || 5}+ Decisions Logged)</span>
+          </div>
+          <p className="font-body text-xs sm:text-sm text-[var(--text-main)] leading-relaxed">
+            {longitudinal_context?.summary_text || report.longitudinal_summary}
+          </p>
+        </div>
+      )}
 
       {/* Signature Ochre Hero: Value of Information (VoI) Callout */}
       <section className="phronesis-voi-card p-6 sm:p-7 space-y-4 relative overflow-hidden">
@@ -128,38 +176,80 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {bias_layer.flagged_patterns.map((pat) => (
-              <div
-                key={pat.id}
-                className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2.5"
-              >
-                <div className="flex items-baseline justify-between">
-                  <h4 className="font-display font-semibold text-sm text-[var(--text-main)]">
-                    {pat.name}
-                  </h4>
-                  <span className="font-ui text-[10px] text-[var(--color-verdigris)] px-2 py-0.5 rounded bg-[var(--color-verdigris-subtle)]">
-                    {pat.field}
-                  </span>
-                </div>
+            {bias_layer.flagged_patterns.map((pat) => {
+              const fb = feedbackStates[pat.id];
+              const isExplicit = pat.grounding_tier === 'explicit_variable';
+              return (
+                <div
+                  key={pat.id}
+                  className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-display font-semibold text-sm text-[var(--text-main)]">
+                          {pat.name}
+                        </h4>
+                        <span
+                          className={`font-ui text-[10px] px-2 py-0.5 rounded font-medium ${
+                            isExplicit
+                              ? 'bg-[var(--color-ochre)]/15 text-[var(--color-ochre)] border border-[var(--color-ochre)]/30'
+                              : 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]'
+                          }`}
+                        >
+                          {isExplicit ? 'Explicit Variable' : 'Narrative Nuance'}
+                        </span>
+                      </div>
+                      <div className="font-body text-[11px] text-[var(--text-muted)] italic mt-0.5">
+                        Attributed: {pat.source}
+                      </div>
+                    </div>
 
-                <div className="font-body text-[11px] text-[var(--text-muted)] italic">
-                  Attributed Lineage: {pat.source}
-                </div>
+                    {/* Discreet Thumbs Up / Down Feedback */}
+                    <div className="flex items-center space-x-1 shrink-0">
+                      {fb?.voted ? (
+                        <span className="font-ui text-[10px] text-[var(--color-verdigris)] flex items-center space-x-1">
+                          <Check className="w-3 h-3" />
+                          <span>Feedback saved</span>
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleFeedback(pat.id, 'bias', true)}
+                            title="Helpful / Accurate Flag"
+                            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                          >
+                            <ThumbsUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleFeedback(pat.id, 'bias', false)}
+                            title="False Positive / Misidentified"
+                            className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                          >
+                            <ThumbsDown className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
 
-                <p className="font-body text-xs text-[var(--text-main)] leading-relaxed">
-                  {pat.caveat_analysis}
-                </p>
+                  <p className="font-body text-xs text-[var(--text-main)] leading-relaxed">
+                    {pat.caveat_analysis}
+                  </p>
 
-                <div className="p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs">
-                  <span className="font-ui font-semibold text-[var(--color-verdigris)]">
-                    Reframing Inquiry:{' '}
-                  </span>
-                  <span className="font-body text-[var(--text-main)] italic">
-                    "{pat.question_to_surface}"
-                  </span>
+                  <div className="p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs">
+                    <span className="font-ui font-semibold text-[var(--color-verdigris)]">
+                      Reframing Inquiry:{' '}
+                    </span>
+                    <span className="font-body text-[var(--text-main)] italic">
+                      "{pat.question_to_surface}"
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -272,12 +362,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
           />
         </div>
 
-        {/* Collapsible Advanced Mathematical Charts (Recharts line curves + Regret Matrix Heatmap) */}
+        {/* Collapsible Advanced Mathematical Charts */}
         <div className="pt-2 border-t border-[var(--border-subtle)]">
           <button
             type="button"
             onClick={() => setShowAdvancedCharts(!showAdvancedCharts)}
-            className="w-full flex items-center justify-between text-xs font-ui text-[var(--text-muted)] hover:text-[var(--text-main)] py-1 transition-colors"
+            className="w-full flex items-center justify-between text-xs font-ui text-[var(--text-muted)] hover:text-[var(--text-main)] py-1 transition-colors cursor-pointer"
           >
             <span className="font-medium">
               {showAdvancedCharts ? 'Hide' : 'Show'} Detailed Sensitivity Curve & Regret Matrix
@@ -306,7 +396,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       </section>
 
       {/* ========================================================================= */}
-      {/* LAYER CARD: Hellenistic Philosophy (Stoic Dichotomy of Control)           */}
+      {/* LAYER CARD: Multi-Framework Philosophical Reflection (4 Parallel Lenses)   */}
       {/* ========================================================================= */}
       <section className="phronesis-card p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
@@ -316,55 +406,111 @@ export const ReportView: React.FC<ReportViewProps> = ({
             </div>
             <div>
               <h3 className="font-display font-semibold text-base text-[var(--text-main)]">
-                Hellenistic Philosophy: {philosophy_layer.framework_name}
+                Multi-Framework Philosophical Reflection
               </h3>
               <p className="font-body text-xs text-[var(--text-muted)]">
-                Sourced: {philosophy_layer.source}
+                Four parallel evaluative lenses (No framework declared superior)
               </p>
             </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-          {/* Internal Controllables (Prohairesis) */}
-          <div className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2">
-            <h4 className="font-ui font-semibold text-[var(--color-verdigris)] flex items-center space-x-1.5">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Internal Controllables (Prohairesis)</span>
-            </h4>
-            <ul className="space-y-1.5 font-body text-[var(--text-main)]">
-              {philosophy_layer.dichotomy_of_control.internal_controllables.map((item, idx) => (
-                <li key={idx} className="flex items-start space-x-1.5">
-                  <span className="text-[var(--color-verdigris)] font-bold">•</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* External Uncontrollables (Indifferents) */}
-          <div className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2">
-            <h4 className="font-ui font-semibold text-[var(--text-muted)] flex items-center space-x-1.5">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>External Indifferents</span>
-            </h4>
-            <ul className="space-y-1.5 font-body text-[var(--text-main)]">
-              {philosophy_layer.dichotomy_of_control.external_uncontrollables.map((item, idx) => (
-                <li key={idx} className="flex items-start space-x-1.5">
-                  <span className="text-[var(--color-slate)] font-bold">•</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {philosophy_layer.indifferents_analysis?.virtue_and_agency_tension && (
-          <div className="p-3.5 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] text-xs font-body text-[var(--text-main)] leading-relaxed">
-            <span className="font-ui font-semibold text-[var(--color-verdigris)]">
-              Agency vs. External Attachment:{' '}
+          <div className="flex items-center space-x-1">
+            <Layers className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
+            <span className="font-data text-xs text-[var(--color-verdigris)] font-medium">
+              4 Lenses
             </span>
-            {philosophy_layer.indifferents_analysis.virtue_and_agency_tension}
+          </div>
+        </div>
+
+        {/* Framework Selector Tabs */}
+        {frameworks.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-1.5 p-1 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)]">
+              {frameworks.map((fw) => (
+                <button
+                  key={fw.framework_id}
+                  type="button"
+                  onClick={() => setActivePhilosophyTab(fw.framework_id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-ui font-medium transition-all cursor-pointer ${
+                    activePhilosophyTab === fw.framework_id
+                      ? 'bg-[var(--bg-surface)] text-[var(--color-verdigris)] shadow-sm border border-[var(--border-subtle)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                >
+                  {fw.framework_name.split('(')[0].trim()}
+                </button>
+              ))}
+            </div>
+
+            {/* Selected Framework Body */}
+            {frameworks
+              .filter((fw) => fw.framework_id === activePhilosophyTab)
+              .map((fw) => (
+                <div key={fw.framework_id} className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-display font-semibold text-sm text-[var(--text-main)]">
+                        {fw.framework_name}
+                      </h4>
+                      <p className="font-body text-[11px] text-[var(--text-muted)] italic">
+                        Source: {fw.source}
+                      </p>
+                    </div>
+                    <span className="font-ui text-[10px] text-[var(--color-verdigris)] px-2 py-0.5 rounded bg-[var(--color-verdigris-subtle)]">
+                      {fw.field}
+                    </span>
+                  </div>
+
+                  <p className="font-body text-xs text-[var(--text-main)] leading-relaxed">
+                    {fw.core_idea}
+                  </p>
+
+                  <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
+                    <span className="font-ui font-semibold text-xs text-[var(--color-verdigris)]">
+                      Socratic Reflective Inquiries:
+                    </span>
+                    <ul className="space-y-1.5 font-body text-xs text-[var(--text-main)]">
+                      {fw.surfaced_questions.map((q, idx) => (
+                        <li key={idx} className="flex items-start space-x-1.5 p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+                          <span className="text-[var(--color-verdigris)] font-bold shrink-0">?</span>
+                          <span className="italic">"{q}"</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+          </div>
+        ) : (
+          /* Legacy Stoic Fallback */
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+            <div className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2">
+              <h4 className="font-ui font-semibold text-[var(--color-verdigris)] flex items-center space-x-1.5">
+                <Shield className="w-3.5 h-3.5" />
+                <span>Internal Controllables</span>
+              </h4>
+              <ul className="space-y-1.5 font-body text-[var(--text-main)]">
+                {philosophy_layer.dichotomy_of_control.internal_controllables.map((item, idx) => (
+                  <li key={idx} className="flex items-start space-x-1.5">
+                    <span className="text-[var(--color-verdigris)] font-bold">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2">
+              <h4 className="font-ui font-semibold text-[var(--text-muted)] flex items-center space-x-1.5">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>External Indifferents</span>
+              </h4>
+              <ul className="space-y-1.5 font-body text-[var(--text-main)]">
+                {philosophy_layer.dichotomy_of_control.external_uncontrollables.map((item, idx) => (
+                  <li key={idx} className="flex items-start space-x-1.5">
+                    <span className="text-[var(--color-slate)] font-bold">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
       </section>
@@ -467,7 +613,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         <button
           type="button"
           onClick={() => setShowFullMarkdown(!showFullMarkdown)}
-          className="w-full flex items-center justify-between text-xs font-ui text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+          className="w-full flex items-center justify-between text-xs font-ui text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
         >
           <div className="flex items-center space-x-2">
             <FileText className="w-4 h-4 text-[var(--color-verdigris)]" />

@@ -33,6 +33,7 @@ export interface StructuredDecision {
   constraints: string[];
   assumptions: Assumption[];
   unknowns: string[];
+  domain?: string;
 }
 
 export interface FlaggedBiasPattern {
@@ -44,6 +45,7 @@ export interface FlaggedBiasPattern {
   observed_trigger: string;
   caveat_analysis: string;
   question_to_surface: string;
+  grounding_tier?: 'explicit_variable' | 'narrative_nuance';
 }
 
 export interface BiasLayerResult {
@@ -96,9 +98,24 @@ export interface StoicAnalysisResult {
   };
   indifferents_analysis: {
     preferred_indifferents: string[];
-    virtue_and_agency_tension: string;
+    virtue_and_agency_tension?: string;
   };
   surfaced_questions: string[];
+}
+
+export interface PhilosophyFrameworkResult {
+  framework_id: string;
+  framework_name: string;
+  field: string;
+  source: string;
+  core_idea: string;
+  dimension_analysis: Record<string, any>;
+  surfaced_questions: string[];
+}
+
+export interface PhilosophyLayerResult {
+  frameworks: PhilosophyFrameworkResult[];
+  stoic_legacy?: StoicAnalysisResult;
 }
 
 export interface FalsifiabilityAuditItem {
@@ -122,12 +139,21 @@ export interface CriticalThinkingLayerResult {
   steelmanned_counterargument?: string;
 }
 
+export interface LongitudinalPatternContext {
+  total_decisions_logged: number;
+  recurring_bias_counts: Record<string, number>;
+  average_base_rate_divergence_pct?: number;
+  summary_text?: string;
+}
+
 export interface AnalysisBundle {
   structured_decision: StructuredDecision;
   bias_layer: BiasLayerResult;
   math_layer: MathLayerResult;
   philosophy_layer: StoicAnalysisResult;
+  philosophy_multi_layer?: PhilosophyLayerResult;
   critical_thinking_layer: CriticalThinkingLayerResult;
+  longitudinal_context?: LongitudinalPatternContext;
 }
 
 export interface SourceAttribution {
@@ -147,6 +173,7 @@ export interface ReportResponse {
     minimax_regret_choice: string;
     inflection_threshold: number;
   };
+  longitudinal_summary?: string;
 }
 
 export interface BenchmarkItem {
@@ -154,4 +181,31 @@ export interface BenchmarkItem {
   title: string;
   narrative: string;
   structured_decision: StructuredDecision;
+}
+
+export interface HistoryItemSummary {
+  id: string;
+  timestamp: string;
+  domain: string;
+  decision_statement: string;
+  preferred_eu_alt?: string;
+  minimax_regret_choice?: string;
+  flagged_bias_ids: string[];
+  has_outcome: boolean;
+  chosen_alternative_id?: string;
+  actual_utility_rating?: number;
+}
+
+export interface FlagFeedbackRequest {
+  decision_id: string;
+  flag_id: string;
+  flag_type: 'bias' | 'philosophy';
+  is_positive: boolean;
+  feedback_reason?: string;
+}
+
+export interface OutcomeRetroRequest {
+  chosen_alternative_id: string;
+  actual_utility_rating?: number;
+  retrospective_notes?: string;
 }

@@ -1,10 +1,10 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.schemas.decision import AnalysisBundle, ReportResponse, SourceAttribution
 from app.services.llm_client import LLMClient
 from app.core.guardrails import ReportGuardrail
 
 SYNTHESIS_SYSTEM_PROMPT = """You are Phronesis Report Synthesis Engine.
-Your job is to convert structured analytical findings from 4 deterministic engines into a crisp, empathetic, structured markdown report.
+Your job is to convert structured analytical findings from deterministic engines into a crisp, empathetic, structured markdown report.
 
 CRITICAL NON-NEGOTIABLE CONSTRAINTS:
 1. Every single sentence MUST trace directly to a supplied data field or value.
@@ -12,6 +12,7 @@ CRITICAL NON-NEGOTIABLE CONSTRAINTS:
 3. Always cite the scientific/philosophical field and literature source for every flagged bias or philosophical framework.
 4. Frame the conclusion around the Value of Information (VoI): what is the single most sensitive uncertain parameter and what cheap real-world experiment tests it before committing?
 5. Use observational pattern language ("consistent with X"), never personal diagnostic labels.
+6. Present all four philosophical lenses (Stoicism, Utilitarianism, Kantian Deontology, Aristotelian Virtue Ethics) as parallel evaluative dimensions without declaring any framework correct.
 
 Required Markdown Structure:
 # Decision Reasoning Audit: [Title]
@@ -27,8 +28,14 @@ Required Markdown Structure:
 ---
 
 ## 2. Sourced Cognitive & Philosophical Tradeoffs
-- [Flagged biases with literature citations (Field / Author / Theory)]
-- [Stoic Dichotomy of Control reflection and Indifferents analysis]
+### Cognitive Pattern Grounding
+- [Flagged biases with literature citations (Field / Author / Theory) and grounding badges: [Explicit Variable] or [Narrative Nuance]]
+
+### Multi-Lens Philosophical Reflection
+- [Stoic Dichotomy of Control reflection]
+- [Utilitarian Consequentialist stakeholder consideration]
+- [Kantian Deontological universalizability test]
+- [Aristotelian Virtue Ethics character & golden mean inquiry]
 
 ---
 
@@ -43,8 +50,10 @@ class SynthesisService:
         d = bundle.structured_decision
         m = bundle.math_layer
         b = bundle.bias_layer
-        p = bundle.philosophy_layer
+        p_legacy = bundle.philosophy_layer
+        p_multi = bundle.philosophy_multi_layer
         ct = bundle.critical_thinking_layer
+        longitudinal = bundle.longitudinal_context
 
         # Sourced attributions collection
         attributions: List[SourceAttribution] = []
@@ -56,13 +65,33 @@ class SynthesisService:
                     referenced_item=pat.name
                 )
             )
-        attributions.append(
-            SourceAttribution(
-                field=p.field,
-                source=p.source,
-                referenced_item=p.framework_name
+
+        if p_multi and p_multi.frameworks:
+            for fw in p_multi.frameworks:
+                attributions.append(
+                    SourceAttribution(
+                        field=fw.field,
+                        source=fw.source,
+                        referenced_item=fw.framework_name
+                    )
+                )
+        else:
+            attributions.append(
+                SourceAttribution(
+                    field=p_legacy.field,
+                    source=p_legacy.source,
+                    referenced_item=p_legacy.framework_name
+                )
             )
-        )
+
+        if ct.base_rate_check:
+            attributions.append(
+                SourceAttribution(
+                    field=ct.base_rate_check.domain,
+                    source=ct.base_rate_check.source,
+                    referenced_item=ct.base_rate_check.reference_class
+                )
+            )
 
         context_payload = {
             "decision_statement": d.decision_statement,
@@ -72,8 +101,9 @@ class SynthesisService:
             "minimax_regret": m.minimax_regret.model_dump(),
             "sensitivity_analysis": m.sensitivity_analysis.model_dump(),
             "flagged_biases": [pat.model_dump() for pat in b.flagged_patterns],
-            "stoic_lens": p.model_dump(),
-            "critical_thinking": ct.model_dump()
+            "philosophy_frameworks": [fw.model_dump() for fw in (p_multi.frameworks if p_multi else [])],
+            "critical_thinking": ct.model_dump(),
+            "longitudinal_context": longitudinal.model_dump() if longitudinal else None
         }
 
         user_prompt = f"Synthesize this analytical bundle into the required report format:\n\n{context_payload}"
@@ -110,10 +140,13 @@ class SynthesisService:
             "inflection_threshold": m.sensitivity_analysis.inflection_threshold
         }
 
+        longitudinal_summary_str = longitudinal.summary_text if longitudinal else None
+
         return ReportResponse(
             report_markdown=final_report,
             key_sensitive_variable=sensitive_var,
             proposed_experiment=proposed_exp,
             attributed_sources=attributions,
-            math_summary=math_summary
+            math_summary=math_summary,
+            longitudinal_summary=longitudinal_summary_str
         )

@@ -2,7 +2,10 @@ import type {
   StructuredDecision,
   AnalysisBundle,
   ReportResponse,
-  BenchmarkItem
+  BenchmarkItem,
+  HistoryItemSummary,
+  FlagFeedbackRequest,
+  OutcomeRetroRequest
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -69,4 +72,79 @@ export async function fetchCounterargument(decision: StructuredDecision, leading
   }
   const data = await res.json();
   return data.steelmanned_counterargument;
+}
+
+// V2 Feedback & Local Memory API
+export async function submitFlagFeedback(req: FlagFeedbackRequest): Promise<void> {
+  const res = await fetch(`${API_BASE}/feedback/flag`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to record feedback');
+  }
+}
+
+export async function fetchHistory(): Promise<HistoryItemSummary[]> {
+  const res = await fetch(`${API_BASE}/history`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch decision history');
+  }
+  return res.json();
+}
+
+export async function fetchHistoryItem(id: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/history/${id}`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch decision details');
+  }
+  return res.json();
+}
+
+export async function recordOutcome(decisionId: string, req: OutcomeRetroRequest): Promise<void> {
+  const res = await fetch(`${API_BASE}/history/${decisionId}/outcome`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to record outcome retrospective');
+  }
+}
+
+export async function exportHistory(): Promise<any> {
+  const res = await fetch(`${API_BASE}/history/export`);
+  if (!res.ok) {
+    throw new Error('Failed to export history');
+  }
+  return res.json();
+}
+
+export async function purgeHistory(): Promise<void> {
+  const res = await fetch(`${API_BASE}/history/purge`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    throw new Error('Failed to purge history');
+  }
+}
+
+export async function fetchMemorySettings(): Promise<{ memory_enabled: boolean }> {
+  const res = await fetch(`${API_BASE}/settings/memory`);
+  if (!res.ok) {
+    return { memory_enabled: false };
+  }
+  return res.json();
+}
+
+export async function updateMemorySettings(enabled: boolean): Promise<void> {
+  const res = await fetch(`${API_BASE}/settings/memory`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to update memory settings');
+  }
 }

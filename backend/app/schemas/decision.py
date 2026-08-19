@@ -139,6 +139,16 @@ class LongitudinalPatternContext(BaseModel):
     average_base_rate_divergence_pct: Optional[float] = None
     summary_text: Optional[str] = None
 
+class FocusConfig(BaseModel):
+    focused_layers: List[str] = Field(
+        default_factory=lambda: ["psychology", "logic", "philosophy", "practical"],
+        description="List of focused layers: psychology, logic, philosophy, practical"
+    )
+    philosophy_frameworks: List[str] = Field(
+        default_factory=list,
+        description="Specific philosophy frameworks to foreground when philosophy is active"
+    )
+
 class AnalysisBundle(BaseModel):
     structured_decision: StructuredDecision
     bias_layer: BiasLayerResult
@@ -147,6 +157,7 @@ class AnalysisBundle(BaseModel):
     philosophy_multi_layer: Optional[PhilosophyLayerResult] = None
     critical_thinking_layer: CriticalThinkingLayerResult
     longitudinal_context: Optional[LongitudinalPatternContext] = None
+    focus_config: Optional[FocusConfig] = None
 
 class SourceAttribution(BaseModel):
     field: str
@@ -160,6 +171,22 @@ class ReportResponse(BaseModel):
     attributed_sources: List[SourceAttribution] = Field(default_factory=list)
     math_summary: Dict[str, Any] = Field(default_factory=dict)
     longitudinal_summary: Optional[str] = None
+    focus_config: Optional[FocusConfig] = None
+
+class DrillDownRequest(BaseModel):
+    decision_statement: str
+    item_type: str = Field(description="bias, philosophy, assumption, base_rate")
+    item_id: str
+    item_title: str
+    item_context: Dict[str, Any] = Field(default_factory=dict)
+
+class DrillDownResponse(BaseModel):
+    item_id: str
+    item_title: str
+    deep_dive_markdown: str
+    academic_context: Optional[str] = None
+    probing_questions: List[str] = Field(default_factory=list)
+    concrete_action_or_test: Optional[str] = None
 
 class BenchmarkItem(BaseModel):
     id: str

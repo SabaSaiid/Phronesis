@@ -5,7 +5,9 @@ import type {
   BenchmarkItem,
   HistoryItemSummary,
   FlagFeedbackRequest,
-  OutcomeRetroRequest
+  OutcomeRetroRequest,
+  DrillDownRequest,
+  DrillDownResponse
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -72,6 +74,19 @@ export async function fetchCounterargument(decision: StructuredDecision, leading
   }
   const data = await res.json();
   return data.steelmanned_counterargument;
+}
+
+export async function fetchDrillDown(req: DrillDownRequest): Promise<DrillDownResponse> {
+  const res = await fetch(`${API_BASE}/analyze/drill-down`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to generate deep dive inquiry');
+  }
+  return res.json();
 }
 
 // V2 Feedback & Local Memory API

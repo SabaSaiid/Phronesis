@@ -4,6 +4,7 @@ import { Sidebar, type HistoryItem } from './components/Sidebar';
 import { SettingsModal } from './components/SettingsModal';
 import { CommandPalette } from './components/CommandPalette';
 import { ExportModal } from './components/ExportModal';
+import { OrientationModal } from './components/OrientationModal';
 import { ToastProvider, useToast } from './components/Toast';
 import { NarrativeInputView } from './features/input/NarrativeInputView';
 import { ModelEditorView } from './features/editor/ModelEditorView';
@@ -12,7 +13,8 @@ import type {
   StructuredDecision,
   AnalysisBundle,
   ReportResponse,
-  BenchmarkItem
+  BenchmarkItem,
+  FocusConfig
 } from './types';
 import {
   fetchBenchmarks,
@@ -20,7 +22,7 @@ import {
   runDeterministicAnalysis,
   synthesizeReport
 } from './lib/api';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Sparkles } from 'lucide-react';
 
 const LOCAL_STORAGE_THEME_KEY = 'phronesis_theme';
 const LOCAL_STORAGE_HISTORY_KEY = 'phronesis_history';
@@ -163,16 +165,27 @@ function AppContent() {
     });
   };
 
-  const handleRunAnalysis = async () => {
+  const [isOrientationOpen, setIsOrientationOpen] = useState<boolean>(() => {
+    return localStorage.getItem('phronesis_orientation_dismissed') !== 'true';
+  });
+  const [loadingStage, setLoadingStage] = useState<string>('');
+
+  const handleRunAnalysis = async (focusConfig?: FocusConfig) => {
     if (!decision) return;
     setIsLoading(true);
     setError(null);
+    setLoadingStage('Computing closed-form expected utility & regret matrices...');
     try {
       // 1. Run deterministic engines
+      setLoadingStage('Scanning 15 cognitive bias patterns & 4 philosophical frameworks...');
       const analysisBundle = await runDeterministicAnalysis(decision);
+      if (focusConfig) {
+        analysisBundle.focus_config = focusConfig;
+      }
       setBundle(analysisBundle);
 
       // 2. Synthesize report
+      setLoadingStage('Synthesizing auditable reasoning dossier with Value of Information...');
       const rep = await synthesizeReport(analysisBundle);
       setReport(rep);
 
@@ -219,6 +232,7 @@ function AppContent() {
       });
     } finally {
       setIsLoading(false);
+      setLoadingStage('');
     }
   };
 
@@ -364,6 +378,41 @@ function AppContent() {
           <p>Phronesis (φρόνησις) · Auditable Human Judgment Under Uncertainty</p>
         </footer>
       </div>
+
+      {/* Pipeline Progress Indicator (During Reasoning Audit) */}
+      {isLoading && loadingStage && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 p-4 rounded-2xl bg-[var(--bg-surface-glass)] backdrop-blur-md border border-[var(--color-verdigris)]/50 shadow-2xl flex items-center space-x-3 animate-fade-in max-w-md w-full mx-4">
+          <div className="p-2 rounded-xl bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] shrink-0">
+            <Sparkles className="w-5 h-5 animate-spin" />
+          </div>
+          <div className="space-y-0.5 flex-1 min-w-0">
+            <div className="flex items-center justify-between text-xs font-ui">
+              <span className="font-semibold text-[var(--color-verdigris)]">
+                Reasoning Audit in Progress
+              </span>
+              <span className="text-[10px] font-mono text-[var(--text-faint)]">
+                Auditing...
+              </span>
+            </div>
+            <p className="font-body text-xs text-[var(--text-main)] truncate animate-pulse">
+              {loadingStage}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* First-Time Orientation Modal */}
+      <OrientationModal
+        isOpen={isOrientationOpen}
+        onClose={() => {
+          setIsOrientationOpen(false);
+          try {
+            localStorage.setItem('phronesis_orientation_dismissed', 'true');
+          } catch (e) {
+            console.warn('Failed to save orientation dismiss state:', e);
+          }
+        }}
+      />
 
       {/* Settings Modal */}
       <SettingsModal

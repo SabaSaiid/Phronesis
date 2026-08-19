@@ -93,6 +93,15 @@ class SynthesisService:
                 )
             )
 
+        focus = getattr(bundle, "focus_config", None)
+        focused_layers = focus.focused_layers if focus and focus.focused_layers else ["psychology", "logic", "philosophy", "practical"]
+        foreground_fws = focus.philosophy_frameworks if focus and focus.philosophy_frameworks else []
+
+        math_depth = "FULL (detailed payoff dynamics and sensitivity derivation)" if "practical" in focused_layers else "CONDENSED (crisp 1-2 sentence summary of EU winner, minimax regret, and inflection threshold)"
+        bias_depth = "FULL (thorough paragraph exposition with academic citations and reframing inquiries for each flagged pattern)" if "psychology" in focused_layers else "CONDENSED (crisp 1-2 sentence summary of flagged cognitive patterns)"
+        phil_depth = "FULL (multi-lens reflection across ethical frameworks)" if "philosophy" in focused_layers else "CONDENSED (crisp 1-2 sentence core moral agency tension summary)"
+        logic_depth = "FULL (falsifiability audit and counterargument stress-test)" if "logic" in focused_layers else "CONDENSED (crisp 1-2 sentence assumption stress-test summary)"
+
         context_payload = {
             "decision_statement": d.decision_statement,
             "alternatives": [a.model_dump() for a in d.alternatives],
@@ -103,10 +112,17 @@ class SynthesisService:
             "flagged_biases": [pat.model_dump() for pat in b.flagged_patterns],
             "philosophy_frameworks": [fw.model_dump() for fw in (p_multi.frameworks if p_multi else [])],
             "critical_thinking": ct.model_dump(),
-            "longitudinal_context": longitudinal.model_dump() if longitudinal else None
+            "longitudinal_context": longitudinal.model_dump() if longitudinal else None,
+            "depth_directives": {
+                "math_layer_depth": math_depth,
+                "bias_layer_depth": bias_depth,
+                "philosophy_layer_depth": phil_depth,
+                "philosophy_foreground_frameworks": foreground_fws,
+                "critical_thinking_layer_depth": logic_depth
+            }
         }
 
-        user_prompt = f"Synthesize this analytical bundle into the required report format:\n\n{context_payload}"
+        user_prompt = f"Synthesize this analytical bundle into the required report format respecting the depth directives for each layer:\n\n{context_payload}"
         raw_report = await LLMClient.generate_text(
             system_prompt=SYNTHESIS_SYSTEM_PROMPT,
             user_prompt=user_prompt
@@ -148,5 +164,6 @@ class SynthesisService:
             proposed_experiment=proposed_exp,
             attributed_sources=attributions,
             math_summary=math_summary,
-            longitudinal_summary=longitudinal_summary_str
+            longitudinal_summary=longitudinal_summary_str,
+            focus_config=focus
         )

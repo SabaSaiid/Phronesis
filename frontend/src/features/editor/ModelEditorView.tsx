@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { StructuredDecision, Assumption } from '../../types';
+import type { StructuredDecision, Assumption, FocusConfig } from '../../types';
+import { FocusSelector } from '../../components/FocusSelector';
 import {
   Play,
   Sliders,
@@ -15,7 +16,7 @@ import {
 interface ModelEditorViewProps {
   decision: StructuredDecision;
   onUpdateDecision: (updated: StructuredDecision) => void;
-  onRunAnalysis: () => Promise<void>;
+  onRunAnalysis: (focusConfig?: FocusConfig) => Promise<void>;
   onBackToInput: () => void;
   isLoading: boolean;
 }
@@ -29,6 +30,10 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
 }) => {
   const [model, setModel] = useState<StructuredDecision>(() => JSON.parse(JSON.stringify(decision)));
   const [newAssumptionText, setNewAssumptionText] = useState('');
+  const [focusConfig, setFocusConfig] = useState<FocusConfig>({
+    focused_layers: ['psychology', 'logic', 'philosophy', 'practical'],
+    philosophy_frameworks: [],
+  });
 
   const handlePayoffChange = (altId: string, stateId: string, utility: number) => {
     const clamped = Math.max(0, Math.min(100, utility));
@@ -140,7 +145,7 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
 
         <button
           type="button"
-          onClick={onRunAnalysis}
+          onClick={() => onRunAnalysis(focusConfig)}
           disabled={isLoading}
           className="px-5 py-2.5 rounded-xl btn-verdigris font-ui font-medium text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-sm transition-all shrink-0 cursor-pointer"
         >
@@ -423,6 +428,12 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
         </div>
       </div>
 
+      {/* Analytical Focus & Depth Steering Section */}
+      <FocusSelector
+        value={focusConfig}
+        onChange={setFocusConfig}
+      />
+
       {/* Sticky Bottom Run Action Bar */}
       <div className="sticky bottom-4 z-20 p-4 rounded-2xl bg-[var(--bg-surface-glass)] backdrop-blur-md border border-[var(--border-strong)] shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-xs font-ui text-[var(--text-muted)] flex items-center space-x-2">
@@ -432,7 +443,7 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
 
         <button
           type="button"
-          onClick={onRunAnalysis}
+          onClick={() => onRunAnalysis(focusConfig)}
           disabled={isLoading}
           className="w-full sm:w-auto px-6 py-2.5 rounded-xl btn-verdigris font-ui font-medium text-sm flex items-center justify-center space-x-2 shadow-sm transition-all cursor-pointer shrink-0"
         >

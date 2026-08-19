@@ -146,6 +146,13 @@ export interface LongitudinalPatternContext {
   summary_text?: string;
 }
 
+export type FocusLayerId = 'psychology' | 'logic' | 'philosophy' | 'practical';
+
+export interface FocusConfig {
+  focused_layers: FocusLayerId[];
+  philosophy_frameworks?: string[];
+}
+
 export interface AnalysisBundle {
   structured_decision: StructuredDecision;
   bias_layer: BiasLayerResult;
@@ -154,6 +161,7 @@ export interface AnalysisBundle {
   philosophy_multi_layer?: PhilosophyLayerResult;
   critical_thinking_layer: CriticalThinkingLayerResult;
   longitudinal_context?: LongitudinalPatternContext;
+  focus_config?: FocusConfig;
 }
 
 export interface SourceAttribution {
@@ -174,6 +182,24 @@ export interface ReportResponse {
     inflection_threshold: number;
   };
   longitudinal_summary?: string;
+  focus_config?: FocusConfig;
+}
+
+export interface DrillDownRequest {
+  decision_statement: string;
+  item_type: 'bias' | 'philosophy' | 'assumption' | 'base_rate' | string;
+  item_id: string;
+  item_title: string;
+  item_context?: Record<string, any>;
+}
+
+export interface DrillDownResponse {
+  item_id: string;
+  item_title: string;
+  deep_dive_markdown: string;
+  academic_context?: string;
+  probing_questions: string[];
+  concrete_action_or_test?: string;
 }
 
 export interface BenchmarkItem {

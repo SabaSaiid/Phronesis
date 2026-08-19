@@ -113,6 +113,8 @@ class ReportGuardrail:
         p_legacy = bundle.philosophy_layer
         p_multi = getattr(bundle, "philosophy_multi_layer", None)
         longitudinal = getattr(bundle, "longitudinal_context", None)
+        focus = getattr(bundle, "focus_config", None)
+        focused_layers = focus.focused_layers if focus and focus.focused_layers else ["psychology", "logic", "philosophy", "practical"]
 
         best_eu_alt = m.expected_utility.preferred_alternative_id
         minimax_alt = m.minimax_regret.minimax_regret_choice
@@ -121,45 +123,61 @@ class ReportGuardrail:
         best_eu_name = alt_names.get(best_eu_alt, best_eu_alt)
         minimax_name = alt_names.get(minimax_alt, minimax_alt)
 
-        bias_bullets = []
-        for pat in b.flagged_patterns:
-            tier_badge = "[Explicit Variable]" if getattr(pat, "grounding_tier", "explicit_variable") == "explicit_variable" else "[Narrative Nuance]"
-            bias_bullets.append(
-                f"- **{pat.name}** `{tier_badge}` (*Source: {pat.field} — {pat.source}*): "
-                f"Stated reasoning exhibits characteristics consistent with {pat.name.lower()}. "
-                f"Question to inspect: *{pat.question_to_surface}*"
-            )
-        biases_formatted = "\n".join(bias_bullets) if bias_bullets else "- No cognitive risk patterns flagged above threshold."
-
-        eu_bullets = []
-        for aid, u_val in m.expected_utility.utilities.items():
-            aname = alt_names.get(aid, aid)
-            eu_bullets.append(f"- **{aname}:** {u_val:.1f} Expected Utility")
-        eu_formatted = "\n".join(eu_bullets)
-
         inflection_pct = int(round(m.sensitivity_analysis.inflection_threshold * 100))
         critical_param = m.sensitivity_analysis.critical_parameter
 
-        # Multi-Framework Philosophy formatting
-        philosophy_sections = []
-        if p_multi and p_multi.frameworks:
-            for fw in p_multi.frameworks:
-                q_text = fw.surfaced_questions[0] if fw.surfaced_questions else fw.core_idea
-                name_display = fw.framework_name
-                if "stoic" in fw.framework_id.lower() and "Stoic Lens" not in name_display:
-                    name_display = f"Stoic Lens ({fw.framework_name})"
-                philosophy_sections.append(
-                    f"- **{name_display}** (*Source: {fw.field} — {fw.source}*):\n"
-                    f"  Reflective Inquiry: *{q_text}*"
-                )
+        # Math Layer Formatting (Full vs Condensed)
+        if "practical" in focused_layers:
+            eu_bullets = []
+            for aid, u_val in m.expected_utility.utilities.items():
+                aname = alt_names.get(aid, aid)
+                eu_bullets.append(f"- **{aname}:** {u_val:.1f} Expected Utility")
+            eu_formatted = "\n".join(eu_bullets)
+            math_section = f"{eu_formatted}\n- **Inflection Threshold:** The leading alternative flips when {critical_param} reaches {inflection_pct}%.\n- **Directional Sensitivity:** {m.sensitivity_analysis.directional_shift}"
         else:
-            stoic_tension = p_legacy.indifferents_analysis.get("virtue_and_agency_tension", "")
-            if not stoic_tension and p_legacy.surfaced_questions:
-                stoic_tension = p_legacy.surfaced_questions[0]
-            philosophy_sections.append(
-                f"- **Stoic Lens — Dichotomy of Control** (*Source: {p_legacy.field} — {p_legacy.source}*): {stoic_tension}"
-            )
-        philosophy_formatted = "\n".join(philosophy_sections)
+            math_section = f"- **Summary:** '{best_eu_name}' achieves highest expected utility ({m.expected_utility.utilities.get(best_eu_alt, 0):.1f} EU); '{minimax_name}' minimizes maximum regret. Sensitivity threshold flips at {inflection_pct}% on '{critical_param}'."
+
+        # Bias Layer Formatting (Full vs Condensed)
+        if "psychology" in focused_layers:
+            bias_bullets = []
+            for pat in b.flagged_patterns:
+                tier_badge = "[Explicit Variable]" if getattr(pat, "grounding_tier", "explicit_variable") == "explicit_variable" else "[Narrative Nuance]"
+                bias_bullets.append(
+                    f"- **{pat.name}** `{tier_badge}` (*Source: {pat.field} — {pat.source}*): "
+                    f"Stated reasoning exhibits characteristics consistent with {pat.name.lower()}. "
+                    f"Question to inspect: *{pat.question_to_surface}*"
+                )
+            biases_formatted = "\n".join(bias_bullets) if bias_bullets else "- No cognitive risk patterns flagged above threshold."
+        else:
+            if b.flagged_patterns:
+                bias_names = ", ".join(p.name for p in b.flagged_patterns)
+                biases_formatted = f"- **Summary:** {len(b.flagged_patterns)} cognitive pattern(s) identified ({bias_names}). Stated framing exhibits characteristics consistent with {b.flagged_patterns[0].name}."
+            else:
+                biases_formatted = "- No acute cognitive bias patterns flagged."
+
+        # Multi-Framework Philosophy formatting (Full vs Condensed)
+        if "philosophy" in focused_layers:
+            philosophy_sections = []
+            if p_multi and p_multi.frameworks:
+                for fw in p_multi.frameworks:
+                    q_text = fw.surfaced_questions[0] if fw.surfaced_questions else fw.core_idea
+                    name_display = fw.framework_name
+                    if "stoic" in fw.framework_id.lower() and "Stoic Lens" not in name_display:
+                        name_display = f"Stoic Lens ({fw.framework_name})"
+                    philosophy_sections.append(
+                        f"- **{name_display}** (*Source: {fw.field} — {fw.source}*):\n"
+                        f"  Reflective Inquiry: *{q_text}*"
+                    )
+            else:
+                stoic_tension = p_legacy.indifferents_analysis.get("virtue_and_agency_tension", "")
+                if not stoic_tension and p_legacy.surfaced_questions:
+                    stoic_tension = p_legacy.surfaced_questions[0]
+                philosophy_sections.append(
+                    f"- **Stoic Lens — Dichotomy of Control** (*Source: {p_legacy.field} — {p_legacy.source}*): {stoic_tension}"
+                )
+            philosophy_formatted = "\n".join(philosophy_sections)
+        else:
+            philosophy_formatted = "- **Summary:** Evaluated across parallel ethical frameworks (Stoic agency, Consequentialist stakeholders, Kantian duty, Virtue formation). Decision stresses balance between external security and reasoned autonomy."
 
         # Longitudinal context block if present
         longitudinal_block = ""
@@ -174,9 +192,7 @@ Analysis of the structured decision model reveals a primary structural tension b
 ---
 
 ## 1. Mathematical Sensitivity & Inflection Thresholds
-{eu_formatted}
-- **Inflection Threshold:** The leading alternative flips when {critical_param} reaches {inflection_pct}%.
-- **Directional Sensitivity:** {m.sensitivity_analysis.directional_shift}
+{math_section}
 
 ---
 

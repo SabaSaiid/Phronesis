@@ -10,12 +10,15 @@ from app.schemas.decision import (
     BenchmarkItem,
     FlagFeedbackRequest,
     OutcomeRetroRequest,
-    HistoryItemSummary
+    HistoryItemSummary,
+    DrillDownRequest,
+    DrillDownResponse
 )
 from app.services.extraction_service import ExtractionService
 from app.services.matching_service import RubricMatchingService
 from app.services.counterargument_service import CounterargumentService
 from app.services.synthesis_service import SynthesisService
+from app.services.drilldown_service import DrillDownService
 from app.engines.math_engine import DecisionTheoryMathEngine
 from app.engines.stoic_engine import StoicPhilosophyEngine
 from app.engines.philosophy_engine import PhilosophyEngine
@@ -80,6 +83,10 @@ async def generate_counterargument(req: CounterargumentRequest):
         req.leading_alternative_id
     )
     return {"steelmanned_counterargument": counter_arg}
+
+@router.post("/analyze/drill-down", response_model=DrillDownResponse)
+async def drill_down_item(req: DrillDownRequest):
+    return await DrillDownService.generate_drill_down(req)
 
 @router.post("/report/synthesize", response_model=ReportResponse)
 async def synthesize_report(bundle: AnalysisBundle):

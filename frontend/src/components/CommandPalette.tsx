@@ -24,6 +24,8 @@ interface CommandPaletteProps {
   benchmarks: BenchmarkItem[];
   onSelectHistoryItem: (item: HistoryItem) => void;
   onSelectBenchmark: (bm: BenchmarkItem) => void;
+  onOpenBenchmarksGallery?: () => void;
+  onOpenMethodology?: () => void;
   onNewDecision: () => void;
   onToggleTheme: () => void;
   onOpenSettings: () => void;
@@ -40,6 +42,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   benchmarks,
   onSelectHistoryItem,
   onSelectBenchmark,
+  onOpenBenchmarksGallery,
+  onOpenMethodology,
   onNewDecision,
   onToggleTheme,
   onOpenSettings,
@@ -74,6 +78,38 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
     },
+    ...(onOpenBenchmarksGallery
+      ? [
+          {
+            id: 'action-benchmarks',
+            type: 'action',
+            title: 'Browse Canonical Dilemmas Gallery',
+            subtitle: 'Explore pre-calibrated reference dilemma library',
+            icon: BookOpen,
+            iconColor: 'text-[var(--color-verdigris)]',
+            handler: () => {
+              onOpenBenchmarksGallery();
+              onClose();
+            },
+          },
+        ]
+      : []),
+    ...(onOpenMethodology
+      ? [
+          {
+            id: 'action-methodology',
+            type: 'action',
+            title: 'Architecture & Theoretical Lineage',
+            subtitle: 'Inspect deterministic math, bias models & VoI design',
+            icon: BookOpen,
+            iconColor: 'text-[var(--color-ochre)]',
+            handler: () => {
+              onOpenMethodology();
+              onClose();
+            },
+          },
+        ]
+      : []),
     ...(hasActiveReport && onEditModel
       ? [
           {

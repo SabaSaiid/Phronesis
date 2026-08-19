@@ -5,8 +5,10 @@ import { SettingsModal } from './components/SettingsModal';
 import { CommandPalette } from './components/CommandPalette';
 import { ExportModal } from './components/ExportModal';
 import { OrientationModal } from './components/OrientationModal';
+import { MethodologyModal } from './components/MethodologyModal';
 import { ToastProvider, useToast } from './components/Toast';
 import { NarrativeInputView } from './features/input/NarrativeInputView';
+import { CanonicalDilemmasView } from './features/benchmarks/CanonicalDilemmasView';
 import { ModelEditorView } from './features/editor/ModelEditorView';
 import { ReportView } from './features/report/ReportView';
 import type {
@@ -30,7 +32,7 @@ const LOCAL_STORAGE_SIDEBAR_KEY = 'phronesis_sidebar';
 
 function AppContent() {
   const { showToast } = useToast();
-  const [step, setStep] = useState<'input' | 'editor' | 'report'>('input');
+  const [step, setStep] = useState<'input' | 'editor' | 'report' | 'benchmarks'>('input');
   const [benchmarks, setBenchmarks] = useState<BenchmarkItem[]>([]);
   const [decision, setDecision] = useState<StructuredDecision | null>(null);
   const [bundle, setBundle] = useState<AnalysisBundle | null>(null);
@@ -41,6 +43,7 @@ function AppContent() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isMethodologyOpen, setIsMethodologyOpen] = useState(false);
 
   // Layout & Theme State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -310,6 +313,8 @@ function AppContent() {
         benchmarks={benchmarks}
         onSelectHistoryItem={handleSelectHistoryItem}
         onSelectBenchmark={handleSelectBenchmark}
+        onOpenBenchmarksGallery={() => setStep('benchmarks')}
+        onOpenMethodology={() => setIsMethodologyOpen(true)}
         onNewDecision={handleReset}
         onDeleteHistoryItem={handleDeleteHistoryItem}
         onTogglePinHistoryItem={handleTogglePinHistoryItem}
@@ -329,7 +334,6 @@ function AppContent() {
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
           isDarkMode={isDarkMode}
           onToggleTheme={handleToggleTheme}
-          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
         />
 
@@ -345,10 +349,16 @@ function AppContent() {
 
           {step === 'input' && (
             <NarrativeInputView
-              benchmarks={benchmarks}
               onExtract={handleExtract}
-              onSelectBenchmark={handleSelectBenchmark}
               isLoading={isLoading}
+            />
+          )}
+
+          {step === 'benchmarks' && (
+            <CanonicalDilemmasView
+              benchmarks={benchmarks}
+              onSelectBenchmark={handleSelectBenchmark}
+              onBackToInput={() => setStep('input')}
             />
           )}
 
@@ -414,6 +424,12 @@ function AppContent() {
         }}
       />
 
+      {/* Methodology & Lineage Modal */}
+      <MethodologyModal
+        isOpen={isMethodologyOpen}
+        onClose={() => setIsMethodologyOpen(false)}
+      />
+
       {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -431,6 +447,8 @@ function AppContent() {
         benchmarks={benchmarks}
         onSelectHistoryItem={handleSelectHistoryItem}
         onSelectBenchmark={handleSelectBenchmark}
+        onOpenBenchmarksGallery={() => setStep('benchmarks')}
+        onOpenMethodology={() => setIsMethodologyOpen(true)}
         onNewDecision={handleReset}
         onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setIsSettingsOpen(true)}

@@ -2,19 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowRight,
   Sparkles,
-  BookOpen,
-  Compass,
-  Shield,
   Brain,
-  Scale,
   Zap
 } from 'lucide-react';
 import type { BenchmarkItem } from '../../types';
 
 interface NarrativeInputViewProps {
-  benchmarks: BenchmarkItem[];
+  benchmarks?: BenchmarkItem[];
   onExtract: (narrative: string) => Promise<void>;
-  onSelectBenchmark: (bm: BenchmarkItem) => void;
+  onSelectBenchmark?: (bm: BenchmarkItem) => void;
   isLoading: boolean;
 }
 
@@ -45,9 +41,7 @@ const LOADING_STEPS = [
 ];
 
 export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
-  benchmarks,
   onExtract,
-  onSelectBenchmark,
   isLoading,
 }) => {
   const [narrative, setNarrative] = useState('');
@@ -83,14 +77,9 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-[760px] mx-auto px-4 py-8 space-y-10 animate-fade-in">
-      {/* Centered Editorial Hero Greeting (Logically / ChatGPT style) */}
-      <div className="text-center space-y-3 pt-4 sm:pt-6">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/20 text-[var(--color-verdigris)] text-xs font-ui font-medium">
-          <Compass className="w-3.5 h-3.5" />
-          <span>Practical Wisdom Under Uncertainty</span>
-        </div>
-
+    <div className="w-full max-w-[760px] mx-auto px-4 py-8 sm:py-12 space-y-6 animate-fade-in">
+      {/* Centered Editorial Hero Greeting */}
+      <div className="text-center space-y-3 pt-2 sm:pt-4">
         <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-main)] leading-tight">
           Examine Your Decision Under Uncertainty
         </h1>
@@ -100,8 +89,8 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
         </p>
       </div>
 
-      {/* Floating Prompt Capsule Form (ChatGPT/Logically style) */}
-      <div className="prompt-capsule p-4 sm:p-5 space-y-3 relative overflow-hidden">
+      {/* Floating Prompt Capsule Form */}
+      <div className="prompt-capsule p-4 sm:p-5 space-y-3 relative overflow-hidden shadow-sm">
         {isLoading ? (
           /* Multi-step loading extraction visual */
           <div className="py-8 px-4 flex flex-col items-center justify-center space-y-4 text-center">
@@ -189,19 +178,9 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
         )}
       </div>
 
-      {/* Starter Dilemma Chips */}
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between text-xs px-1">
-          <span className="font-ui font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center space-x-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
-            <span>Quick Dilemma Starters</span>
-          </span>
-          <span className="font-body text-[11px] text-[var(--text-faint)]">
-            Click to load template
-          </span>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
+      {/* Starter Dilemma Chips directly under input */}
+      <div className="pt-1">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           {STARTER_DILEMMAS.map((starter) => (
             <button
               key={starter.title}
@@ -215,77 +194,6 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
               <span>{starter.title}</span>
             </button>
           ))}
-        </div>
-      </div>
-
-      {/* Canonical Benchmarks Library Section */}
-      {benchmarks.length > 0 && (
-        <div className="phronesis-card p-5 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
-            <span className="font-ui text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center space-x-2">
-              <BookOpen className="w-4 h-4 text-[var(--color-verdigris)]" />
-              <span>Or Explore Pre-Calibrated Canonical Dilemmas</span>
-            </span>
-            <span className="font-data text-[11px] text-[var(--color-verdigris)] font-medium">
-              1-Click Deterministic Audit
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {benchmarks.map((bm) => (
-              <div
-                key={bm.id}
-                onClick={() => onSelectBenchmark(bm)}
-                className="p-3.5 rounded-xl bg-[var(--bg-app)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--color-verdigris)]/40 transition-all cursor-pointer space-y-1.5 group shadow-2xs"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-semibold text-xs text-[var(--text-main)] group-hover:text-[var(--color-verdigris)] transition-colors flex items-center space-x-1.5">
-                    <span className="text-xs text-[var(--color-verdigris)] font-mono">§</span>
-                    <span>{bm.title}</span>
-                  </h3>
-                  <span className="text-[10px] font-mono text-[var(--text-faint)]">
-                    Audit →
-                  </span>
-                </div>
-                <p className="font-body text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed">
-                  {bm.narrative}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Structural Lineage Pillars */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs font-ui">
-        <div className="phronesis-card p-4 space-y-1.5">
-          <div className="flex items-center space-x-2 font-semibold text-[var(--text-main)]">
-            <Scale className="w-4 h-4 text-[var(--color-verdigris)]" />
-            <span>Deterministic Math</span>
-          </div>
-          <p className="font-body text-[var(--text-muted)] leading-relaxed">
-            Expected utility and sensitivity thresholds run through pure Python closed-form algebraic solvers.
-          </p>
-        </div>
-
-        <div className="phronesis-card p-4 space-y-1.5">
-          <div className="flex items-center space-x-2 font-semibold text-[var(--text-main)]">
-            <Shield className="w-4 h-4 text-[var(--color-verdigris)]" />
-            <span>Sourced Lineage</span>
-          </div>
-          <p className="font-body text-[var(--text-muted)] leading-relaxed">
-            Every cognitive bias and philosophy lens cites peer-reviewed literature (Kahneman, Tversky, Taleb).
-          </p>
-        </div>
-
-        <div className="phronesis-card p-4 space-y-1.5">
-          <div className="flex items-center space-x-2 font-semibold text-[var(--text-main)]">
-            <Compass className="w-4 h-4 text-[var(--color-ochre)]" />
-            <span>Value of Information</span>
-          </div>
-          <p className="font-body text-[var(--text-muted)] leading-relaxed">
-            Surfaces the single most decision-sensitive unknown and pairs it with a cheap 48-hour falsification test.
-          </p>
         </div>
       </div>
     </div>

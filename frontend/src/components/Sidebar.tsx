@@ -36,6 +36,8 @@ interface SidebarProps {
   benchmarks: BenchmarkItem[];
   onSelectHistoryItem: (item: HistoryItem) => void;
   onSelectBenchmark: (bm: BenchmarkItem) => void;
+  onOpenBenchmarksGallery?: () => void;
+  onOpenMethodology?: () => void;
   onNewDecision: () => void;
   onDeleteHistoryItem?: (id: string) => void;
   onTogglePinHistoryItem?: (id: string) => void;
@@ -56,6 +58,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   benchmarks,
   onSelectHistoryItem,
   onSelectBenchmark,
+  onOpenBenchmarksGallery,
+  onOpenMethodology,
   onNewDecision,
   onDeleteHistoryItem,
   onTogglePinHistoryItem,
@@ -518,21 +522,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div>
             {isExpanded ? (
               <div className="px-2 mb-1.5 flex items-center justify-between">
-                <span className="text-[11px] font-ui font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center space-x-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenBenchmarksGallery) {
+                      onOpenBenchmarksGallery();
+                      onCloseMobile();
+                    }
+                  }}
+                  className="text-[11px] font-ui font-semibold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--color-verdigris)] flex items-center space-x-1.5 cursor-pointer transition-colors text-left"
+                  title="Browse Canonical Dilemmas library"
+                >
                   <BookOpen className="w-3.5 h-3.5 text-[var(--color-slate)]" />
                   <span>Canonical Dilemmas</span>
-                </span>
-                {filteredBenchmarks.length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-faint)]">
-                    {filteredBenchmarks.length}
-                  </span>
+                </button>
+                {onOpenBenchmarksGallery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenBenchmarksGallery();
+                      onCloseMobile();
+                    }}
+                    className="text-[10px] text-[var(--color-verdigris)] hover:underline font-mono cursor-pointer"
+                    title="View all canonical dilemmas"
+                  >
+                    View all →
+                  </button>
                 )}
               </div>
             ) : (
               <div className="flex justify-center mb-1 text-[var(--text-muted)] pt-2 border-t border-[var(--border-subtle)]" title="Canonical Dilemmas">
-                <span className="text-[9px] font-mono uppercase tracking-wider text-[var(--text-faint)]">
+                <button
+                  type="button"
+                  onClick={onOpenBenchmarksGallery}
+                  className="text-[9px] font-mono uppercase tracking-wider text-[var(--text-faint)] hover:text-[var(--color-verdigris)] cursor-pointer"
+                >
                   Bench
-                </span>
+                </button>
               </div>
             )}
 
@@ -597,74 +623,80 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
           </div>
+
+          {/* Methodology & Lineage link (if provided) */}
+          {onOpenMethodology && isExpanded && (
+            <div className="pt-2 border-t border-[var(--border-subtle)]">
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenMethodology();
+                  onCloseMobile();
+                }}
+                className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-ui text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors flex items-center space-x-2 cursor-pointer"
+                title="Engine Architecture & Methodology"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0" />
+                <span>Methodology & Lineage</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Footer: User Profile Tile (Logically/ChatGPT style), Settings, and Theme Switcher */}
+        {/* Consolidated Unified Footer */}
         {isExpanded ? (
-          <div className="p-2.5 border-t border-[var(--border-subtle)] space-y-2 bg-[var(--bg-surface-raised)]">
-            {/* User Profile Card (Reflecting Local & Private Zero Data Leakage) */}
-            <div className="p-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between">
+          <div className="p-2.5 border-t border-[var(--border-subtle)] bg-[var(--bg-surface-raised)]">
+            <div className="p-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between shadow-2xs">
               <div className="flex items-center space-x-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[var(--color-verdigris)] text-[#F5F2EA] flex items-center justify-center font-display font-bold text-xs shrink-0 shadow-2xs">
                   S
                 </div>
                 <div className="min-w-0">
-                  <div className="font-ui font-semibold text-xs text-[var(--text-main)] truncate">
+                  <div className="font-ui font-semibold text-xs text-[var(--text-main)] truncate leading-tight">
                     Saba Said
                   </div>
                   <div className="text-[9px] font-mono text-[var(--color-verdigris)] flex items-center space-x-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-verdigris)] animate-pulse" />
-                    <span>Local & Private Engine</span>
+                    <span>Local & Sovereign</span>
                   </div>
                 </div>
               </div>
 
-              {onOpenSettings && (
+              <div className="flex items-center space-x-0.5">
                 <button
                   type="button"
-                  onClick={onOpenSettings}
+                  onClick={onToggleTheme}
                   className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-raised)] transition-colors cursor-pointer"
-                  title="Settings & Storage"
-                  aria-label="Settings"
+                  aria-label="Toggle theme"
+                  title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                 >
-                  <Settings className="w-3.5 h-3.5" />
+                  {isDarkMode ? (
+                    <Sun className="w-3.5 h-3.5 text-[var(--color-ochre)]" />
+                  ) : (
+                    <Moon className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
+                  )}
                 </button>
-              )}
-            </div>
 
-            {/* Bottom Controls Row: Theme Toggle & Telemetry badge */}
-            <div className="flex items-center justify-between text-xs font-ui">
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                className="flex items-center space-x-1.5 px-2 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer text-[11px]"
-                aria-label="Toggle theme"
-              >
-                {isDarkMode ? (
-                  <>
-                    <Sun className="w-3.5 h-3.5 text-[var(--color-ochre)] shrink-0" />
-                    <span>Light Mode</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0" />
-                    <span>Dark Mode</span>
-                  </>
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-raised)] transition-colors cursor-pointer"
+                    title="Settings & Privacy"
+                    aria-label="Settings"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                  </button>
                 )}
-              </button>
-
-              <div className="flex items-center space-x-1 text-[10px] font-mono text-[var(--text-faint)]">
-                <ShieldCheck className="w-3 h-3 text-[var(--color-verdigris)] shrink-0" />
-                <span>V2 Solvers</span>
               </div>
             </div>
           </div>
         ) : (
           /* Collapsed Bottom Icons */
-          <div className="p-2 border-t border-[var(--border-subtle)] flex flex-col items-center space-y-2">
+          <div className="p-2 border-t border-[var(--border-subtle)] flex flex-col items-center space-y-1.5">
             <div
               className="w-8 h-8 rounded-lg bg-[var(--color-verdigris)] text-[#F5F2EA] flex items-center justify-center font-display font-bold text-xs shadow-2xs"
-              title="Saba Said (Local & Private Storage)"
+              title="Saba Said (Local & Sovereign)"
             >
               S
             </div>
@@ -672,14 +704,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={onToggleTheme}
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+              className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-label="Toggle theme"
             >
               {isDarkMode ? (
-                <Sun className="w-4.5 h-4.5 text-[var(--color-ochre)]" />
+                <Sun className="w-4 h-4 text-[var(--color-ochre)]" />
               ) : (
-                <Moon className="w-4.5 h-4.5 text-[var(--color-verdigris)]" />
+                <Moon className="w-4 h-4 text-[var(--color-verdigris)]" />
               )}
             </button>
 
@@ -687,11 +719,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={onOpenSettings}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
                 title="Settings & Privacy"
                 aria-label="Settings"
               >
-                <Settings className="w-4.5 h-4.5" />
+                <Settings className="w-4 h-4" />
               </button>
             )}
           </div>

@@ -37,7 +37,6 @@ import {
 interface ReportViewProps {
   bundle: AnalysisBundle;
   report: ReportResponse;
-  onEditModel: () => void;
   onNewDecision?: () => void;
   onOpenExport?: () => void;
 }
@@ -45,7 +44,6 @@ interface ReportViewProps {
 export const ReportView: React.FC<ReportViewProps> = ({
   bundle,
   report,
-  onEditModel,
   onNewDecision,
   onOpenExport,
 }) => {
@@ -1171,14 +1169,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
-          <button
-            type="button"
-            onClick={onEditModel}
-            className="px-3.5 py-2 rounded-xl text-xs font-ui font-medium bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] text-[var(--text-main)] flex items-center space-x-1.5 transition-colors cursor-pointer"
-          >
-            <Sliders className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
-            <span>Tweak Parameters</span>
-          </button>
+          <span className="text-[11px] font-ui text-[var(--text-faint)] italic">Scroll up to edit parameters</span>
         </div>
       </div>
 
@@ -1301,14 +1292,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
       {/* Bottom Actions */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[var(--border-subtle)]">
-        <button
-          type="button"
-          onClick={onEditModel}
-          className="w-full sm:w-auto px-4 py-2.5 rounded-xl font-ui text-xs text-[var(--text-main)] hover:bg-[var(--bg-surface)] border border-[var(--border-medium)] flex items-center justify-center space-x-2 transition-colors cursor-pointer"
-        >
-          <Sliders className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
-          <span>Calibrate Inputs & Re-run</span>
-        </button>
+
 
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           {onOpenExport && (

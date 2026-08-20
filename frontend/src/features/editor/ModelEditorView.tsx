@@ -6,7 +6,6 @@ import {
   Sliders,
   CheckCircle2,
   AlertTriangle,
-  ArrowLeft,
   Plus,
   Trash2,
   Sparkles,
@@ -17,7 +16,6 @@ interface ModelEditorViewProps {
   decision: StructuredDecision;
   onUpdateDecision: (updated: StructuredDecision) => void;
   onRunAnalysis: (focusConfig?: FocusConfig) => Promise<void>;
-  onBackToInput: () => void;
   isLoading: boolean;
 }
 
@@ -25,7 +23,6 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
   decision,
   onUpdateDecision,
   onRunAnalysis,
-  onBackToInput,
   isLoading,
 }) => {
   const [model, setModel] = useState<StructuredDecision>(() => JSON.parse(JSON.stringify(decision)));
@@ -132,14 +129,6 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
       {/* Top Navigation & Action Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div>
-          <button
-            type="button"
-            onClick={onBackToInput}
-            className="inline-flex items-center space-x-1 text-xs font-ui text-[var(--text-muted)] hover:text-[var(--text-main)] mb-1.5 transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Narrative</span>
-          </button>
           <h2 className="font-display text-2xl font-semibold text-[var(--text-main)] tracking-tight">
             Examine & Calibrate Model Parameters
           </h2>

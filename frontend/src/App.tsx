@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, type HistoryItem } from './components/Sidebar';
 import { ToastProvider, useToast } from './components/Toast';
 import { NarrativeInputView } from './features/input/NarrativeInputView';
+import { CollapsedDescribeCard } from './components/CollapsedDescribeCard';
+import { CollapsedCalibrateCard } from './components/CollapsedCalibrateCard';
 import type {
   StructuredDecision,
   AnalysisBundle,
@@ -17,7 +19,7 @@ import {
   runDeterministicAnalysis,
   synthesizeReport
 } from './lib/api';
-import { AlertCircle, Sparkles } from 'lucide-react';
+import { AlertCircle, Sparkles, AlertTriangle, X } from 'lucide-react';
 
 // Lazy-loaded secondary views and modal dialogs for bundle code-splitting
 const CanonicalDilemmasView = lazy(() =>
@@ -73,9 +75,24 @@ function safePersistHistory(items: HistoryItem[]) {
   }
 }
 
+/**
+ * Session stage for the accumulating-sections architecture.
+ * - 'input': Only Describe is visible (initial state or benchmarks gallery)
+ * - 'editor': Describe collapsed + Calibrate active
+ * - 'report': Describe collapsed + Calibrate collapsed + Report active
+ * - 'benchmarks': Special standalone gallery view
+ */
+type ActiveStage = 'input' | 'editor' | 'report' | 'benchmarks';
+
 function AppContent() {
   const { showToast } = useToast();
-  const [step, setStep] = useState<'input' | 'editor' | 'report' | 'benchmarks'>('input');
+
+  // --- Session state: accumulating sections ---
+  const [activeStage, setActiveStage] = useState<ActiveStage>('input');
+  const [submittedNarrative, setSubmittedNarrative] = useState<string>('');
+  const [isEditingDescribe, setIsEditingDescribe] = useState(false);
+
+  // Data state (same as before)
   const [benchmarks, setBenchmarks] = useState<BenchmarkItem[]>([]);
   const [decision, setDecision] = useState<StructuredDecision | null>(null);
   const [bundle, setBundle] = useState<AnalysisBundle | null>(null);
@@ -83,6 +100,8 @@ function AppContent() {
   const [currentDecisionId, setCurrentDecisionId] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -94,6 +113,13 @@ function AppContent() {
     return (saved as ChatLayoutMode) || 'drawer';
   });
 
+  // Edit-and-regenerate confirmation dialog
+  const [pendingEditSection, setPendingEditSection] = useState<'describe' | 'calibrate' | null>(null);
+
+  // Section refs for auto-scroll and anchor-nav
+  const describeSectionRef = useRef<HTMLDivElement>(null);
+  const calibrateSectionRef = useRef<HTMLDivElement>(null);
+  const reportSectionRef = useRef<HTMLDivElement>(null);
 
   // Layout & Theme State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -149,13 +175,20 @@ function AppContent() {
   }, []);
 
   const handleReset = useCallback(() => {
-    setStep('input');
+    setActiveStage('input');
+    setSubmittedNarrative('');
+    setIsEditingDescribe(false);
     setDecision(null);
     setBundle(null);
     setReport(null);
     setCurrentDecisionId(undefined);
     setError(null);
+    setPendingEditSection(null);
   }, []);
+
+  // Derive a `step` value for components that still need the legacy type
+  // (Header, Sidebar, SocraticChatDrawer, CommandPalette)
+  const currentStep = activeStage as 'input' | 'editor' | 'report' | 'benchmarks';
 
   // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘J)
   useEffect(() => {
@@ -180,16 +213,35 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleReset, showToast]);
 
+  // --- Auto-scroll to newest section ---
+  const scrollToSection = useCallback((sectionRef: React.RefObject<HTMLDivElement | null>) => {
+    // Small delay to let the DOM mount the new section
+    setTimeout(() => {
+      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }, []);
+
+  // --- Anchor-nav handler: scroll to section by id ---
+  const handleScrollToSection = useCallback((sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
   const handleExtract = async (narrative: string) => {
     setIsLoading(true);
     setError(null);
     try {
       const extracted = await extractDecision(narrative);
+      setSubmittedNarrative(narrative);
       setDecision(extracted);
       setBundle(null);
       setReport(null);
       setCurrentDecisionId(undefined);
-      setStep('editor');
+      setIsEditingDescribe(false);
+      setActiveStage('editor');
+      scrollToSection(calibrateSectionRef);
       showToast({
         type: 'success',
         title: 'Model Extracted',
@@ -209,11 +261,14 @@ function AppContent() {
 
   const handleSelectBenchmark = async (bm: BenchmarkItem) => {
     setError(null);
+    setSubmittedNarrative(bm.narrative || bm.title);
     setDecision(bm.structured_decision);
     setBundle(null);
     setReport(null);
     setCurrentDecisionId(bm.id);
-    setStep('editor');
+    setIsEditingDescribe(false);
+    setActiveStage('editor');
+    scrollToSection(calibrateSectionRef);
     showToast({
       type: 'info',
       title: 'Canonical Dilemma Loaded',
@@ -269,7 +324,8 @@ function AppContent() {
         return updated;
       });
 
-      setStep('report');
+      setActiveStage('report');
+      scrollToSection(reportSectionRef);
       showToast({
         type: 'success',
         title: 'Audit Complete',
@@ -294,10 +350,18 @@ function AppContent() {
       setBundle(item.data.bundle || null);
       setReport(item.data.report || null);
       setCurrentDecisionId(item.id);
+      setIsEditingDescribe(false);
+      setPendingEditSection(null);
+
+      // For history items, set the narrative from the decision statement
+      if (item.data.decision) {
+        setSubmittedNarrative(item.previewText || item.data.decision.decision_statement);
+      }
+
       if (item.data.bundle && item.data.report) {
-        setStep('report');
+        setActiveStage('report');
       } else if (item.data.decision) {
-        setStep('editor');
+        setActiveStage('editor');
       }
       showToast({
         type: 'info',
@@ -380,15 +444,15 @@ function AppContent() {
         payoff_matrix: [...prev.payoff_matrix, ...newCells],
       };
     });
-    if (step === 'input') {
-      setStep('editor');
+    if (activeStage === 'input') {
+      setActiveStage('editor');
     }
     showToast({
       type: 'success',
       title: 'Alternative Added',
       description: `Added "${alt.name}" to your decision model.`,
     });
-  }, [step, showToast]);
+  }, [activeStage, showToast]);
 
   const handleInsertAssumption = useCallback((assump: { text: string; type?: string; testable?: boolean }) => {
     const newAssumption = {
@@ -420,6 +484,64 @@ function AppContent() {
     }
   }, []);
 
+  // --- Edit-and-regenerate handlers ---
+  const handleRequestEditDescribe = useCallback(() => {
+    // If we're still at input stage, nothing downstream to regenerate
+    if (activeStage === 'input') return;
+    // Show confirmation dialog
+    setPendingEditSection('describe');
+  }, [activeStage]);
+
+  const handleRequestEditCalibrate = useCallback(() => {
+    // If we're still at editor stage, just let them keep editing (it's already active)
+    if (activeStage === 'editor') return;
+    // Show confirmation dialog for regenerating report
+    setPendingEditSection('calibrate');
+  }, [activeStage]);
+
+  const handleConfirmEdit = useCallback(() => {
+    if (pendingEditSection === 'describe') {
+      // Re-expand Describe, clear downstream
+      setIsEditingDescribe(true);
+      setDecision(null);
+      setBundle(null);
+      setReport(null);
+      setActiveStage('input');
+      setPendingEditSection(null);
+      scrollToSection(describeSectionRef);
+      showToast({
+        type: 'info',
+        title: 'Editing Description',
+        description: 'Modify your dilemma and resubmit to regenerate downstream analysis.',
+      });
+    } else if (pendingEditSection === 'calibrate') {
+      // Re-expand Calibrate, clear report
+      setBundle(null);
+      setReport(null);
+      setActiveStage('editor');
+      setPendingEditSection(null);
+      scrollToSection(calibrateSectionRef);
+      showToast({
+        type: 'info',
+        title: 'Editing Calibration',
+        description: 'Adjust your model parameters and re-run the reasoning audit.',
+      });
+    }
+  }, [pendingEditSection, scrollToSection, showToast]);
+
+  const handleCancelEdit = useCallback(() => {
+    setPendingEditSection(null);
+  }, []);
+
+  // Determine what sections to show
+  const showDescribeActive = activeStage === 'input';
+  const showDescribeCollapsed = activeStage === 'editor' || activeStage === 'report';
+  const showCalibrate = activeStage === 'editor' || activeStage === 'report';
+  const showCalibrateCollapsed = activeStage === 'report';
+  const showCalibrateActive = activeStage === 'editor';
+  const showReport = activeStage === 'report';
+  const showBenchmarks = activeStage === 'benchmarks';
+
   return (
     <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex">
       {/* Collapsible / Responsive Sidebar */}
@@ -432,7 +554,7 @@ function AppContent() {
         benchmarks={benchmarks}
         onSelectHistoryItem={handleSelectHistoryItem}
         onSelectBenchmark={handleSelectBenchmark}
-        onOpenBenchmarksGallery={() => setStep('benchmarks')}
+        onOpenBenchmarksGallery={() => setActiveStage('benchmarks')}
         onOpenMethodology={() => setIsMethodologyOpen(true)}
         onNewDecision={handleReset}
         onDeleteHistoryItem={handleDeleteHistoryItem}
@@ -451,13 +573,17 @@ function AppContent() {
         <div className="flex-1 flex flex-col min-w-0">
           <Header
             onReset={handleReset}
-            currentStep={step}
+            currentStep={currentStep}
+            activeStage={activeStage}
             onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
             isDarkMode={isDarkMode}
             onToggleTheme={handleToggleTheme}
             onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
             onToggleChat={() => setIsChatDrawerOpen((prev) => !prev)}
             isChatOpen={isChatDrawerOpen}
+            onScrollToSection={handleScrollToSection}
+            hasDecision={!!decision}
+            hasReport={!!(bundle && report)}
           />
 
           <main className="flex-1 pb-16">
@@ -470,41 +596,81 @@ function AppContent() {
               </div>
             )}
 
-            {step === 'input' && (
-              <NarrativeInputView
-                onExtract={handleExtract}
-                isLoading={isLoading}
-                externalTextToAppend={externalTextToAppend}
-                onClearExternalText={() => setExternalTextToAppend(undefined)}
-              />
-            )}
+            {/* --- ACCUMULATING SECTIONS --- */}
+            <div className="space-y-6 py-4">
 
+              {/* SECTION 1: Describe */}
+              <div ref={describeSectionRef}>
+                {showDescribeCollapsed && !isEditingDescribe && submittedNarrative && (
+                  <CollapsedDescribeCard
+                    narrative={submittedNarrative}
+                    onEdit={handleRequestEditDescribe}
+                    isEditDisabled={isLoading}
+                  />
+                )}
+
+                {(showDescribeActive || isEditingDescribe) && (
+                  <NarrativeInputView
+                    onExtract={handleExtract}
+                    isLoading={isLoading}
+                    externalTextToAppend={externalTextToAppend}
+                    onClearExternalText={() => setExternalTextToAppend(undefined)}
+                    initialNarrative={isEditingDescribe ? submittedNarrative : undefined}
+                    isReEdit={isEditingDescribe}
+                  />
+                )}
+              </div>
+
+              {/* SECTION 2: Calibrate */}
+              {showCalibrate && (
+                <div ref={calibrateSectionRef}>
+                  {showCalibrateCollapsed && decision && (
+                    <CollapsedCalibrateCard
+                      decision={decision}
+                      onEdit={handleRequestEditCalibrate}
+                      isEditDisabled={isLoading}
+                    />
+                  )}
+
+                  {showCalibrateActive && decision && (
+                    <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading calibration view...</div>}>
+                      <section id="section-calibrate">
+                        <ModelEditorView
+                          decision={decision}
+                          onUpdateDecision={setDecision}
+                          onRunAnalysis={handleRunAnalysis}
+                          isLoading={isLoading}
+                        />
+                      </section>
+                    </Suspense>
+                  )}
+                </div>
+              )}
+
+              {/* SECTION 3: Audit Report */}
+              {showReport && bundle && report && (
+                <div ref={reportSectionRef}>
+                  <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading report view...</div>}>
+                    <section id="section-report">
+                      <ReportView
+                        bundle={bundle}
+                        report={report}
+                        onNewDecision={handleReset}
+                        onOpenExport={() => setIsExportModalOpen(true)}
+                      />
+                    </section>
+                  </Suspense>
+                </div>
+              )}
+            </div>
+
+            {/* Benchmarks Gallery (standalone view, not part of session flow) */}
             <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading view...</div>}>
-              {step === 'benchmarks' && (
+              {showBenchmarks && (
                 <CanonicalDilemmasView
                   benchmarks={benchmarks}
                   onSelectBenchmark={handleSelectBenchmark}
-                  onBackToInput={() => setStep('input')}
-                />
-              )}
-
-              {step === 'editor' && decision && (
-                <ModelEditorView
-                  decision={decision}
-                  onUpdateDecision={setDecision}
-                  onRunAnalysis={handleRunAnalysis}
-                  onBackToInput={() => setStep('input')}
-                  isLoading={isLoading}
-                />
-              )}
-
-              {step === 'report' && bundle && report && (
-                <ReportView
-                  bundle={bundle}
-                  report={report}
-                  onEditModel={() => setStep('editor')}
-                  onNewDecision={handleReset}
-                  onOpenExport={() => setIsExportModalOpen(true)}
+                  onBackToInput={() => setActiveStage('input')}
                 />
               )}
             </Suspense>
@@ -522,7 +688,7 @@ function AppContent() {
             <SocraticChatDrawer
               isOpen={isChatDrawerOpen}
               onClose={() => setIsChatDrawerOpen(false)}
-              currentStep={step}
+              currentStep={currentStep}
               decision={decision}
               bundle={bundle}
               layoutMode={chatLayoutMode}
@@ -548,7 +714,7 @@ function AppContent() {
           <SocraticChatDrawer
             isOpen={isChatDrawerOpen}
             onClose={() => setIsChatDrawerOpen(false)}
-            currentStep={step}
+            currentStep={currentStep}
             decision={decision}
             bundle={bundle}
             layoutMode={chatLayoutMode}
@@ -585,6 +751,55 @@ function AppContent() {
             <p className="font-body text-xs text-[var(--text-main)] truncate animate-pulse">
               {loadingStage}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* --- Edit-and-Regenerate Confirmation Modal --- */}
+      {pendingEditSection && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="p-2 rounded-xl bg-[var(--color-ochre-subtle)] text-[var(--color-ochre)] shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <h3 className="font-display font-semibold text-base text-[var(--text-main)]">
+                  {pendingEditSection === 'describe'
+                    ? 'Edit Dilemma Description?'
+                    : 'Edit Model Calibration?'}
+                </h3>
+                <p className="font-body text-sm text-[var(--text-muted)] leading-relaxed">
+                  {pendingEditSection === 'describe'
+                    ? 'Editing the description will regenerate both the Calibration and Audit Report sections below. Your current calibration settings and report will be cleared.'
+                    : 'Editing the calibration will regenerate the Audit Report section below. Your current report will be cleared.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-app)] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="px-4 py-2 rounded-xl text-sm font-ui font-medium text-[var(--text-main)] bg-[var(--bg-app)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmEdit}
+                className="px-4 py-2 rounded-xl text-sm font-ui font-medium text-white bg-[var(--color-ochre)] hover:opacity-90 transition-all cursor-pointer shadow-sm"
+              >
+                {pendingEditSection === 'describe' ? 'Edit & Regenerate' : 'Edit & Re-audit'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -627,13 +842,13 @@ function AppContent() {
           benchmarks={benchmarks}
           onSelectHistoryItem={handleSelectHistoryItem}
           onSelectBenchmark={handleSelectBenchmark}
-          onOpenBenchmarksGallery={() => setStep('benchmarks')}
+          onOpenBenchmarksGallery={() => setActiveStage('benchmarks')}
           onOpenMethodology={() => setIsMethodologyOpen(true)}
           onNewDecision={handleReset}
           onToggleTheme={handleToggleTheme}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
-          onEditModel={decision ? () => setStep('editor') : undefined}
+          onEditModel={decision ? () => setActiveStage('editor') : undefined}
           isDarkMode={isDarkMode}
           hasActiveReport={!!(bundle && report)}
         />

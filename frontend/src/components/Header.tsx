@@ -1,34 +1,60 @@
 import React from 'react';
-import { Menu, Sun, Moon, Share2, Plus, MessageSquareQuote } from 'lucide-react';
+import { Menu, Sun, Moon, Share2, Plus, MessageSquareQuote, PenTool, Sliders, LineChart, Check } from 'lucide-react';
 
 interface HeaderProps {
   onReset: () => void;
   currentStep: 'input' | 'editor' | 'report' | 'benchmarks';
+  activeStage: 'input' | 'editor' | 'report' | 'benchmarks';
   onToggleMobileSidebar: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
   onOpenExport?: () => void;
   onToggleChat?: () => void;
   isChatOpen?: boolean;
+  onScrollToSection: (sectionId: string) => void;
+  hasDecision: boolean;
+  hasReport: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onReset,
   currentStep,
+  activeStage,
   onToggleMobileSidebar,
   isDarkMode,
   onToggleTheme,
   onOpenExport,
   onToggleChat,
   isChatOpen,
+  onScrollToSection,
+  hasDecision,
+  hasReport,
 }) => {
   const steps = [
-    { key: 'input', label: '1. Describe' },
-    { key: 'editor', label: '2. Calibrate' },
-    { key: 'report', label: '3. Audit Report' },
+    {
+      key: 'input',
+      sectionId: 'section-describe',
+      label: '1. Describe',
+      icon: PenTool,
+      accessible: true,
+    },
+    {
+      key: 'editor',
+      sectionId: 'section-calibrate',
+      label: '2. Calibrate',
+      icon: Sliders,
+      accessible: hasDecision,
+    },
+    {
+      key: 'report',
+      sectionId: 'section-report',
+      label: '3. Audit Report',
+      icon: LineChart,
+      accessible: hasReport,
+    },
   ] as const;
 
-  const showStepper = currentStep === 'editor' || currentStep === 'report';
+  const showStepper = activeStage === 'editor' || activeStage === 'report';
 
   return (
     <header className="sticky top-0 z-30 bg-[var(--bg-app)]/85 backdrop-blur-md border-b border-[var(--border-subtle)] transition-colors">
@@ -45,29 +71,44 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Center: Minimalist Step Breadcrumbs (Active only when a decision is in progress) */}
+        {/* Center: Anchor-Nav Step Indicators (scroll-to-section on click) */}
         {showStepper ? (
-          <nav className="flex items-center space-x-2.5 text-xs font-ui animate-fade-in">
+          <nav className="flex items-center space-x-2.5 text-xs font-ui animate-fade-in" aria-label="Decision progress">
             {steps.map((s, idx) => {
-              const isActive = currentStep === s.key;
-              const isPast = (currentStep === 'report' && (s.key === 'input' || s.key === 'editor')) || (currentStep === 'editor' && s.key === 'input');
+              const isActive = activeStage === s.key;
+              const isPast =
+                (activeStage === 'report' && (s.key === 'input' || s.key === 'editor')) ||
+                (activeStage === 'editor' && s.key === 'input');
+              const Icon = s.icon;
+              const canNavigate = s.accessible;
+
               return (
                 <React.Fragment key={s.key}>
                   {idx > 0 && <span className="text-[var(--text-faint)] text-[10px]">→</span>}
-                  <span
+                  <button
+                    type="button"
+                    onClick={() => canNavigate && onScrollToSection(s.sectionId)}
+                    disabled={!canNavigate}
                     className={`
-                      px-2.5 py-0.5 rounded-md transition-all
+                      px-2.5 py-1 rounded-md transition-all flex items-center space-x-1.5
                       ${
                         isActive
-                          ? 'font-semibold text-[var(--color-verdigris)] bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/30 shadow-2xs'
+                          ? 'font-semibold text-[var(--color-verdigris)] bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/30 shadow-2xs cursor-pointer'
                           : isPast
-                          ? 'text-[var(--text-muted)] opacity-80'
-                          : 'text-[var(--text-faint)] opacity-50'
+                          ? 'text-[var(--text-muted)] opacity-80 hover:opacity-100 hover:text-[var(--color-verdigris)] cursor-pointer'
+                          : 'text-[var(--text-faint)] opacity-50 cursor-not-allowed'
                       }
                     `}
+                    aria-label={`Scroll to ${s.label}`}
+                    title={canNavigate ? `Scroll to ${s.label}` : `${s.label} (not available yet)`}
                   >
-                    {s.label}
-                  </span>
+                    {isPast ? (
+                      <Check className="w-3 h-3 text-[var(--color-verdigris)]" />
+                    ) : (
+                      <Icon className="w-3 h-3" />
+                    )}
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </button>
                 </React.Fragment>
               );
             })}
@@ -100,8 +141,8 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Export Report Trigger (Visible on Report view) */}
-          {currentStep === 'report' && onOpenExport && (
+          {/* Export Report Trigger (Visible when report exists) */}
+          {activeStage === 'report' && onOpenExport && (
             <button
               type="button"
               onClick={onOpenExport}

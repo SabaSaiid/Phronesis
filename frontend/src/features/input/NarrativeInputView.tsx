@@ -14,6 +14,8 @@ interface NarrativeInputViewProps {
   isLoading: boolean;
   externalTextToAppend?: string;
   onClearExternalText?: () => void;
+  initialNarrative?: string;
+  isReEdit?: boolean;
 }
 
 const STARTER_DILEMMAS = [
@@ -47,8 +49,10 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   isLoading,
   externalTextToAppend,
   onClearExternalText,
+  initialNarrative,
+  isReEdit,
 }) => {
-  const [narrative, setNarrative] = useState('');
+  const [narrative, setNarrative] = useState(initialNarrative || '');
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
 
   useEffect(() => {
@@ -90,17 +94,19 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6 animate-fade-in">
-      {/* Centered Editorial Hero Greeting */}
-      <div className="text-center space-y-3 pt-2 sm:pt-4">
-        <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-main)] leading-tight">
-          Examine Your Decision Under Uncertainty
-        </h1>
+    <section id="section-describe" className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6 animate-fade-in">
+      {/* Centered Editorial Hero Greeting (hidden during re-edit) */}
+      {!isReEdit && (
+        <div className="text-center space-y-3 pt-2 sm:pt-4">
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-main)] leading-tight">
+            Examine Your Decision Under Uncertainty
+          </h1>
 
-        <p className="font-body text-sm sm:text-base text-[var(--text-muted)] max-w-xl mx-auto leading-relaxed">
-          Phronesis never commands what to choose. It structures your dilemma, computes mathematical sensitivity, flags cognitive bias patterns with academic citations, and surfaces high-leverage 48-hour tests.
-        </p>
-      </div>
+          <p className="font-body text-sm sm:text-base text-[var(--text-muted)] max-w-xl mx-auto leading-relaxed">
+            Phronesis never commands what to choose. It structures your dilemma, computes mathematical sensitivity, flags cognitive bias patterns with academic citations, and surfaces high-leverage 48-hour tests.
+          </p>
+        </div>
+      )}
 
       {/* Floating Prompt Capsule Form */}
       <div className="prompt-capsule p-4 sm:p-5 space-y-3 relative overflow-hidden shadow-sm">
@@ -191,24 +197,26 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
         )}
       </div>
 
-      {/* Starter Dilemma Chips directly under input */}
-      <div className="pt-1">
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {STARTER_DILEMMAS.map((starter) => (
-            <button
-              key={starter.title}
-              type="button"
-              onClick={() => setNarrative(starter.text)}
-              className="px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--color-verdigris)]/50 text-xs font-ui text-[var(--text-main)] transition-all flex items-center space-x-1.5 group cursor-pointer shadow-2xs"
-            >
-              <span className="text-[var(--color-verdigris)] font-serif group-hover:rotate-45 transition-transform">
-                ✦
-              </span>
-              <span>{starter.title}</span>
-            </button>
-          ))}
+      {/* Starter Dilemma Chips directly under input (hidden during re-edit) */}
+      {!isReEdit && (
+        <div className="pt-1">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {STARTER_DILEMMAS.map((starter) => (
+              <button
+                key={starter.title}
+                type="button"
+                onClick={() => setNarrative(starter.text)}
+                className="px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--color-verdigris)]/50 text-xs font-ui text-[var(--text-main)] transition-all flex items-center space-x-1.5 group cursor-pointer shadow-2xs"
+              >
+                <span className="text-[var(--color-verdigris)] font-serif group-hover:rotate-45 transition-transform">
+                  ✦
+                </span>
+                <span>{starter.title}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </section>
   );
 };

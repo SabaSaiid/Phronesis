@@ -646,7 +646,7 @@ function AppContent() {
 
           <main className="flex-1 pb-16">
             {error && (
-              <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-4">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 mt-4">
                 <div className="p-3.5 rounded-xl bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)] text-xs text-[var(--text-main)] flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 text-[var(--color-ochre)] shrink-0" />
                   <span className="font-ui">{error}</span>

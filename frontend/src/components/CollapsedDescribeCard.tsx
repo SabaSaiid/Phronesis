@@ -16,7 +16,7 @@ export const CollapsedDescribeCard: React.FC<CollapsedDescribeCardProps> = ({
   const displayText = isExpanded ? narrative : (narrative.length > 200 ? narrative.slice(0, 200) + '…' : narrative);
 
   return (
-    <section id="section-describe" className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+    <section id="section-describe" className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-10">
       <div className="phronesis-card p-4 sm:p-5 space-y-2 relative border-l-2 border-[var(--color-verdigris)]/40">
         {/* Header Row */}
         <div className="flex items-center justify-between">

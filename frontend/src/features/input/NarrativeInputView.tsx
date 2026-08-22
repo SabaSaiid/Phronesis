@@ -94,7 +94,7 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   };
 
   return (
-    <section id="section-describe" className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6 animate-fade-in">
+    <section id="section-describe" className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-12 space-y-6 animate-fade-in">
       {/* Centered Editorial Hero Greeting (hidden during re-edit) */}
       {!isReEdit && (
         <div className="text-center space-y-3 pt-2 sm:pt-4">

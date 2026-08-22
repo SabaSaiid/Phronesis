@@ -17,7 +17,7 @@ export const CollapsedCalibrateCard: React.FC<CollapsedCalibrateCardProps> = ({
   const isProbValid = Math.abs(totalProb - 1.0) < 0.01;
 
   return (
-    <section id="section-calibrate" className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+    <section id="section-calibrate" className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-10">
       <div className="phronesis-card p-4 sm:p-5 space-y-3 relative border-l-2 border-[var(--color-verdigris)]/40">
         {/* Header Row */}
         <div className="flex items-center justify-between">

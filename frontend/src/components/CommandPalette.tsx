@@ -11,7 +11,11 @@ import {
   Sliders,
   Sparkles,
   ArrowRight,
-  X
+  X,
+  HelpCircle,
+  Scale,
+  Shield,
+  Code2,
 } from 'lucide-react';
 import type { BenchmarkItem } from '../types';
 import type { HistoryItem } from './Sidebar';
@@ -31,6 +35,7 @@ interface CommandPaletteProps {
   onOpenSettings: () => void;
   onOpenExport?: () => void;
   onEditModel?: () => void;
+  onOpenLegal?: (tab?: 'faq' | 'credits' | 'terms' | 'privacy') => void;
   isDarkMode: boolean;
   hasActiveReport: boolean;
 }
@@ -49,6 +54,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenSettings,
   onOpenExport,
   onEditModel,
+  onOpenLegal,
   isDarkMode,
   hasActiveReport,
 }) => {
@@ -166,6 +172,58 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
     },
+    ...(onOpenLegal
+      ? [
+          {
+            id: 'action-faq',
+            type: 'action',
+            title: 'Help & FAQ',
+            subtitle: 'Read answers about decision calculus, storage, and shortcuts',
+            icon: HelpCircle,
+            iconColor: 'text-[var(--color-verdigris)]',
+            handler: () => {
+              onOpenLegal('faq');
+              onClose();
+            },
+          },
+          {
+            id: 'action-credits',
+            type: 'action',
+            title: 'Open Source Credits & Lineage',
+            subtitle: 'Inspect open-source libraries and academic citations',
+            icon: Code2,
+            iconColor: 'text-[var(--color-verdigris)]',
+            handler: () => {
+              onOpenLegal('credits');
+              onClose();
+            },
+          },
+          {
+            id: 'action-terms',
+            type: 'action',
+            title: 'Terms of Service (PolyForm Noncommercial)',
+            subtitle: 'View software license terms and permitted use',
+            icon: Scale,
+            iconColor: 'text-[var(--text-muted)]',
+            handler: () => {
+              onOpenLegal('terms');
+              onClose();
+            },
+          },
+          {
+            id: 'action-privacy',
+            type: 'action',
+            title: 'Privacy Policy & Local Sovereignty',
+            subtitle: 'Learn about zero cloud tracking and 100% local SQLite storage',
+            icon: Shield,
+            iconColor: 'text-[var(--color-verdigris)]',
+            handler: () => {
+              onOpenLegal('privacy');
+              onClose();
+            },
+          },
+        ]
+      : []),
   ];
 
   // Filtered items

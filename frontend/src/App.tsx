@@ -49,6 +49,9 @@ const OrientationModal = lazy(() =>
 const MethodologyModal = lazy(() =>
   import('./components/MethodologyModal').then((m) => ({ default: m.MethodologyModal }))
 );
+const LegalModal = lazy(() =>
+  import('./components/LegalModal').then((m) => ({ default: m.LegalModal }))
+);
 
 const LOCAL_STORAGE_THEME_KEY = 'phronesis_theme';
 const LOCAL_STORAGE_HISTORY_KEY = 'phronesis_history';
@@ -106,6 +109,8 @@ function AppContent() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isMethodologyOpen, setIsMethodologyOpen] = useState(false);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState<'faq' | 'credits' | 'terms' | 'privacy'>('faq');
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
   const [externalTextToAppend, setExternalTextToAppend] = useState<string | undefined>(undefined);
   const [chatLayoutMode, setChatLayoutMode] = useState<ChatLayoutMode>(() => {
@@ -172,6 +177,11 @@ function AppContent() {
 
   const handleToggleTheme = useCallback(() => {
     setIsDarkMode((prev) => !prev);
+  }, []);
+
+  const handleOpenLegal = useCallback((tab: 'faq' | 'credits' | 'terms' | 'privacy' = 'faq') => {
+    setLegalTab(tab);
+    setIsLegalOpen(true);
   }, []);
 
   const handleReset = useCallback(() => {
@@ -623,6 +633,7 @@ function AppContent() {
         currentDecisionId={currentDecisionId}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onOpenLegal={handleOpenLegal}
       />
 
       {/* Main Content Area: Supports Docked Split-Screen Mode */}
@@ -907,8 +918,16 @@ function AppContent() {
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
           onEditModel={decision ? () => setActiveStage('editor') : undefined}
+          onOpenLegal={handleOpenLegal}
           isDarkMode={isDarkMode}
           hasActiveReport={!!(bundle && report)}
+        />
+
+        {/* Legal, Help & Governance Modal */}
+        <LegalModal
+          isOpen={isLegalOpen}
+          onClose={() => setIsLegalOpen(false)}
+          initialTab={legalTab}
         />
 
         {/* Export & Sharing Modal */}

@@ -21,6 +21,7 @@ import {
   Download,
   HardDrive,
   Lock,
+  Scale,
 } from 'lucide-react';
 import type { BenchmarkItem } from '../types';
 import { formatRelativeTime, formatExactDateTime, groupByDate } from '../lib/formatTime';
@@ -63,6 +64,7 @@ interface SidebarProps {
   currentDecisionId?: string;
   onOpenSettings?: () => void;
   onOpenCommandPalette?: () => void;
+  onOpenLegal?: (tab?: 'faq' | 'credits' | 'terms' | 'privacy') => void;
 }
 
 // ──────────────────────────────────────────────
@@ -626,6 +628,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentDecisionId,
   onOpenSettings,
   onOpenCommandPalette,
+  onOpenLegal,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
@@ -1192,6 +1195,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 </div>
               )}
+
+              {/* ─── Legal, Help & FAQ Link ─── */}
+              {onOpenLegal && (
+                <div className={onOpenMethodology ? 'pt-0.5' : 'pt-2 border-t border-[var(--border-subtle)]'}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenLegal('faq');
+                      onCloseMobile();
+                    }}
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-ui text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors flex items-center space-x-2 cursor-pointer"
+                    title="Help & FAQ, Open Source Credits, Terms of Service, Privacy Policy"
+                  >
+                    <Scale className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0" />
+                    <span>Legal, FAQ & Credits</span>
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             /* ═══ Collapsed Rail Mode ═══ */
@@ -1335,6 +1356,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Moon className="w-4 h-4 text-[var(--color-verdigris)]" />
               )}
             </button>
+
+            {onOpenLegal && (
+              <button
+                type="button"
+                onClick={() => onOpenLegal('faq')}
+                className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                title="Legal, FAQ & Credits"
+                aria-label="Legal and Governance"
+              >
+                <Scale className="w-4 h-4" />
+              </button>
+            )}
 
             {onOpenSettings && (
               <button

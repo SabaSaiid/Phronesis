@@ -11,10 +11,17 @@ import type {
   ReportResponse,
   BenchmarkItem,
   FocusConfig,
-  ChatLayoutMode
+  ChatLayoutMode,
+  LLMConfigOverride,
+  EffortLevel,
+  ProjectSummary
 } from './types';
 import {
   fetchBenchmarks,
+  fetchProjects,
+  createProject,
+  deleteProject,
+  fetchHistoryItem,
   extractDecision,
   runDeterministicAnalysis,
   synthesizeReport
@@ -24,6 +31,9 @@ import { AlertCircle, Sparkles, AlertTriangle, X } from 'lucide-react';
 // Lazy-loaded secondary views and modal dialogs for bundle code-splitting
 const CanonicalDilemmasView = lazy(() =>
   import('./features/benchmarks/CanonicalDilemmasView').then((m) => ({ default: m.CanonicalDilemmasView }))
+);
+const ProjectView = lazy(() =>
+  import('./features/projects/ProjectView').then((m) => ({ default: m.ProjectView }))
 );
 const ModelEditorView = lazy(() =>
   import('./features/editor/ModelEditorView').then((m) => ({ default: m.ModelEditorView }))
@@ -85,7 +95,7 @@ function safePersistHistory(items: HistoryItem[]) {
  * - 'report': Describe collapsed + Calibrate collapsed + Report active
  * - 'benchmarks': Special standalone gallery view
  */
-type ActiveStage = 'input' | 'editor' | 'report' | 'benchmarks';
+type ActiveStage = 'input' | 'editor' | 'report' | 'benchmarks' | 'project';
 
 function AppContent() {
   const { showToast } = useToast();
@@ -95,7 +105,32 @@ function AppContent() {
   const [submittedNarrative, setSubmittedNarrative] = useState<string>('');
   const [isEditingDescribe, setIsEditingDescribe] = useState(false);
 
-  // Data state (same as before)
+  // Model & Reasoning Effort configuration
+  const [modelConfig, setModelConfig] = useState<LLMConfigOverride>(() => {
+    try {
+      const saved = localStorage.getItem('phronesis_preferred_model');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [effortLevel, setEffortLevel] = useState<EffortLevel>(() => {
+    try {
+      const saved = localStorage.getItem('phronesis_preferred_effort');
+      return (saved as EffortLevel) || 'standard';
+    } catch {
+      return 'standard';
+    }
+  });
+
+  // Projects State
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | undefined>(undefined);
+  const [activeProjectContext, setActiveProjectContext] = useState<string | undefined>(undefined);
+  const [viewingProjectId, setViewingProjectId] = useState<string | null>(null);
+
+  // Data state
   const [benchmarks, setBenchmarks] = useState<BenchmarkItem[]>([]);
   const [decision, setDecision] = useState<StructuredDecision | null>(null);
   const [bundle, setBundle] = useState<AnalysisBundle | null>(null);
@@ -166,12 +201,18 @@ function AppContent() {
     localStorage.setItem(LOCAL_STORAGE_SIDEBAR_KEY, String(isSidebarOpen));
   }, [isSidebarOpen]);
 
-  // Fetch Benchmarks on mount
+  // Fetch Benchmarks and Projects on mount
   useEffect(() => {
     fetchBenchmarks()
       .then(setBenchmarks)
       .catch((err) => {
         console.warn('Failed to load benchmarks from API:', err);
+      });
+    
+    fetchProjects()
+      .then(setProjects)
+      .catch((err) => {
+        console.warn('Failed to load projects from API:', err);
       });
   }, []);
 
@@ -194,6 +235,7 @@ function AppContent() {
     setCurrentDecisionId(undefined);
     setError(null);
     setPendingEditSection(null);
+    setViewingProjectId(null);
   }, []);
 
   // Derive a `step` value for components that still need the legacy type
@@ -246,7 +288,12 @@ function AppContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const extracted = await extractDecision(narrative);
+      const extracted = await extractDecision(
+        narrative,
+        modelConfig,
+        activeProjectId,
+        activeProjectContext
+      );
       setSubmittedNarrative(narrative);
       setDecision(extracted);
       setBundle(null);
@@ -306,6 +353,9 @@ function AppContent() {
       if (focusConfig) {
         analysisBundle.focus_config = focusConfig;
       }
+      analysisBundle.effort_level = effortLevel;
+      analysisBundle.project_id = activeProjectId;
+      analysisBundle.project_context = activeProjectContext;
       setBundle(analysisBundle);
 
       // 2. Synthesize report
@@ -337,6 +387,9 @@ function AppContent() {
         return updated;
       });
 
+      // Refresh project counts if inside a project
+      fetchProjects().then(setProjects).catch(console.warn);
+
       setActiveStage('report');
       scrollToSection(reportSectionRef);
       showToast({
@@ -356,6 +409,87 @@ function AppContent() {
       setLoadingStage('');
     }
   };
+
+  // ──────────────────────────────────────────────
+  // Projects Management Handlers
+  // ──────────────────────────────────────────────
+  const handleSelectProject = useCallback((projectId: string) => {
+    setViewingProjectId(projectId);
+    setActiveStage('project');
+  }, []);
+
+  const handleCreateProject = useCallback(async (name: string) => {
+    const p = await createProject({ name });
+    const updated = await fetchProjects();
+    setProjects(updated);
+    showToast({
+      type: 'success',
+      title: 'Project Created',
+      description: `Created project container "${p.name}".`,
+    });
+  }, [showToast]);
+
+  const handleDeleteProject = useCallback(async (projectId: string) => {
+    await deleteProject(projectId);
+    const updated = await fetchProjects();
+    setProjects(updated);
+    if (activeProjectId === projectId) {
+      setActiveProjectId(undefined);
+      setActiveProjectContext(undefined);
+    }
+    showToast({
+      type: 'info',
+      title: 'Project Deleted',
+      description: 'Project container deleted. Dossiers remain preserved in history.',
+    });
+  }, [activeProjectId, showToast]);
+
+  const handleNewDecisionInProject = useCallback((projectId: string, projectContext: string) => {
+    setActiveProjectId(projectId);
+    setActiveProjectContext(projectContext);
+    setViewingProjectId(null);
+    handleReset();
+    showToast({
+      type: 'info',
+      title: 'Project Context Active',
+      description: 'New decision will be grouped under this project and receive its shared constraints.',
+    });
+  }, [handleReset, showToast]);
+
+  const handleSelectDecisionFromProject = useCallback(async (decisionId: string) => {
+    try {
+      setIsLoading(true);
+      const item = await fetchHistoryItem(decisionId);
+      if (item) {
+        setDecision(item.structured_decision);
+        setBundle(item.analysis_bundle);
+        setReport({
+          report_markdown: item.report_markdown,
+          key_sensitive_variable: item.key_sensitive_variable,
+          proposed_experiment: '',
+          attributed_sources: [],
+          math_summary: {
+            expected_utility: {},
+            preferred_eu_alt: item.preferred_eu_alt,
+            minimax_regret_choice: item.minimax_regret_choice,
+            inflection_threshold: 0,
+          },
+        });
+        setCurrentDecisionId(decisionId);
+        setSubmittedNarrative(item.decision_statement);
+        setActiveStage('report');
+      }
+    } catch (err: any) {
+      console.error('Failed to load project decision:', err);
+      showToast({
+        type: 'error',
+        title: 'Load Failed',
+        description: 'Could not load decision record.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [showToast]);
 
   const handleSelectHistoryItem = (item: HistoryItem) => {
     if (item.data) {
@@ -606,6 +740,9 @@ function AppContent() {
   const showCalibrateActive = activeStage === 'editor';
   const showReport = activeStage === 'report';
   const showBenchmarks = activeStage === 'benchmarks';
+  const showProject = activeStage === 'project' && !!viewingProjectId;
+
+  const activeProjectObj = projects.find((p) => p.id === activeProjectId);
 
   return (
     <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex">
@@ -617,6 +754,11 @@ function AppContent() {
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
         history={history}
         benchmarks={benchmarks}
+        projects={projects}
+        activeProjectId={viewingProjectId || activeProjectId}
+        onSelectProject={handleSelectProject}
+        onCreateProject={handleCreateProject}
+        onDeleteProject={handleDeleteProject}
         onSelectHistoryItem={handleSelectHistoryItem}
         onSelectBenchmark={handleSelectBenchmark}
         onOpenBenchmarksGallery={() => setActiveStage('benchmarks')}
@@ -665,73 +807,105 @@ function AppContent() {
               </div>
             )}
 
-            {/* --- ACCUMULATING SECTIONS --- */}
-            <div className="space-y-6 py-4">
+            {/* --- ACCUMULATING SECTIONS (When not in full-page standalone views) --- */}
+            {!showBenchmarks && !showProject && (
+              <div className="space-y-6 py-4">
 
-              {/* SECTION 1: Describe */}
-              <div ref={describeSectionRef}>
-                {showDescribeCollapsed && !isEditingDescribe && submittedNarrative && (
-                  <CollapsedDescribeCard
-                    narrative={submittedNarrative}
-                    onEdit={handleRequestEditDescribe}
-                    isEditDisabled={isLoading}
-                  />
-                )}
-
-                {(showDescribeActive || isEditingDescribe) && (
-                  <NarrativeInputView
-                    onExtract={handleExtract}
-                    isLoading={isLoading}
-                    externalTextToAppend={externalTextToAppend}
-                    onClearExternalText={() => setExternalTextToAppend(undefined)}
-                    initialNarrative={isEditingDescribe ? submittedNarrative : undefined}
-                    isReEdit={isEditingDescribe}
-                  />
-                )}
-              </div>
-
-              {/* SECTION 2: Calibrate */}
-              {showCalibrate && (
-                <div ref={calibrateSectionRef}>
-                  {showCalibrateCollapsed && decision && (
-                    <CollapsedCalibrateCard
-                      decision={decision}
-                      onEdit={handleRequestEditCalibrate}
+                {/* SECTION 1: Describe */}
+                <div ref={describeSectionRef}>
+                  {showDescribeCollapsed && !isEditingDescribe && submittedNarrative && (
+                    <CollapsedDescribeCard
+                      narrative={submittedNarrative}
+                      onEdit={handleRequestEditDescribe}
                       isEditDisabled={isLoading}
                     />
                   )}
 
-                  {showCalibrateActive && decision && (
-                    <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading calibration view...</div>}>
-                      <section id="section-calibrate">
-                        <ModelEditorView
-                          decision={decision}
-                          onUpdateDecision={setDecision}
-                          onRunAnalysis={handleRunAnalysis}
-                          isLoading={isLoading}
+                  {(showDescribeActive || isEditingDescribe) && (
+                    <NarrativeInputView
+                      onExtract={handleExtract}
+                      isLoading={isLoading}
+                      externalTextToAppend={externalTextToAppend}
+                      onClearExternalText={() => setExternalTextToAppend(undefined)}
+                      initialNarrative={isEditingDescribe ? submittedNarrative : undefined}
+                      isReEdit={isEditingDescribe}
+                      modelConfig={modelConfig}
+                      onModelConfigChange={setModelConfig}
+                      effortLevel={effortLevel}
+                      onEffortLevelChange={setEffortLevel}
+                      activeProjectId={activeProjectId}
+                      activeProjectName={activeProjectObj?.name}
+                      onClearActiveProject={() => {
+                        setActiveProjectId(undefined);
+                        setActiveProjectContext(undefined);
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* SECTION 2: Calibrate */}
+                {showCalibrate && (
+                  <div ref={calibrateSectionRef}>
+                    {showCalibrateCollapsed && decision && (
+                      <CollapsedCalibrateCard
+                        decision={decision}
+                        onEdit={handleRequestEditCalibrate}
+                        isEditDisabled={isLoading}
+                      />
+                    )}
+
+                    {showCalibrateActive && decision && (
+                      <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading calibration view...</div>}>
+                        <section id="section-calibrate">
+                          <ModelEditorView
+                            decision={decision}
+                            onUpdateDecision={setDecision}
+                            onRunAnalysis={handleRunAnalysis}
+                            isLoading={isLoading}
+                          />
+                        </section>
+                      </Suspense>
+                    )}
+                  </div>
+                )}
+
+                {/* SECTION 3: Audit Report */}
+                {showReport && bundle && report && (
+                  <div ref={reportSectionRef}>
+                    <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading report view...</div>}>
+                      <section id="section-report">
+                        <ReportView
+                          bundle={bundle}
+                          report={report}
+                          onNewDecision={handleReset}
+                          onOpenExport={() => setIsExportModalOpen(true)}
                         />
                       </section>
                     </Suspense>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
+            )}
 
-              {/* SECTION 3: Audit Report */}
-              {showReport && bundle && report && (
-                <div ref={reportSectionRef}>
-                  <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading report view...</div>}>
-                    <section id="section-report">
-                      <ReportView
-                        bundle={bundle}
-                        report={report}
-                        onNewDecision={handleReset}
-                        onOpenExport={() => setIsExportModalOpen(true)}
-                      />
-                    </section>
-                  </Suspense>
-                </div>
-              )}
-            </div>
+            {/* Project Workspace View */}
+            {showProject && viewingProjectId && (
+              <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading project view...</div>}>
+                <ProjectView
+                  projectId={viewingProjectId}
+                  onNewDecisionInProject={handleNewDecisionInProject}
+                  onSelectDecision={handleSelectDecisionFromProject}
+                  onCloseProjectView={() => {
+                    setViewingProjectId(null);
+                    setActiveStage('input');
+                  }}
+                  onProjectDeleted={() => {
+                    fetchProjects().then(setProjects);
+                    setViewingProjectId(null);
+                    setActiveStage('input');
+                  }}
+                />
+              </Suspense>
+            )}
 
             {/* Benchmarks Gallery (standalone view, not part of session flow) */}
             <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading view...</div>}>

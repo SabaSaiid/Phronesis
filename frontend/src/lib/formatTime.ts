@@ -33,6 +33,15 @@ export function formatRelativeTime(timestamp: number): string {
 }
 
 /**
+ * Formats an ISO string or timestamp into a concise relative time string.
+ */
+export function formatTimeAgo(time: string | number): string {
+  if (!time) return '';
+  const ts = typeof time === 'string' ? new Date(time).getTime() : time;
+  return formatRelativeTime(ts);
+}
+
+/**
  * Formats a Unix timestamp into a full human-readable date + time string
  * for use in hover tooltips and preview popovers.
  */

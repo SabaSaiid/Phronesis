@@ -15,8 +15,15 @@ from app.schemas.decision import (
     DrillDownRequest,
     DrillDownResponse,
     DeliberationRequest,
-    DeliberationResponse
+    DeliberationResponse,
+    LLMConfigOverride,
+    ModelsCatalogResponse,
+    Project,
+    ProjectSummary,
+    CreateProjectRequest,
+    UpdateProjectRequest
 )
+from app.services.llm_client import LLMClient
 from app.services.extraction_service import ExtractionService
 from app.services.matching_service import RubricMatchingService
 from app.services.counterargument_service import CounterargumentService
@@ -33,23 +40,119 @@ router = APIRouter()
 
 class ExtractRequest(BaseModel):
     narrative: str
+    llm_config: Optional[LLMConfigOverride] = None
+    project_id: Optional[str] = None
+    project_context: Optional[str] = None
 
 class CounterargumentRequest(BaseModel):
     structured_decision: StructuredDecision
     leading_alternative_id: str
+    llm_config: Optional[LLMConfigOverride] = None
 
 class MemorySettingsRequest(BaseModel):
     enabled: bool
 
+class SynthesizeReportRequest(BaseModel):
+    bundle: AnalysisBundle
+    llm_config: Optional[LLMConfigOverride] = None
+
+# ──────────────────────────────────────────────
+# Models Discovery Endpoint
+# ──────────────────────────────────────────────
+@router.get("/models", response_model=ModelsCatalogResponse)
+async def get_models_catalog():
+    return LLMClient.get_models_catalog()
+
+# ──────────────────────────────────────────────
+# Projects CRUD Endpoints
+# ──────────────────────────────────────────────
+@router.get("/projects", response_model=List[ProjectSummary])
+async def list_projects():
+    projects_data = LocalStorage.list_projects()
+    return [
+        ProjectSummary(
+            id=p["id"],
+            name=p["name"],
+            background_note=p.get("background_note", ""),
+            decision_count=p.get("decision_count", 0),
+            last_decision_at=p.get("last_decision_at"),
+            recurring_bias_ids=p.get("recurring_bias_ids", [])
+        )
+        for p in projects_data
+    ]
+
+@router.post("/projects", response_model=Project)
+async def create_project(req: CreateProjectRequest):
+    if not req.name.strip():
+        raise HTTPException(status_code=400, detail="Project name cannot be empty.")
+    pid = LocalStorage.create_project(name=req.name, background_note=req.background_note or "")
+    p = LocalStorage.get_project(pid)
+    if not p:
+        raise HTTPException(status_code=500, detail="Failed to create project.")
+    return Project(
+        id=p["id"],
+        name=p["name"],
+        background_note=p.get("background_note", ""),
+        created_at=p["created_at"],
+        updated_at=p["updated_at"],
+        archived=bool(p.get("archived", False))
+    )
+
+@router.get("/projects/{project_id}")
+async def get_project(project_id: str):
+    p = LocalStorage.get_project(project_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return p
+
+@router.patch("/projects/{project_id}")
+async def update_project(project_id: str, req: UpdateProjectRequest):
+    success = LocalStorage.update_project(
+        project_id=project_id,
+        name=req.name,
+        background_note=req.background_note,
+        archived=req.archived
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Project not found or update failed.")
+    return {"status": "success"}
+
+@router.delete("/projects/{project_id}")
+async def delete_project(project_id: str):
+    success = LocalStorage.delete_project(project_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Project not found or deletion failed.")
+    return {"status": "success"}
+
+@router.get("/projects/{project_id}/decisions")
+async def get_project_decisions(project_id: str):
+    return LocalStorage.get_project_decisions(project_id)
+
+# ──────────────────────────────────────────────
+# Extraction & Analysis Endpoints
+# ──────────────────────────────────────────────
 @router.post("/extract", response_model=Dict[str, Any])
 async def extract_decision(req: ExtractRequest):
     if len(req.narrative.strip()) < 10:
         raise HTTPException(status_code=400, detail="Narrative too short (minimum 10 characters).")
-    decision = await ExtractionService.extract_structured_decision(req.narrative)
+    
+    # Resolve project background context if project_id is given and context not passed
+    project_ctx = req.project_context
+    if req.project_id and not project_ctx:
+        p = LocalStorage.get_project(req.project_id)
+        if p and p.get("background_note"):
+            project_ctx = p["background_note"]
+
+    decision = await ExtractionService.extract_structured_decision(
+        narrative=req.narrative,
+        llm_config=req.llm_config,
+        project_context=project_ctx
+    )
     return {
         "status": "success",
         "structured_decision": decision.model_dump(),
-        "extraction_confidence": 0.95
+        "extraction_confidence": 0.95,
+        "project_id": req.project_id
     }
 
 @router.post("/analyze/deterministic", response_model=AnalysisBundle)
@@ -87,7 +190,8 @@ async def analyze_deterministic(decision: StructuredDecision):
 async def generate_counterargument(req: CounterargumentRequest):
     counter_arg = await CounterargumentService.generate_counterargument(
         req.structured_decision,
-        req.leading_alternative_id
+        req.leading_alternative_id,
+        llm_config=req.llm_config
     )
     return {"steelmanned_counterargument": counter_arg}
 

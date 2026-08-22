@@ -3,8 +3,8 @@ import { Menu, Sun, Moon, Share2, Plus, MessageSquareQuote, PenTool, Sliders, Li
 
 interface HeaderProps {
   onReset: () => void;
-  currentStep: 'input' | 'editor' | 'report' | 'benchmarks';
-  activeStage: 'input' | 'editor' | 'report' | 'benchmarks';
+  currentStep: 'input' | 'editor' | 'report' | 'benchmarks' | 'project';
+  activeStage: 'input' | 'editor' | 'report' | 'benchmarks' | 'project';
   onToggleMobileSidebar: () => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;

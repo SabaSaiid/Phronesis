@@ -3,9 +3,12 @@ import {
   ArrowRight,
   Sparkles,
   Brain,
-  Zap
+  Folder,
+  X
 } from 'lucide-react';
-import type { BenchmarkItem } from '../../types';
+import type { BenchmarkItem, LLMConfigOverride, EffortLevel } from '../../types';
+import { ModelSelector } from '../../components/ModelSelector';
+import { EffortSelector } from '../../components/EffortSelector';
 
 interface NarrativeInputViewProps {
   benchmarks?: BenchmarkItem[];
@@ -16,6 +19,13 @@ interface NarrativeInputViewProps {
   onClearExternalText?: () => void;
   initialNarrative?: string;
   isReEdit?: boolean;
+  modelConfig: LLMConfigOverride;
+  onModelConfigChange: (override: LLMConfigOverride) => void;
+  effortLevel: EffortLevel;
+  onEffortLevelChange: (effort: EffortLevel) => void;
+  activeProjectId?: string;
+  activeProjectName?: string;
+  onClearActiveProject?: () => void;
 }
 
 const STARTER_DILEMMAS = [
@@ -51,6 +61,13 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   onClearExternalText,
   initialNarrative,
   isReEdit,
+  modelConfig,
+  onModelConfigChange,
+  effortLevel,
+  onEffortLevelChange,
+  activeProjectId: _activeProjectId,
+  activeProjectName,
+  onClearActiveProject,
 }) => {
   const [narrative, setNarrative] = useState(initialNarrative || '');
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
@@ -110,6 +127,27 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
 
       {/* Floating Prompt Capsule Form */}
       <div className="prompt-capsule p-4 sm:p-5 space-y-3 relative overflow-hidden shadow-sm">
+        {/* Active Project Banner if scoped */}
+        {activeProjectName && (
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/30 text-xs font-ui text-[var(--color-verdigris)]">
+            <div className="flex items-center space-x-2 truncate">
+              <Folder className="w-3.5 h-3.5 shrink-0" />
+              <span className="font-medium truncate">Scoped to Project: <strong>{activeProjectName}</strong></span>
+              <span className="hidden sm:inline text-[10px] opacity-80">(Context auto-injected)</span>
+            </div>
+            {onClearActiveProject && (
+              <button
+                type="button"
+                onClick={onClearActiveProject}
+                className="p-1 hover:bg-[var(--color-verdigris)]/20 rounded-md transition-colors cursor-pointer text-[var(--color-verdigris)]"
+                title="Detach decision from project"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
         {isLoading ? (
           /* Multi-step loading extraction visual */
           <div className="py-8 px-4 flex flex-col items-center justify-center space-y-4 text-center">
@@ -166,11 +204,22 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
 
             {/* Bottom Controls Bar inside Capsule */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[var(--border-subtle)]">
-              <div className="text-[11px] text-[var(--text-muted)] font-ui flex items-center space-x-1.5 self-start sm:self-center">
-                <Zap className="w-3.5 h-3.5 text-[var(--color-ochre)] shrink-0" />
-                <span>Include alternatives, key unknowns, and payoff expectations.</span>
+              {/* Left Selector Controls: Model & Effort */}
+              <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                <ModelSelector
+                  value={modelConfig}
+                  onChange={onModelConfigChange}
+                  disabled={isLoading}
+                />
+
+                <EffortSelector
+                  value={effortLevel}
+                  onChange={onEffortLevelChange}
+                  disabled={isLoading}
+                />
               </div>
 
+              {/* Right Submit Actions */}
               <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
                 <span className="hidden sm:inline-flex text-[10px] font-mono text-[var(--text-faint)] px-1.5 py-0.5 rounded bg-[var(--bg-app)] border border-[var(--border-subtle)]">
                   ⌘ + Enter

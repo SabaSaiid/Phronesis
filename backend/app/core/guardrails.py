@@ -89,14 +89,18 @@ class ReportGuardrail:
         return offenders
 
     @classmethod
-    async def audit_boundaries_llm(cls, text: str) -> Tuple[bool, Optional[str], Optional[str]]:
+    async def audit_boundaries_llm(
+        cls,
+        text: str,
+        llm_config: Optional[Any] = None
+    ) -> Tuple[bool, Optional[str], Optional[str]]:
         """
         Stage 2: Constrained LLM Audit Pass evaluating generated text strictly
         against the 5 Non-Negotiable Boundaries.
         Returns: (passed: bool, offending_sentence: Optional[str], violation_reason: Optional[str])
         """
         from app.services.llm_client import LLMClient
-        result = await LLMClient.audit_report_boundaries(text)
+        result = await LLMClient.audit_report_boundaries(text, llm_config=llm_config)
         passed = bool(result.get("passed", True))
         offending_sentence = result.get("offending_sentence") or None
         violation_reason = result.get("violation_reason") or None

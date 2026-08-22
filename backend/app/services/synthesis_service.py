@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional
-from app.schemas.decision import AnalysisBundle, ReportResponse, SourceAttribution
+from app.schemas.decision import AnalysisBundle, ReportResponse, SourceAttribution, LLMConfigOverride
 from app.services.llm_client import LLMClient
 from app.core.guardrails import ReportGuardrail
 
@@ -46,7 +46,11 @@ Required Markdown Structure:
 
 class SynthesisService:
     @classmethod
-    async def synthesize_report(cls, bundle: AnalysisBundle) -> ReportResponse:
+    async def synthesize_report(
+        cls,
+        bundle: AnalysisBundle,
+        llm_config: Optional[LLMConfigOverride] = None
+    ) -> ReportResponse:
         d = bundle.structured_decision
         m = bundle.math_layer
         b = bundle.bias_layer
@@ -54,6 +58,9 @@ class SynthesisService:
         p_multi = bundle.philosophy_multi_layer
         ct = bundle.critical_thinking_layer
         longitudinal = bundle.longitudinal_context
+        effort = (getattr(bundle, "effort_level", None) or "standard").lower()
+        project_context = getattr(bundle, "project_context", None)
+        project_id = getattr(bundle, "project_id", None)
 
         # Sourced attributions collection
         attributions: List[SourceAttribution] = []
@@ -97,10 +104,20 @@ class SynthesisService:
         focused_layers = focus.focused_layers if focus and focus.focused_layers else ["psychology", "logic", "philosophy", "practical"]
         foreground_fws = focus.philosophy_frameworks if focus and focus.philosophy_frameworks else []
 
-        math_depth = "FULL (detailed payoff dynamics and sensitivity derivation)" if "practical" in focused_layers else "CONDENSED (crisp 1-2 sentence summary of EU winner, minimax regret, and inflection threshold)"
-        bias_depth = "FULL (thorough paragraph exposition with academic citations and reframing inquiries for each flagged pattern)" if "psychology" in focused_layers else "CONDENSED (crisp 1-2 sentence summary of flagged cognitive patterns)"
-        phil_depth = "FULL (multi-lens reflection across ethical frameworks)" if "philosophy" in focused_layers else "CONDENSED (crisp 1-2 sentence core moral agency tension summary)"
-        logic_depth = "FULL (falsifiability audit and counterargument stress-test)" if "logic" in focused_layers else "CONDENSED (crisp 1-2 sentence assumption stress-test summary)"
+        # Decided Depth Resolution: Effort (Coarse) x Focus Mode (Fine)
+        def resolve_depth(layer_name: str) -> str:
+            is_focused = layer_name in focused_layers
+            if effort == "thorough":
+                return "EXTENDED (comprehensive multi-paragraph deep-dive and nuance analysis)" if is_focused else "FULL (complete exposition with all context)"
+            elif effort == "quick":
+                return "FULL (focused key points with academic grounding)" if is_focused else "CONDENSED (crisp 1-2 sentence core summary)"
+            else:  # standard
+                return "FULL (thorough paragraph exposition with academic citations)" if is_focused else "CONDENSED (crisp 1-2 sentence summary)"
+
+        math_depth = resolve_depth("practical")
+        bias_depth = resolve_depth("psychology")
+        phil_depth = resolve_depth("philosophy")
+        logic_depth = resolve_depth("logic")
 
         context_payload = {
             "decision_statement": d.decision_statement,
@@ -113,22 +130,25 @@ class SynthesisService:
             "philosophy_frameworks": [fw.model_dump() for fw in (p_multi.frameworks if p_multi else [])],
             "critical_thinking": ct.model_dump(),
             "longitudinal_context": longitudinal.model_dump() if longitudinal else None,
+            "project_context": project_context,
             "depth_directives": {
                 "math_layer_depth": math_depth,
                 "bias_layer_depth": bias_depth,
                 "philosophy_layer_depth": phil_depth,
-                "philosophy_foreground_frameworks": foreground_fws,
-                "critical_thinking_layer_depth": logic_depth
+                "philosophy_foreground_frameworks": foreground_fws if effort != "thorough" else ["all_4_lenses_extended"],
+                "critical_thinking_layer_depth": logic_depth,
+                "effort_level": effort
             }
         }
 
         user_prompt = f"Synthesize this analytical bundle into the required report format respecting the depth directives for each layer:\n\n{context_payload}"
         raw_report = await LLMClient.generate_text(
             system_prompt=SYNTHESIS_SYSTEM_PROMPT,
-            user_prompt=user_prompt
+            user_prompt=user_prompt,
+            llm_config=llm_config
         )
 
-        # Two-Stage Synthesis Guardrail Pipeline
+        # Two-Stage Synthesis Guardrail Pipeline (MANDATORY INVARIANCE ACROSS ALL EFFORT TIERS)
         # Stage 1: Fast Regex / Lexicon Linter
         is_regex_valid, regex_violations = ReportGuardrail.validate_text(raw_report)
         if not is_regex_valid:
@@ -136,7 +156,10 @@ class SynthesisService:
             final_report = ReportGuardrail.generate_fallback_template(bundle)
         else:
             # Stage 2: Constrained LLM Boundary Audit
-            audit_passed, offending_sentence, violation_reason = await ReportGuardrail.audit_boundaries_llm(raw_report)
+            audit_passed, offending_sentence, violation_reason = await ReportGuardrail.audit_boundaries_llm(
+                raw_report,
+                llm_config=llm_config
+            )
             if not audit_passed:
                 print(f"[Guardrail Triggered - Stage 2 LLM Audit] Boundary violation detected: {violation_reason}. Offending: '{offending_sentence}'. Falling back to structured template.")
                 final_report = ReportGuardrail.generate_fallback_template(bundle)
@@ -165,5 +188,7 @@ class SynthesisService:
             attributed_sources=attributions,
             math_summary=math_summary,
             longitudinal_summary=longitudinal_summary_str,
-            focus_config=focus
+            focus_config=focus,
+            effort_level=effort,
+            project_id=project_id
         )

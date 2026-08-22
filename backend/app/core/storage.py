@@ -71,6 +71,16 @@ class LocalStorage:
             );
             """)
             conn.execute("""
+            CREATE TABLE IF NOT EXISTS projects (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                background_note TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                archived INTEGER NOT NULL DEFAULT 0
+            );
+            """)
+            conn.execute("""
             CREATE TABLE IF NOT EXISTS decisions (
                 id TEXT PRIMARY KEY,
                 timestamp TEXT NOT NULL,
@@ -82,9 +92,20 @@ class LocalStorage:
                 key_sensitive_variable TEXT,
                 preferred_eu_alt TEXT,
                 minimax_regret_choice TEXT,
-                flagged_bias_ids TEXT
+                flagged_bias_ids TEXT,
+                project_id TEXT REFERENCES projects(id) ON DELETE SET NULL
             );
             """)
+            # Migration check: ensure project_id column exists if table was created previously
+            cur = conn.cursor()
+            cur.execute("PRAGMA table_info(decisions)")
+            columns = [row["name"] for row in cur.fetchall()]
+            if "project_id" not in columns:
+                try:
+                    conn.execute("ALTER TABLE decisions ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE SET NULL;")
+                except Exception as e:
+                    print(f"[LocalStorage Migration Warning] Could not add project_id: {e}")
+
             conn.execute("""
             CREATE TABLE IF NOT EXISTS decision_outcomes (
                 id TEXT PRIMARY KEY,
@@ -144,14 +165,15 @@ class LocalStorage:
         try:
             with cls.get_connection() as conn:
                 bias_ids = ",".join(p.id for p in bundle.bias_layer.flagged_patterns)
+                project_id = getattr(bundle, "project_id", None) or getattr(report, "project_id", None)
                 conn.execute("""
                 INSERT INTO decisions (
                     id, timestamp, domain, decision_statement,
                     structured_decision_json, analysis_bundle_json,
                     report_markdown, key_sensitive_variable,
                     preferred_eu_alt, minimax_regret_choice,
-                    flagged_bias_ids
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    flagged_bias_ids, project_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     decision_id,
                     datetime.now(timezone.utc).isoformat(),
@@ -163,12 +185,162 @@ class LocalStorage:
                     report.key_sensitive_variable,
                     bundle.math_layer.expected_utility.preferred_alternative_id,
                     bundle.math_layer.minimax_regret.minimax_regret_choice,
-                    bias_ids
+                    bias_ids,
+                    project_id
                 ))
             return True
         except Exception as e:
             print(f"[LocalStorage Error] Failed to save decision: {e}")
             return False
+
+    # ──────────────────────────────────────────────
+    # Projects CRUD Operations
+    # ──────────────────────────────────────────────
+
+    @classmethod
+    def create_project(cls, name: str, background_note: str = "") -> str:
+        project_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        with cls.get_connection() as conn:
+            conn.execute("""
+            INSERT INTO projects (id, name, background_note, created_at, updated_at, archived)
+            VALUES (?, ?, ?, ?, ?, 0)
+            """, (project_id, name.strip(), background_note.strip() if background_note else "", now, now))
+        return project_id
+
+    @classmethod
+    def get_project(cls, project_id: str) -> Optional[Dict[str, Any]]:
+        try:
+            with cls.get_connection() as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                SELECT p.*, COUNT(d.id) as decision_count, MAX(d.timestamp) as last_decision_at
+                FROM projects p
+                LEFT JOIN decisions d ON p.id = d.project_id
+                WHERE p.id = ?
+                GROUP BY p.id
+                """, (project_id,))
+                row = cur.fetchone()
+                if not row:
+                    return None
+                return dict(row)
+        except Exception as e:
+            print(f"[LocalStorage Error] Failed to get project: {e}")
+            return None
+
+    @classmethod
+    def list_projects(cls, include_archived: bool = False) -> List[Dict[str, Any]]:
+        try:
+            with cls.get_connection() as conn:
+                cur = conn.cursor()
+                query = """
+                SELECT p.*, COUNT(d.id) as decision_count, MAX(d.timestamp) as last_decision_at
+                FROM projects p
+                LEFT JOIN decisions d ON p.id = d.project_id
+                """
+                if not include_archived:
+                    query += " WHERE p.archived = 0"
+                query += " GROUP BY p.id ORDER BY p.updated_at DESC"
+                cur.execute(query)
+                rows = cur.fetchall()
+
+                # Get recurring bias ids per project
+                results = []
+                for r in rows:
+                    p_dict = dict(r)
+                    cur.execute("SELECT flagged_bias_ids FROM decisions WHERE project_id = ?", (p_dict["id"],))
+                    d_rows = cur.fetchall()
+                    bias_counts: Dict[str, int] = {}
+                    for dr in d_rows:
+                        if dr["flagged_bias_ids"]:
+                            for b in dr["flagged_bias_ids"].split(","):
+                                b_clean = b.strip()
+                                if b_clean:
+                                    bias_counts[b_clean] = bias_counts.get(b_clean, 0) + 1
+                    top_biases = sorted(bias_counts.keys(), key=lambda k: bias_counts[k], reverse=True)[:3]
+                    p_dict["recurring_bias_ids"] = top_biases
+                    results.append(p_dict)
+                return results
+        except Exception as e:
+            print(f"[LocalStorage Error] Failed to list projects: {e}")
+            return []
+
+    @classmethod
+    def update_project(
+        cls,
+        project_id: str,
+        name: Optional[str] = None,
+        background_note: Optional[str] = None,
+        archived: Optional[bool] = None
+    ) -> bool:
+        try:
+            with cls.get_connection() as conn:
+                updates = ["updated_at = ?"]
+                params = [datetime.now(timezone.utc).isoformat()]
+                if name is not None:
+                    updates.append("name = ?")
+                    params.append(name.strip())
+                if background_note is not None:
+                    updates.append("background_note = ?")
+                    params.append(background_note.strip())
+                if archived is not None:
+                    updates.append("archived = ?")
+                    params.append(1 if archived else 0)
+
+                params.append(project_id)
+                query = f"UPDATE projects SET {', '.join(updates)} WHERE id = ?"
+                cur = conn.cursor()
+                cur.execute(query, tuple(params))
+                return cur.rowcount > 0
+        except Exception as e:
+            print(f"[LocalStorage Error] Failed to update project: {e}")
+            return False
+
+    @classmethod
+    def delete_project(cls, project_id: str) -> bool:
+        try:
+            with cls.get_connection() as conn:
+                # Disassociate decisions rather than cascading deletion
+                conn.execute("UPDATE decisions SET project_id = NULL WHERE project_id = ?", (project_id,))
+                cur = conn.cursor()
+                cur.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+                return cur.rowcount > 0
+        except Exception as e:
+            print(f"[LocalStorage Error] Failed to delete project: {e}")
+            return False
+
+    @classmethod
+    def get_project_decisions(cls, project_id: str) -> List[Dict[str, Any]]:
+        try:
+            with cls.get_connection() as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                SELECT d.*, o.chosen_alternative_id, o.actual_utility_rating, o.retrospective_notes, o.recorded_at as outcome_recorded_at
+                FROM decisions d
+                LEFT JOIN decision_outcomes o ON d.id = o.decision_id
+                WHERE d.project_id = ?
+                ORDER BY d.timestamp DESC
+                """, (project_id,))
+                rows = cur.fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            print(f"[LocalStorage Error] Failed to get project decisions: {e}")
+            return []
+
+    @classmethod
+    def assign_decision_to_project(cls, decision_id: str, project_id: Optional[str]) -> bool:
+        try:
+            with cls.get_connection() as conn:
+                cur = conn.cursor()
+                cur.execute("UPDATE decisions SET project_id = ? WHERE id = ?", (project_id, decision_id))
+                return cur.rowcount > 0
+        except Exception as e:
+            print(f"[LocalStorage Error] Failed to assign decision to project: {e}")
+            return False
+
+    # ──────────────────────────────────────────────
+    # Decision History Queries & Actions
+    # ──────────────────────────────────────────────
 
     @classmethod
     def list_decisions(cls) -> List[HistoryItemSummary]:
@@ -233,6 +405,8 @@ class LocalStorage:
                     "key_sensitive_variable": row["key_sensitive_variable"],
                     "preferred_eu_alt": row["preferred_eu_alt"],
                     "minimax_regret_choice": row["minimax_regret_choice"],
+                    "flagged_bias_ids": [b.strip() for b in row["flagged_bias_ids"].split(",") if b.strip()] if row["flagged_bias_ids"] else [],
+                    "project_id": row["project_id"],
                     "outcome": {
                         "chosen_alternative_id": row["chosen_alternative_id"],
                         "actual_utility_rating": row["actual_utility_rating"],
@@ -299,10 +473,16 @@ class LocalStorage:
             return False
 
     @classmethod
-    def get_longitudinal_summary(cls, target_domain: Optional[str] = None) -> Optional[LongitudinalPatternContext]:
+    def get_longitudinal_summary(
+        cls,
+        target_domain: Optional[str] = None,
+        project_id: Optional[str] = None
+    ) -> Optional[LongitudinalPatternContext]:
         """
-        Threshold-Gated Longitudinal Context Aggregator:
-        Only emits summary insights if total logged decisions >= 5 and memory is opted in.
+        Three-Tier Scoped Longitudinal Pattern Retrieval:
+        - Tier 1 (Project Scope): If inside a project with >=5 decisions, summarize strictly within that project.
+        - Tier 2 (Blended Scope): If in a project with <5 decisions, supplement with same-domain decisions if total >= 5.
+        - Tier 3 (Global Scope): If unscoped, summarize across global history if total >= 5.
         """
         if not cls.is_memory_enabled():
             return None
@@ -310,6 +490,72 @@ class LocalStorage:
         try:
             with cls.get_connection() as conn:
                 cur = conn.cursor()
+
+                # ─── TIER 1 & TIER 2: Project-Scoped Retrieval ───
+                if project_id:
+                    # Get Project Name
+                    cur.execute("SELECT name FROM projects WHERE id = ?", (project_id,))
+                    p_row = cur.fetchone()
+                    project_name = p_row["name"] if p_row else "Current Project"
+
+                    cur.execute("SELECT id, domain, flagged_bias_ids FROM decisions WHERE project_id = ? ORDER BY timestamp DESC", (project_id,))
+                    proj_rows = cur.fetchall()
+                    proj_count = len(proj_rows)
+
+                    if proj_count >= 5:
+                        # Pure Tier 1 Project Scope
+                        bias_counts: Dict[str, int] = {}
+                        for r in proj_rows:
+                            if r["flagged_bias_ids"]:
+                                for bid in [b.strip() for b in r["flagged_bias_ids"].split(",") if b.strip()]:
+                                    bias_counts[bid] = bias_counts.get(bid, 0) + 1
+
+                        top_biases = sorted(bias_counts.items(), key=lambda x: x[1], reverse=True)[:2]
+                        bias_phrases = [f"'{b[0]}' was flagged in {b[1]} of {proj_count} decisions" for b in top_biases if b[1] >= 2]
+                        bias_summary = ", and ".join(bias_phrases) if bias_phrases else "no single cognitive pattern dominated"
+
+                        summary_text = (
+                            f"Longitudinal history (Scoped to Project: \"{project_name}\", {proj_count} decisions logged): "
+                            f"{bias_summary}. This project-scoped context is provided as an observational reference."
+                        )
+
+                        return LongitudinalPatternContext(
+                            total_decisions_logged=proj_count,
+                            recurring_bias_counts=bias_counts,
+                            summary_text=summary_text
+                        )
+                    else:
+                        # Check Tier 2: Supplement with same-domain decisions outside project
+                        cur.execute(
+                            "SELECT id, domain, flagged_bias_ids FROM decisions WHERE (project_id IS NULL OR project_id != ?) AND domain = ? ORDER BY timestamp DESC LIMIT 5",
+                            (project_id, target_domain or "general")
+                        )
+                        supp_rows = cur.fetchall()
+                        combined_rows = list(proj_rows) + list(supp_rows)
+                        if len(combined_rows) >= 5:
+                            bias_counts: Dict[str, int] = {}
+                            for r in combined_rows:
+                                if r["flagged_bias_ids"]:
+                                    for bid in [b.strip() for b in r["flagged_bias_ids"].split(",") if b.strip()]:
+                                        bias_counts[bid] = bias_counts.get(bid, 0) + 1
+
+                            top_biases = sorted(bias_counts.items(), key=lambda x: x[1], reverse=True)[:2]
+                            bias_phrases = [f"'{b[0]}' flagged {b[1]} times" for b in top_biases if b[1] >= 2]
+                            bias_summary = ", and ".join(bias_phrases) if bias_phrases else "no dominant pattern"
+
+                            summary_text = (
+                                f"Longitudinal history (Project \"{project_name}\" [{proj_count}] + Domain supplement [{len(supp_rows)}]): "
+                                f"{bias_summary}."
+                            )
+
+                            return LongitudinalPatternContext(
+                                total_decisions_logged=len(combined_rows),
+                                recurring_bias_counts=bias_counts,
+                                summary_text=summary_text
+                            )
+                        return None
+
+                # ─── TIER 3: Global Recency Fallback ───
                 cur.execute("SELECT COUNT(*) as cnt FROM decisions")
                 total_cnt = cur.fetchone()["cnt"]
                 if total_cnt < 5:
@@ -319,14 +565,13 @@ class LocalStorage:
                 cur.execute("SELECT id, domain, flagged_bias_ids FROM decisions ORDER BY timestamp DESC LIMIT 10")
                 recent_rows = cur.fetchall()
 
-                bias_counts: Dict[str, int] = {}
+                bias_counts = {}
                 for r in recent_rows:
                     if r["flagged_bias_ids"]:
                         b_ids = [b.strip() for b in r["flagged_bias_ids"].split(",") if b.strip()]
                         for bid in b_ids:
                             bias_counts[bid] = bias_counts.get(bid, 0) + 1
 
-                # Format neutral observational summary string
                 top_biases = sorted(bias_counts.items(), key=lambda x: x[1], reverse=True)[:2]
                 bias_phrases = [f"'{b[0]}' was flagged in {b[1]} instances" for b in top_biases if b[1] >= 2]
 
@@ -357,6 +602,8 @@ class LocalStorage:
         try:
             with cls.get_connection() as conn:
                 cur = conn.cursor()
+                cur.execute("SELECT * FROM projects ORDER BY created_at ASC")
+                projects_rows = [dict(r) for r in cur.fetchall()]
                 cur.execute("SELECT * FROM decisions ORDER BY timestamp ASC")
                 decisions_rows = [dict(r) for r in cur.fetchall()]
                 cur.execute("SELECT * FROM decision_outcomes ORDER BY recorded_at ASC")
@@ -367,6 +614,7 @@ class LocalStorage:
                 return {
                     "version": "2.0",
                     "exported_at": datetime.now(timezone.utc).isoformat(),
+                    "projects": projects_rows,
                     "decisions": decisions_rows,
                     "outcomes": outcomes_rows,
                     "feedback": feedback_rows
@@ -380,6 +628,7 @@ class LocalStorage:
             with cls.get_connection() as conn:
                 conn.execute("DELETE FROM decision_outcomes;")
                 conn.execute("DELETE FROM decisions;")
+                conn.execute("DELETE FROM projects;")
                 conn.execute("DELETE FROM flag_feedback;")
             # Vacuum outside transaction block
             conn = sqlite3.connect(cls.get_db_path())

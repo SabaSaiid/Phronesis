@@ -22,8 +22,10 @@ import {
   HardDrive,
   Lock,
   Scale,
+  Folder,
+  FolderPlus,
 } from 'lucide-react';
-import type { BenchmarkItem } from '../types';
+import type { BenchmarkItem, ProjectSummary } from '../types';
 import { formatRelativeTime, formatExactDateTime, groupByDate } from '../lib/formatTime';
 
 // ──────────────────────────────────────────────
@@ -39,7 +41,7 @@ export interface HistoryItem {
   data: any;
 }
 
-type FilterMode = 'all' | 'pinned' | 'recent' | 'benchmarks';
+type FilterMode = 'all' | 'projects' | 'pinned' | 'recent' | 'benchmarks';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -48,6 +50,12 @@ interface SidebarProps {
   onCloseMobile: () => void;
   history: HistoryItem[];
   benchmarks: BenchmarkItem[];
+  projects?: ProjectSummary[];
+  activeProjectId?: string;
+  onSelectProject?: (projectId: string) => void;
+  onCreateProject?: (name: string) => Promise<void>;
+  onDeleteProject?: (projectId: string) => Promise<void>;
+  onMoveDecisionToProject?: (decisionId: string, projectId: string | null) => Promise<void>;
   onSelectHistoryItem: (item: HistoryItem) => void;
   onSelectBenchmark: (bm: BenchmarkItem) => void;
   onOpenBenchmarksGallery?: () => void;
@@ -612,6 +620,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   history,
   benchmarks,
+  projects = [],
+  activeProjectId,
+  onSelectProject,
+  onCreateProject,
+  onDeleteProject: _onDeleteProject,
+  onMoveDecisionToProject: _onMoveDecisionToProject,
   onSelectHistoryItem,
   onSelectBenchmark,
   onOpenBenchmarksGallery,
@@ -634,11 +648,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showSovereignPopover, setShowSovereignPopover] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
 
   // Collapsible sections persisted state
   const [sectionState, setSectionState] = useState<Record<string, boolean>>(() => {
     const saved = loadSectionState();
     return {
+      projects: saved.projects !== false,
       pinned: saved.pinned !== false,
       today: saved.today !== false,
       yesterday: saved.yesterday !== false,
@@ -647,6 +664,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       benchmarks: saved.benchmarks !== false,
     };
   });
+
+  const handleCreateProjectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProjectName.trim() || !onCreateProject) return;
+    try {
+      await onCreateProject(newProjectName.trim());
+      setNewProjectName('');
+      setIsCreatingProject(false);
+    } catch (err) {
+      console.error('Failed to create project:', err);
+    }
+  };
 
   const toggleSection = (key: string) => {
     setSectionState((prev) => {
@@ -1028,6 +1057,112 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex-1 overflow-y-auto sidebar-scrollbar px-2 space-y-3 py-2">
           {isExpanded ? (
             <>
+              {/* ─── Projects Container Section ─── */}
+              {filterMode !== 'benchmarks' && (
+                <SidebarSection
+                  id="projects"
+                  label="Projects"
+                  icon={Folder}
+                  iconClassName="text-[var(--color-verdigris)] w-3.5 h-3.5"
+                  count={projects.length}
+                  isOpen={sectionState.projects !== false}
+                  onToggle={() => toggleSection('projects')}
+                  headerRight={
+                    onCreateProject ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsCreatingProject((prev) => !prev);
+                        }}
+                        className="p-1 rounded text-[var(--text-faint)] hover:text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+                        title="Create new project container"
+                      >
+                        <FolderPlus className="w-3.5 h-3.5" />
+                      </button>
+                    ) : undefined
+                  }
+                >
+                  <div className="space-y-0.5 px-0.5">
+                    {/* Inline New Project Form */}
+                    {isCreatingProject && (
+                      <form onSubmit={handleCreateProjectSubmit} className="p-2 mb-1.5 rounded-xl bg-[var(--bg-surface-raised)] border border-[var(--color-verdigris)]/40 space-y-1.5 shadow-2xs">
+                        <div className="text-[10px] font-ui font-semibold text-[var(--color-verdigris)] flex items-center justify-between">
+                          <span>New Project Container</span>
+                          <button
+                            type="button"
+                            onClick={() => setIsCreatingProject(false)}
+                            className="p-0.5 text-[var(--text-faint)] hover:text-[var(--text-main)] cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          autoFocus
+                          value={newProjectName}
+                          onChange={(e) => setNewProjectName(e.target.value)}
+                          placeholder="e.g. Career Transition"
+                          className="w-full bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-lg px-2 py-1 text-xs font-ui text-[var(--text-main)] focus:outline-none focus:border-[var(--color-verdigris)]"
+                        />
+                        <div className="flex items-center justify-end space-x-1.5 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setIsCreatingProject(false)}
+                            className="px-2 py-0.5 text-[10px] font-ui text-[var(--text-muted)] hover:bg-[var(--bg-surface)] rounded cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={!newProjectName.trim()}
+                            className="btn-verdigris px-2.5 py-0.5 text-[10px] font-ui rounded cursor-pointer disabled:opacity-50"
+                          >
+                            Create
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {projects.map((p) => {
+                      const isActive = activeProjectId === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            onSelectProject?.(p.id);
+                            onCloseMobile();
+                          }}
+                          className={`w-full text-left p-2 rounded-xl transition-all text-xs font-ui group flex items-center justify-between cursor-pointer border ${
+                            isActive
+                              ? 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] font-medium border-[var(--color-verdigris)]/30'
+                              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] border-transparent'
+                          }`}
+                          title={p.name}
+                        >
+                          <div className="flex items-center space-x-2 min-w-0 pr-1">
+                            <Folder className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[var(--color-verdigris)]' : 'text-[var(--text-muted)] group-hover:text-[var(--color-verdigris)]'}`} />
+                            <span className="truncate text-xs">{p.name}</span>
+                          </div>
+                          <div className="flex items-center space-x-1 shrink-0">
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-[var(--bg-app)] text-[var(--text-faint)] border border-[var(--border-subtle)]">
+                              {p.decision_count}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {projects.length === 0 && !isCreatingProject && (
+                      <div className="px-2 py-2 text-[10px] text-[var(--text-faint)] italic font-body">
+                        No projects yet. Click + to group decisions.
+                      </div>
+                    )}
+                  </div>
+                </SidebarSection>
+              )}
+
               {/* ─── Pinned Dossiers ─── */}
               {pinnedItems.length > 0 && (
                 <SidebarSection
@@ -1217,6 +1352,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             /* ═══ Collapsed Rail Mode ═══ */
             <div className="flex flex-col items-center space-y-1">
+              {/* Collapsed Projects */}
+              {projects.slice(0, 4).map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => onSelectProject?.(p.id)}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                    activeProjectId === p.id
+                      ? 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] border border-[var(--color-verdigris)]/40 shadow-2xs'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)]'
+                  }`}
+                  title={`Project: ${p.name} (${p.decision_count} decisions)`}
+                >
+                  <Folder className="w-4 h-4" />
+                </button>
+              ))}
+
+              {projects.length > 0 && <div className="w-6 border-t border-[var(--border-subtle)] my-1" />}
+
               {/* Collapsed History Icons with hover preview */}
               {history.slice(0, 8).map((item) => (
                 <CollapsedItemWithPreview

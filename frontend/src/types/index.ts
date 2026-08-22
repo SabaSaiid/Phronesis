@@ -146,6 +146,60 @@ export interface LongitudinalPatternContext {
   summary_text?: string;
 }
 
+export interface LLMConfigOverride {
+  provider?: string;
+  model?: string;
+  api_key?: string;
+}
+
+export interface LLMModelOption {
+  provider: string;
+  model: string;
+  label: string;
+  description?: string;
+  has_key: boolean;
+  is_default: boolean;
+}
+
+export interface ModelsCatalogResponse {
+  models: LLMModelOption[];
+  default_model: {
+    provider: string;
+    model: string;
+  };
+}
+
+export type EffortLevel = 'quick' | 'standard' | 'thorough';
+
+export interface Project {
+  id: string;
+  name: string;
+  background_note: string;
+  created_at: string;
+  updated_at: string;
+  archived: boolean;
+}
+
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  background_note: string;
+  decision_count: number;
+  last_decision_at?: string;
+  recurring_bias_ids?: string[];
+}
+
+export interface CreateProjectRequest {
+  name: string;
+  background_note?: string;
+}
+
+export interface UpdateProjectRequest {
+  name?: string;
+  background_note?: string;
+  archived?: boolean;
+}
+
 export type FocusLayerId = 'psychology' | 'logic' | 'philosophy' | 'practical';
 
 export interface FocusConfig {
@@ -162,6 +216,9 @@ export interface AnalysisBundle {
   critical_thinking_layer: CriticalThinkingLayerResult;
   longitudinal_context?: LongitudinalPatternContext;
   focus_config?: FocusConfig;
+  effort_level?: EffortLevel;
+  project_id?: string;
+  project_context?: string;
 }
 
 export interface SourceAttribution {
@@ -183,6 +240,8 @@ export interface ReportResponse {
   };
   longitudinal_summary?: string;
   focus_config?: FocusConfig;
+  effort_level?: EffortLevel;
+  project_id?: string;
 }
 
 export interface DrillDownRequest {

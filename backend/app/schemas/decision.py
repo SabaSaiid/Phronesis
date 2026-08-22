@@ -139,6 +139,49 @@ class LongitudinalPatternContext(BaseModel):
     average_base_rate_divergence_pct: Optional[float] = None
     summary_text: Optional[str] = None
 
+class LLMConfigOverride(BaseModel):
+    provider: Optional[str] = Field(default=None, description="gemini, openai, anthropic, or mock")
+    model: Optional[str] = Field(default=None, description="Specific model ID e.g. gemini-2.5-flash, gpt-4o")
+    api_key: Optional[str] = Field(default=None, description="Optional per-session API key")
+
+class LLMModelOption(BaseModel):
+    provider: str
+    model: str
+    label: str
+    description: Optional[str] = ""
+    has_key: bool = True
+    is_default: bool = False
+
+class ModelsCatalogResponse(BaseModel):
+    models: List[LLMModelOption]
+    default_model: Dict[str, str]
+
+# Project Schemas
+class Project(BaseModel):
+    id: str
+    name: str
+    background_note: str = ""
+    created_at: str
+    updated_at: str
+    archived: bool = False
+
+class ProjectSummary(BaseModel):
+    id: str
+    name: str
+    background_note: str = ""
+    decision_count: int = 0
+    last_decision_at: Optional[str] = None
+    recurring_bias_ids: List[str] = Field(default_factory=list)
+
+class CreateProjectRequest(BaseModel):
+    name: str
+    background_note: Optional[str] = ""
+
+class UpdateProjectRequest(BaseModel):
+    name: Optional[str] = None
+    background_note: Optional[str] = None
+    archived: Optional[bool] = None
+
 class FocusConfig(BaseModel):
     focused_layers: List[str] = Field(
         default_factory=lambda: ["psychology", "logic", "philosophy", "practical"],
@@ -158,6 +201,9 @@ class AnalysisBundle(BaseModel):
     critical_thinking_layer: CriticalThinkingLayerResult
     longitudinal_context: Optional[LongitudinalPatternContext] = None
     focus_config: Optional[FocusConfig] = None
+    effort_level: Optional[str] = Field(default="standard", description="quick, standard, or thorough")
+    project_id: Optional[str] = None
+    project_context: Optional[str] = None
 
 class SourceAttribution(BaseModel):
     field: str
@@ -172,6 +218,8 @@ class ReportResponse(BaseModel):
     math_summary: Dict[str, Any] = Field(default_factory=dict)
     longitudinal_summary: Optional[str] = None
     focus_config: Optional[FocusConfig] = None
+    effort_level: Optional[str] = "standard"
+    project_id: Optional[str] = None
 
 class DrillDownRequest(BaseModel):
     decision_statement: str

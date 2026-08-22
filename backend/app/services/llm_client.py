@@ -3,13 +3,118 @@ import json
 from typing import Dict, Any, Optional
 from app.core.config import settings
 
+from app.schemas.decision import LLMConfigOverride, LLMModelOption, ModelsCatalogResponse
+
 class LLMClient:
     """
     Unified LLM Client supporting Gemini, OpenAI, Anthropic, and Mock/Offline fallback.
     Maintains cached client instances for HTTP connection pooling.
+    Supports per-request LLMConfigOverride without mutating server singleton state.
     """
 
     _clients: Dict[str, Any] = {}
+
+    @classmethod
+    def _resolve_provider_model_key(cls, llm_config: Optional[LLMConfigOverride] = None):
+        provider = (llm_config.provider if llm_config and llm_config.provider else settings.LLM_PROVIDER or "mock").lower()
+        
+        # Determine API key based on provider
+        api_key = None
+        if llm_config and llm_config.api_key:
+            api_key = llm_config.api_key
+        elif settings.LLM_API_KEY:
+            api_key = settings.LLM_API_KEY
+        else:
+            if provider == "gemini":
+                api_key = os.environ.get("GEMINI_API_KEY")
+            elif provider == "openai":
+                api_key = os.environ.get("OPENAI_API_KEY")
+            elif provider == "anthropic":
+                api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+
+        # Determine Model
+        if llm_config and llm_config.model:
+            model = llm_config.model
+        elif settings.LLM_MODEL:
+            model = settings.LLM_MODEL
+        else:
+            if provider == "gemini":
+                model = "gemini-2.5-flash"
+            elif provider == "openai":
+                model = "gpt-4o-mini"
+            elif provider == "anthropic":
+                model = "claude-3-5-sonnet-20241022"
+            else:
+                model = "mock-deterministic"
+
+        return provider, model, api_key
+
+    @classmethod
+    def get_models_catalog(cls) -> ModelsCatalogResponse:
+        gemini_key = bool(settings.LLM_API_KEY or os.environ.get("GEMINI_API_KEY"))
+        openai_key = bool(os.environ.get("OPENAI_API_KEY") or (settings.LLM_PROVIDER == "openai" and settings.LLM_API_KEY))
+        anthropic_key = bool(os.environ.get("ANTHROPIC_API_KEY") or (settings.LLM_PROVIDER == "anthropic" and settings.LLM_API_KEY))
+
+        default_prov = (settings.LLM_PROVIDER or "gemini").lower()
+        default_mod = settings.LLM_MODEL or ("gemini-2.5-flash" if default_prov == "gemini" else "gpt-4o-mini" if default_prov == "openai" else "claude-3-5-sonnet-20241022")
+
+        models = [
+            LLMModelOption(
+                provider="gemini",
+                model="gemini-2.5-flash",
+                label="Gemini 2.5 Flash",
+                description="Fast and highly responsive multimodal model",
+                has_key=gemini_key,
+                is_default=(default_prov == "gemini" and "flash" in default_mod)
+            ),
+            LLMModelOption(
+                provider="gemini",
+                model="gemini-2.5-pro",
+                label="Gemini 2.5 Pro",
+                description="High reasoning depth and complex nuance extraction",
+                has_key=gemini_key,
+                is_default=(default_prov == "gemini" and "pro" in default_mod)
+            ),
+            LLMModelOption(
+                provider="openai",
+                model="gpt-4o-mini",
+                label="GPT-4o Mini",
+                description="Lightweight and structured reasoning",
+                has_key=openai_key,
+                is_default=(default_prov == "openai" and "mini" in default_mod)
+            ),
+            LLMModelOption(
+                provider="openai",
+                model="gpt-4o",
+                label="GPT-4o",
+                description="Flagship OpenAI omni intelligence",
+                has_key=openai_key,
+                is_default=(default_prov == "openai" and "mini" not in default_mod)
+            ),
+            LLMModelOption(
+                provider="anthropic",
+                model="claude-3-5-sonnet-20241022",
+                label="Claude 3.5 Sonnet",
+                description="Precision prose synthesis and rigorous nuance",
+                has_key=anthropic_key,
+                is_default=(default_prov == "anthropic")
+            ),
+            LLMModelOption(
+                provider="mock",
+                model="deterministic",
+                label="Offline Deterministic",
+                description="Pure Python heuristic extraction & templating (Zero API keys needed)",
+                has_key=True,
+                is_default=(default_prov == "mock")
+            ),
+        ]
+
+        return ModelsCatalogResponse(
+            models=models,
+            default_model={"provider": default_prov, "model": default_mod}
+        )
 
     @classmethod
     def _get_gemini_client(cls, api_key: str):
@@ -36,9 +141,13 @@ class LLMClient:
         return cls._clients[key]
 
     @classmethod
-    async def generate_structured_json(cls, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
-        provider = (settings.LLM_PROVIDER or "mock").lower()
-        api_key = settings.LLM_API_KEY or os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+    async def generate_structured_json(
+        cls,
+        system_prompt: str,
+        user_prompt: str,
+        llm_config: Optional[LLMConfigOverride] = None
+    ) -> Dict[str, Any]:
+        provider, model, api_key = cls._resolve_provider_model_key(llm_config)
 
         if not api_key or provider == "mock":
             return cls._mock_structured_response(user_prompt)
@@ -48,7 +157,7 @@ class LLMClient:
                 from google.genai import types
                 client = cls._get_gemini_client(api_key)
                 response = client.models.generate_content(
-                    model=settings.LLM_MODEL or "gemini-2.5-flash",
+                    model=model,
                     contents=f"{system_prompt}\n\nUser Input:\n{user_prompt}",
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -60,7 +169,7 @@ class LLMClient:
             elif provider == "openai":
                 client = cls._get_openai_client(api_key)
                 response = await client.chat.completions.create(
-                    model=settings.LLM_MODEL or "gpt-4o-mini",
+                    model=model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt}
@@ -73,7 +182,7 @@ class LLMClient:
             elif provider == "anthropic":
                 client = cls._get_anthropic_client(api_key)
                 response = await client.messages.create(
-                    model=settings.LLM_MODEL or "claude-3-5-sonnet-20241022",
+                    model=model,
                     max_tokens=2000,
                     system=system_prompt + "\nReturn ONLY valid JSON.",
                     messages=[{"role": "user", "content": user_prompt}],
@@ -88,16 +197,19 @@ class LLMClient:
                 return json.loads(content.strip())
 
         except Exception as e:
-            # Fallback to intelligent deterministic extraction
-            print(f"[LLMClient Warning] LLM call failed with error: {e}. Falling back to mock generator.")
+            print(f"[LLMClient Warning] LLM call ({provider}/{model}) failed with error: {e}. Falling back to mock generator.")
             return cls._mock_structured_response(user_prompt)
 
         return cls._mock_structured_response(user_prompt)
 
     @classmethod
-    async def generate_text(cls, system_prompt: str, user_prompt: str) -> str:
-        provider = (settings.LLM_PROVIDER or "mock").lower()
-        api_key = settings.LLM_API_KEY or os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+    async def generate_text(
+        cls,
+        system_prompt: str,
+        user_prompt: str,
+        llm_config: Optional[LLMConfigOverride] = None
+    ) -> str:
+        provider, model, api_key = cls._resolve_provider_model_key(llm_config)
 
         if not api_key or provider == "mock":
             return cls._mock_text_response(user_prompt)
@@ -106,7 +218,7 @@ class LLMClient:
             if provider == "gemini":
                 client = cls._get_gemini_client(api_key)
                 response = client.models.generate_content(
-                    model=settings.LLM_MODEL or "gemini-2.5-flash",
+                    model=model,
                     contents=f"{system_prompt}\n\nContext Data:\n{user_prompt}"
                 )
                 return response.text
@@ -114,7 +226,7 @@ class LLMClient:
             elif provider == "openai":
                 client = cls._get_openai_client(api_key)
                 response = await client.chat.completions.create(
-                    model=settings.LLM_MODEL or "gpt-4o-mini",
+                    model=model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt}
@@ -126,7 +238,7 @@ class LLMClient:
             elif provider == "anthropic":
                 client = cls._get_anthropic_client(api_key)
                 response = await client.messages.create(
-                    model=settings.LLM_MODEL or "claude-3-5-sonnet-20241022",
+                    model=model,
                     max_tokens=3000,
                     system=system_prompt,
                     messages=[{"role": "user", "content": user_prompt}],
@@ -135,7 +247,7 @@ class LLMClient:
                 return response.content[0].text
 
         except Exception as e:
-            print(f"[LLMClient Warning] LLM text generation failed with error: {e}. Using deterministic template fallback.")
+            print(f"[LLMClient Warning] LLM text generation ({provider}/{model}) failed with error: {e}. Using deterministic template fallback.")
             return cls._mock_text_response(user_prompt)
 
         return cls._mock_text_response(user_prompt)
@@ -224,14 +336,17 @@ class LLMClient:
         )
 
     @classmethod
-    async def audit_report_boundaries(cls, report_text: str) -> Dict[str, Any]:
+    async def audit_report_boundaries(
+        cls,
+        report_text: str,
+        llm_config: Optional[LLMConfigOverride] = None
+    ) -> Dict[str, Any]:
         """
         Stage 2 LLM Audit Pass: Evaluates generated report text strictly against
         the 5 Non-Negotiable Boundaries from the README.
         Allowed output: JSON with {passed: bool, offending_sentence: str, violation_reason: str}
         """
-        provider = (settings.LLM_PROVIDER or "mock").lower()
-        api_key = settings.LLM_API_KEY or os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+        provider, model, api_key = cls._resolve_provider_model_key(llm_config)
 
         if not api_key or provider == "mock":
             return cls._mock_audit_response(report_text)
@@ -259,7 +374,7 @@ class LLMClient:
                 from google.genai import types
                 client = cls._get_gemini_client(api_key)
                 response = client.models.generate_content(
-                    model=settings.LLM_MODEL or "gemini-2.5-flash",
+                    model=model,
                     contents=f"{system_prompt}\n\n{user_prompt}",
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -271,7 +386,7 @@ class LLMClient:
             elif provider == "openai":
                 client = cls._get_openai_client(api_key)
                 response = await client.chat.completions.create(
-                    model=settings.LLM_MODEL or "gpt-4o-mini",
+                    model=model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt}
@@ -284,7 +399,7 @@ class LLMClient:
             elif provider == "anthropic":
                 client = cls._get_anthropic_client(api_key)
                 response = await client.messages.create(
-                    model=settings.LLM_MODEL or "claude-3-5-sonnet-20241022",
+                    model=model,
                     max_tokens=1000,
                     system=system_prompt + "\nReturn ONLY valid JSON.",
                     messages=[{"role": "user", "content": user_prompt}],
@@ -298,7 +413,7 @@ class LLMClient:
                 return json.loads(content.strip())
 
         except Exception as e:
-            print(f"[LLMClient Warning] LLM audit failed with error: {e}. Falling back to deterministic audit.")
+            print(f"[LLMClient Warning] LLM audit ({provider}/{model}) failed with error: {e}. Falling back to deterministic audit.")
             return cls._mock_audit_response(report_text)
 
         return cls._mock_audit_response(report_text)

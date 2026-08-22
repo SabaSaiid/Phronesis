@@ -1,5 +1,5 @@
-from typing import Dict, Any
-from app.schemas.decision import StructuredDecision
+from typing import Dict, Any, Optional
+from app.schemas.decision import StructuredDecision, LLMConfigOverride
 from app.services.llm_client import LLMClient
 
 EXTRACTION_SYSTEM_PROMPT = """You are Phronesis Extraction Engine.
@@ -36,11 +36,24 @@ Rules:
 
 class ExtractionService:
     @classmethod
-    async def extract_structured_decision(cls, narrative: str) -> StructuredDecision:
-        user_prompt = f"Extract structured decision model from this dilemma:\n\n{narrative.strip()}"
+    async def extract_structured_decision(
+        cls,
+        narrative: str,
+        llm_config: Optional[LLMConfigOverride] = None,
+        project_context: Optional[str] = None
+    ) -> StructuredDecision:
+        user_prompt_parts = []
+        if project_context and project_context.strip():
+            user_prompt_parts.append(
+                f"[PROJECT SHARED CONTEXT & BACKGROUND]\n{project_context.strip()}\n[END PROJECT CONTEXT]\n"
+            )
+        user_prompt_parts.append(f"Extract structured decision model from this dilemma:\n\n{narrative.strip()}")
+        user_prompt = "\n".join(user_prompt_parts)
+
         data = await LLMClient.generate_structured_json(
             system_prompt=EXTRACTION_SYSTEM_PROMPT,
-            user_prompt=user_prompt
+            user_prompt=user_prompt,
+            llm_config=llm_config
         )
         
         # Pydantic v2 validation and auto-normalization

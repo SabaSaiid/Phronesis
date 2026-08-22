@@ -9,11 +9,91 @@ import type {
   DrillDownRequest,
   DrillDownResponse,
   DeliberationRequest,
-  DeliberationResponse
+  DeliberationResponse,
+  LLMConfigOverride,
+  ModelsCatalogResponse,
+  Project,
+  ProjectSummary,
+  CreateProjectRequest,
+  UpdateProjectRequest
 } from '../types';
 
 const API_BASE = '/api/v1';
 
+// ──────────────────────────────────────────────
+// Models & Provider Selection
+// ──────────────────────────────────────────────
+export async function fetchModels(): Promise<ModelsCatalogResponse> {
+  const res = await fetch(`${API_BASE}/models`);
+  if (!res.ok) {
+    throw new Error(`Failed to load models catalog: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+// ──────────────────────────────────────────────
+// Projects API
+// ──────────────────────────────────────────────
+export async function fetchProjects(): Promise<ProjectSummary[]> {
+  const res = await fetch(`${API_BASE}/projects`);
+  if (!res.ok) {
+    throw new Error(`Failed to load projects: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function createProject(req: CreateProjectRequest): Promise<Project> {
+  const res = await fetch(`${API_BASE}/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to create project');
+  }
+  return res.json();
+}
+
+export async function fetchProject(id: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/projects/${id}`);
+  if (!res.ok) {
+    throw new Error(`Failed to load project details: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function updateProject(id: string, req: UpdateProjectRequest): Promise<void> {
+  const res = await fetch(`${API_BASE}/projects/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to update project');
+  }
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/projects/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error('Failed to delete project');
+  }
+}
+
+export async function fetchProjectDecisions(id: string): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/projects/${id}/decisions`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch project decisions');
+  }
+  return res.json();
+}
+
+// ──────────────────────────────────────────────
+// Benchmarks & Decision Workflow
+// ──────────────────────────────────────────────
 export async function fetchBenchmarks(): Promise<BenchmarkItem[]> {
   const res = await fetch(`${API_BASE}/benchmarks`);
   if (!res.ok) {
@@ -22,11 +102,21 @@ export async function fetchBenchmarks(): Promise<BenchmarkItem[]> {
   return res.json();
 }
 
-export async function extractDecision(narrative: string): Promise<StructuredDecision> {
+export async function extractDecision(
+  narrative: string,
+  llmConfig?: LLMConfigOverride,
+  projectId?: string,
+  projectContext?: string
+): Promise<StructuredDecision> {
   const res = await fetch(`${API_BASE}/extract`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ narrative }),
+    body: JSON.stringify({
+      narrative,
+      llm_config: llmConfig,
+      project_id: projectId,
+      project_context: projectContext
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -62,13 +152,18 @@ export async function synthesizeReport(bundle: AnalysisBundle): Promise<ReportRe
   return res.json();
 }
 
-export async function fetchCounterargument(decision: StructuredDecision, leadingAltId: string): Promise<string> {
+export async function fetchCounterargument(
+  decision: StructuredDecision,
+  leadingAltId: string,
+  llmConfig?: LLMConfigOverride
+): Promise<string> {
   const res = await fetch(`${API_BASE}/analyze/counterargument`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       structured_decision: decision,
       leading_alternative_id: leadingAltId,
+      llm_config: llmConfig
     }),
   });
   if (!res.ok) {

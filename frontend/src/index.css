@@ -283,3 +283,115 @@ body {
   }
 }
 
+/* ═══════ Sidebar Enhancement Utilities ═══════ */
+
+/* Thin sidebar scrollbar — only visible on hover */
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 9999px;
+  transition: background 0.15s ease;
+}
+.sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+}
+
+/* Collapsible accordion section with smooth height */
+.sidebar-accordion-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.2s ease-out, opacity 0.15s ease;
+  opacity: 1;
+}
+.sidebar-accordion-content[data-collapsed="true"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.sidebar-accordion-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Glassmorphic floating preview popover for collapsed rail */
+.sidebar-popover {
+  background: var(--bg-surface-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-elevated);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Resize drag handle */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background 0.15s ease;
+}
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle:active {
+  background: var(--color-verdigris-subtle);
+}
+
+/* Context menu dropdown animation */
+@keyframes contextMenuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.sidebar-context-menu {
+  animation: contextMenuIn 0.12s ease-out forwards;
+  transform-origin: top right;
+}
+
+/* Filter chip active state */
+.sidebar-filter-chip {
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.sidebar-filter-chip[data-active="true"] {
+  background-color: var(--color-verdigris-subtle);
+  color: var(--color-verdigris);
+  border-color: var(--color-verdigris);
+}
+
+/* Substring search highlight */
+.sidebar-search-highlight {
+  background-color: var(--color-ochre-subtle);
+  color: var(--color-ochre);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Sovereign storage popover entrance */
+@keyframes popoverSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.sidebar-sovereign-popover {
+  animation: popoverSlideUp 0.15s ease-out forwards;
+}

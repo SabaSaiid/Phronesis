@@ -31,3 +31,60 @@ export function formatRelativeTime(timestamp: number): string {
   const date = new Date(timestamp);
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
+
+/**
+ * Formats a Unix timestamp into a full human-readable date + time string
+ * for use in hover tooltips and preview popovers.
+ */
+export function formatExactDateTime(timestamp: number): string {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  return date.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export interface DateGroupedItems<T extends { timestamp: number }> {
+  today: T[];
+  yesterday: T[];
+  pastWeek: T[];
+  older: T[];
+}
+
+/**
+ * Groups timestamped items into chronological buckets:
+ * Today, Yesterday, Previous 7 Days, Older.
+ */
+export function groupByDate<T extends { timestamp: number }>(
+  items: T[]
+): DateGroupedItems<T> {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfYesterday = startOfToday - 86_400_000;
+  const startOfPastWeek = startOfToday - 6 * 86_400_000;
+
+  const groups: DateGroupedItems<T> = {
+    today: [],
+    yesterday: [],
+    pastWeek: [],
+    older: [],
+  };
+
+  for (const item of items) {
+    if (item.timestamp >= startOfToday) {
+      groups.today.push(item);
+    } else if (item.timestamp >= startOfYesterday) {
+      groups.yesterday.push(item);
+    } else if (item.timestamp >= startOfPastWeek) {
+      groups.pastWeek.push(item);
+    } else {
+      groups.older.push(item);
+    }
+  }
+
+  return groups;
+}

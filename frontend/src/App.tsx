@@ -190,7 +190,7 @@ function AppContent() {
   // (Header, Sidebar, SocraticChatDrawer, CommandPalette)
   const currentStep = activeStage as 'input' | 'editor' | 'report' | 'benchmarks';
 
-  // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘J)
+  // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘J, ⌘B)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -199,6 +199,9 @@ function AppContent() {
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
         e.preventDefault();
         setIsChatDrawerOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        setIsSidebarOpen((prev) => !prev);
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'n' && !e.shiftKey) {
         e.preventDefault();
         handleReset();
@@ -406,6 +409,58 @@ function AppContent() {
     });
   };
 
+  const handleRenameHistoryItem = (id: string, newTitle: string) => {
+    setHistory((prev) => {
+      const updated = prev.map((item) =>
+        item.id === id ? { ...item, title: newTitle } : item
+      );
+      safePersistHistory(updated);
+      return updated;
+    });
+  };
+
+  const handleDuplicateHistoryItem = (item: HistoryItem) => {
+    const duplicated: HistoryItem = {
+      ...item,
+      id: `dec-${Date.now()}`,
+      title: `${item.title} (copy)`,
+      timestamp: Date.now(),
+      isPinned: false,
+    };
+    setHistory((prev) => {
+      const updated = [duplicated, ...prev].slice(0, 20);
+      safePersistHistory(updated);
+      return updated;
+    });
+    showToast({
+      type: 'info',
+      title: 'Dossier Duplicated',
+      description: `"${duplicated.title}" created.`,
+    });
+  };
+
+  const handleExportSingleHistoryItem = (item: HistoryItem) => {
+    try {
+      const payload = { id: item.id, title: item.title, timestamp: item.timestamp, data: item.data };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `phronesis_${item.title.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40)}_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast({
+        type: 'success',
+        title: 'Exported',
+        description: `"${item.title}" saved as JSON.`,
+      });
+    } catch (err) {
+      console.warn('Export failed:', err);
+    }
+  };
+
   const handleInsertAlternative = useCallback((alt: { name: string; description: string }) => {
     const newId = `alt_${Date.now()}`;
     const newAlt = {
@@ -559,6 +614,9 @@ function AppContent() {
         onNewDecision={handleReset}
         onDeleteHistoryItem={handleDeleteHistoryItem}
         onTogglePinHistoryItem={handleTogglePinHistoryItem}
+        onRenameHistoryItem={handleRenameHistoryItem}
+        onDuplicateHistoryItem={handleDuplicateHistoryItem}
+        onExportHistoryItem={handleExportSingleHistoryItem}
         onClearHistory={handleClearHistory}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}

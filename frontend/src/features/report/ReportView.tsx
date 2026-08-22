@@ -19,7 +19,6 @@ import {
   Scale,
   Compass,
   FileText,
-  Sliders,
   Target,
   Shield,
   AlertCircle,

@@ -944,7 +944,7 @@ function AppContent() {
           </main>
 
           {/* Subtle Disciplined Footer */}
-          <footer className="border-t border-[var(--border-subtle)] py-6 text-center text-xs text-[var(--text-faint)] font-mono">
+          <footer className="py-6 text-center text-xs text-[var(--text-faint)] font-mono">
             <p>Phronesis (φρόνησις) · Auditable Human Judgment Under Uncertainty</p>
           </footer>
         </div>

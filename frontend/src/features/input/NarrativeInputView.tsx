@@ -219,12 +219,13 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
                 placeholder="Ask anything or describe your decision..."
                 rows={2}
                 disabled={isLoading}
-                className="w-full bg-transparent text-[var(--text-main)] placeholder-[var(--text-faint)] text-sm sm:text-base font-body leading-relaxed focus:outline-none resize-none overflow-y-auto"
+                className="w-full bg-transparent text-[var(--text-main)] placeholder-[var(--text-faint)] text-sm sm:text-base font-body leading-relaxed border-0 border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none ring-0 resize-none overflow-y-auto"
+                style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
               />
             </div>
 
             {/* Bottom Controls Row: Left [+] Action Button, Right [Model/Effort, Mic, Send Button] */}
-            <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]">
+            <div className="flex items-center justify-between pt-1">
               {/* Left: [+] Context Action Menu Button (Screenshot 2) */}
               <div className="relative" ref={plusMenuRef}>
                 <button

@@ -170,7 +170,16 @@ body {
 .prompt-capsule:focus-within {
   background-color: var(--bg-input-focus);
   border-color: var(--color-verdigris);
-  box-shadow: 0 0 0 3px var(--color-verdigris-subtle), var(--shadow-elevated);
+  box-shadow: 0 0 0 1px var(--color-verdigris), var(--shadow-elevated);
+}
+
+.prompt-capsule textarea,
+.prompt-capsule textarea:focus,
+.prompt-capsule textarea:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
 }
 
 /* Floating contextual popover menu (Screenshot 2 & 3) */

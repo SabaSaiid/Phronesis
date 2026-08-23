@@ -139,6 +139,7 @@ function AppContent() {
   const [currentDecisionId, setCurrentDecisionId] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isTemporarySession, setIsTemporarySession] = useState(false);
 
   // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -220,6 +221,20 @@ function AppContent() {
   const handleToggleTheme = useCallback(() => {
     setIsDarkMode((prev) => !prev);
   }, []);
+
+  const handleToggleTemporarySession = useCallback(() => {
+    setIsTemporarySession((prev) => {
+      const next = !prev;
+      showToast({
+        type: next ? 'info' : 'success',
+        title: next ? 'Temporary Deliberation Active' : 'Normal Session Restored',
+        description: next
+          ? 'Decisions and deliberations in this session will not be saved to history.'
+          : 'History persistence is now enabled.',
+      });
+      return next;
+    });
+  }, [showToast]);
 
   const handleOpenLegal = useCallback((tab: 'faq' | 'credits' | 'terms' | 'privacy' = 'faq') => {
     setLegalTab(tab);
@@ -364,29 +379,32 @@ function AppContent() {
       const rep = await synthesizeReport(analysisBundle);
       setReport(rep);
 
-      // 3. Save to history
+      // 3. Save to history (only if not temporary session)
       const historyId = `dec-${Date.now()}`;
       setCurrentDecisionId(historyId);
-      const newHistoryItem: HistoryItem = {
-        id: historyId,
-        title: decision.decision_statement.length > 50 
-          ? `${decision.decision_statement.slice(0, 48)}...` 
-          : decision.decision_statement,
-        timestamp: Date.now(),
-        previewText: decision.decision_statement,
-        isPinned: false,
-        data: {
-          decision,
-          bundle: analysisBundle,
-          report: rep,
-        },
-      };
 
-      setHistory((prev) => {
-        const updated = [newHistoryItem, ...prev.filter((item) => item.title !== newHistoryItem.title)].slice(0, 20);
-        safePersistHistory(updated);
-        return updated;
-      });
+      if (!isTemporarySession) {
+        const newHistoryItem: HistoryItem = {
+          id: historyId,
+          title: decision.decision_statement.length > 50 
+            ? `${decision.decision_statement.slice(0, 48)}...` 
+            : decision.decision_statement,
+          timestamp: Date.now(),
+          previewText: decision.decision_statement,
+          isPinned: false,
+          data: {
+            decision,
+            bundle: analysisBundle,
+            report: rep,
+          },
+        };
+
+        setHistory((prev) => {
+          const updated = [newHistoryItem, ...prev.filter((item) => item.title !== newHistoryItem.title)].slice(0, 20);
+          safePersistHistory(updated);
+          return updated;
+        });
+      }
 
       // Refresh project counts if inside a project
       fetchProjects().then(setProjects).catch(console.warn);
@@ -798,6 +816,8 @@ function AppContent() {
             onScrollToSection={handleScrollToSection}
             hasDecision={!!decision}
             hasReport={!!(bundle && report)}
+            isTemporarySession={isTemporarySession}
+            onToggleTemporarySession={handleToggleTemporarySession}
           />
 
           <main className="flex-1 pb-16">
@@ -842,6 +862,7 @@ function AppContent() {
                         setActiveProjectId(undefined);
                         setActiveProjectContext(undefined);
                       }}
+                      onOpenBenchmarksGallery={() => setActiveStage('benchmarks')}
                     />
                   )}
                 </div>

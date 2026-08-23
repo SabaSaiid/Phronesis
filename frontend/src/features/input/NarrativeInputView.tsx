@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  ArrowRight,
+  ArrowUp,
   Sparkles,
-  Brain,
   Folder,
-  X
+  X,
+  Plus,
+  Mic,
+  FileText,
+  BookOpen,
+  FlaskConical,
+  Compass
 } from 'lucide-react';
 import type { BenchmarkItem, LLMConfigOverride, EffortLevel } from '../../types';
 import { ModelSelector } from '../../components/ModelSelector';
@@ -26,6 +31,7 @@ interface NarrativeInputViewProps {
   activeProjectId?: string;
   activeProjectName?: string;
   onClearActiveProject?: () => void;
+  onOpenBenchmarksGallery?: () => void;
 }
 
 const STARTER_DILEMMAS = [
@@ -65,12 +71,27 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   onModelConfigChange,
   effortLevel,
   onEffortLevelChange,
-  activeProjectId: _activeProjectId,
   activeProjectName,
   onClearActiveProject,
+  onOpenBenchmarksGallery,
 }) => {
   const [narrative, setNarrative] = useState(initialNarrative || '');
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+  const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+
+  const plusMenuRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Close plus menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (plusMenuRef.current && !plusMenuRef.current.contains(e.target as Node)) {
+        setIsPlusMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (externalTextToAppend) {
@@ -94,8 +115,16 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Auto-resize textarea height
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(240, Math.max(56, textareaRef.current.scrollHeight))}px`;
+    }
+  }, [narrative]);
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (narrative.trim().length >= 10 && !isLoading) {
       onExtract(narrative);
     }
@@ -104,43 +133,41 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
-      if (narrative.trim().length >= 10 && !isLoading) {
-        onExtract(narrative);
-      }
+      handleSubmit();
     }
   };
 
-  return (
-    <section id="section-describe" className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-12 space-y-6 animate-fade-in">
-      {/* Centered Editorial Hero Greeting (hidden during re-edit) */}
-      {!isReEdit && (
-        <div className="text-center space-y-3 pt-2 sm:pt-4">
-          <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-main)] leading-tight">
-            Examine Your Decision Under Uncertainty
-          </h1>
+  const canSubmit = narrative.trim().length >= 10 && !isLoading;
 
-          <p className="font-body text-sm sm:text-base text-[var(--text-muted)] max-w-xl mx-auto leading-relaxed">
-            Phronesis never commands what to choose. It structures your dilemma, computes mathematical sensitivity, flags cognitive bias patterns with academic citations, and surfaces high-leverage 48-hour tests.
+  return (
+    <section id="section-describe" className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-7 animate-fade-in flex flex-col items-center justify-center min-h-[65vh]">
+      {/* Centered Minimal Hero Greeting (ChatGPT Style) */}
+      {!isReEdit && (
+        <div className="text-center space-y-2 max-w-xl">
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-main)]">
+            Ready when you are.
+          </h1>
+          <p className="font-body text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
+            State your dilemma, strategic crossroads, or career choice. Phronesis structures the math, models downside regrets, and isolates key flipping variables.
           </p>
         </div>
       )}
 
       {/* Floating Prompt Capsule Form */}
-      <div className="prompt-capsule p-4 sm:p-5 space-y-3 relative overflow-hidden shadow-sm">
-        {/* Active Project Banner if scoped */}
+      <div className="w-full max-w-3xl relative">
+        {/* Scoped Project Banner if attached */}
         {activeProjectName && (
-          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/30 text-xs font-ui text-[var(--color-verdigris)]">
+          <div className="mb-2 flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/30 text-xs font-ui text-[var(--color-verdigris)]">
             <div className="flex items-center space-x-2 truncate">
               <Folder className="w-3.5 h-3.5 shrink-0" />
-              <span className="font-medium truncate">Scoped to Project: <strong>{activeProjectName}</strong></span>
-              <span className="hidden sm:inline text-[10px] opacity-80">(Context auto-injected)</span>
+              <span className="font-medium truncate">Scoped Project: <strong>{activeProjectName}</strong></span>
             </div>
             {onClearActiveProject && (
               <button
                 type="button"
                 onClick={onClearActiveProject}
-                className="p-1 hover:bg-[var(--color-verdigris)]/20 rounded-md transition-colors cursor-pointer text-[var(--color-verdigris)]"
-                title="Detach decision from project"
+                className="p-0.5 hover:bg-[var(--color-verdigris)]/20 rounded transition-colors cursor-pointer text-[var(--color-verdigris)]"
+                title="Detach project"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -150,12 +177,12 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
 
         {isLoading ? (
           /* Multi-step loading extraction visual */
-          <div className="py-8 px-4 flex flex-col items-center justify-center space-y-4 text-center">
-            <div className="w-10 h-10 rounded-xl bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/40 flex items-center justify-center text-[var(--color-verdigris)] shadow-sm animate-bounce">
+          <div className="prompt-capsule p-8 flex flex-col items-center justify-center space-y-4 text-center">
+            <div className="w-10 h-10 rounded-2xl bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/40 flex items-center justify-center text-[var(--color-verdigris)] shadow-sm animate-bounce">
               <Sparkles className="w-5 h-5" />
             </div>
 
-            <div className="space-y-1.5 max-w-sm">
+            <div className="space-y-1 max-w-sm">
               <h3 className="font-display font-semibold text-sm text-[var(--text-main)]">
                 Extracting Decision Parameters
               </h3>
@@ -165,7 +192,7 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
             </div>
 
             {/* Stepper Dots */}
-            <div className="flex items-center space-x-2 pt-2">
+            <div className="flex items-center space-x-2 pt-1">
               {LOADING_STEPS.map((_, idx) => (
                 <div
                   key={idx}
@@ -181,31 +208,118 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <label className="font-ui font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center space-x-1.5">
-                <Brain className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
-                <span>Describe Your Dilemma Once</span>
-              </label>
-              <span className="font-data text-[11px] text-[var(--text-faint)]">
-                {narrative.length} chars
-              </span>
+          <div className="prompt-capsule p-3.5 sm:p-4 space-y-2.5 relative">
+            {/* Top Textarea Row */}
+            <div className="px-1.5 pt-1">
+              <textarea
+                ref={textareaRef}
+                value={narrative}
+                onChange={(e) => setNarrative(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask anything or describe your decision..."
+                rows={2}
+                disabled={isLoading}
+                className="w-full bg-transparent text-[var(--text-main)] placeholder-[var(--text-faint)] text-sm sm:text-base font-body leading-relaxed focus:outline-none resize-none overflow-y-auto"
+              />
             </div>
 
-            <textarea
-              value={narrative}
-              onChange={(e) => setNarrative(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="e.g. I am deciding whether to remain in my stable enterprise software engineering job or join an early-stage AI startup as a founding engineer. I have $120k in unvested RSUs over 18 months, and the startup has 14 months of runway..."
-              rows={6}
-              disabled={isLoading}
-              className="w-full bg-transparent text-[var(--text-main)] placeholder-[var(--text-faint)] text-sm font-body leading-relaxed focus:outline-none resize-y"
-            />
+            {/* Bottom Controls Row: Left [+] Action Button, Right [Model/Effort, Mic, Send Button] */}
+            <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]">
+              {/* Left: [+] Context Action Menu Button (Screenshot 2) */}
+              <div className="relative" ref={plusMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsPlusMenuOpen((prev) => !prev)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-app)] border border-[var(--border-subtle)] transition-colors cursor-pointer"
+                  title="Add context, benchmarks, or protocols"
+                  aria-label="Add context or actions"
+                >
+                  <Plus className={`w-4 h-4 transition-transform ${isPlusMenuOpen ? 'rotate-45 text-[var(--color-verdigris)]' : ''}`} />
+                </button>
 
-            {/* Bottom Controls Bar inside Capsule */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[var(--border-subtle)]">
-              {/* Left Selector Controls: Model & Effort */}
-              <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                {/* Floating Context Popover Menu (Screenshot 2 style) */}
+                {isPlusMenuOpen && (
+                  <div className="chatgpt-popover absolute left-0 bottom-full mb-2 w-72 sm:w-80 p-2 z-50 animate-fade-in space-y-1">
+                    <div className="px-2.5 py-1 text-[10px] font-ui font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+                      Deliberation Tools
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        onOpenBenchmarksGallery?.();
+                      }}
+                      className="chatgpt-popover-item"
+                    >
+                      <BookOpen className="w-4 h-4 text-[var(--color-verdigris)] shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-ui font-medium leading-tight">Canonical Dilemmas</div>
+                        <div className="text-[11px] text-[var(--text-muted)] truncate">Browse startup, career & financial benchmarks</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        setNarrative((prev) =>
+                          prev
+                            ? `${prev}\n\n[Explicit Constraints]: \n[Prior Probabilities]: `
+                            : `[Decision Statement]: \n[Key Alternatives]: \n[Critical Uncertainties]: `
+                        );
+                        textareaRef.current?.focus();
+                      }}
+                      className="chatgpt-popover-item"
+                    >
+                      <FileText className="w-4 h-4 text-[var(--color-ochre)] shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-ui font-medium leading-tight">Structured Template</div>
+                        <div className="text-[11px] text-[var(--text-muted)] truncate">Insert structured decision scaffolding</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        setNarrative((prev) =>
+                          `${prev}\n\n[VoI Inquiry]: What test under $100 and <4 hours can falsify our critical assumption?`
+                        );
+                        textareaRef.current?.focus();
+                      }}
+                      className="chatgpt-popover-item"
+                    >
+                      <FlaskConical className="w-4 h-4 text-[var(--color-ochre)] shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-ui font-medium leading-tight">48-Hour VoI Protocol</div>
+                        <div className="text-[11px] text-[var(--text-muted)] truncate">Target high-leverage empirical falsification</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        setNarrative((prev) =>
+                          `${prev}\n\n[Dialectic Prompt]: Apply the Stoic Dichotomy of Control to separate agency from external adiaphora.`
+                        );
+                        textareaRef.current?.focus();
+                      }}
+                      className="chatgpt-popover-item"
+                    >
+                      <Compass className="w-4 h-4 text-[var(--color-verdigris)] shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-ui font-medium leading-tight">Dialectic Lens Prompt</div>
+                        <div className="text-[11px] text-[var(--text-muted)] truncate">Inject multi-framework philosophical lens</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Model & Effort Selectors, Mic Icon, Submit Circle Button */}
+              <div className="flex items-center space-x-2">
                 <ModelSelector
                   value={modelConfig}
                   onChange={onModelConfigChange}
@@ -217,53 +331,60 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
                   onChange={onEffortLevelChange}
                   disabled={isLoading}
                 />
-              </div>
 
-              {/* Right Submit Actions */}
-              <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
-                <span className="hidden sm:inline-flex text-[10px] font-mono text-[var(--text-faint)] px-1.5 py-0.5 rounded bg-[var(--bg-app)] border border-[var(--border-subtle)]">
-                  ⌘ + Enter
-                </span>
-
+                {/* Voice / Mic Indicator */}
                 <button
-                  type="submit"
-                  disabled={isLoading || narrative.trim().length < 10}
+                  type="button"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
+                  title="Voice input (dictation)"
+                  onClick={() => textareaRef.current?.focus()}
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
+
+                {/* Submit Circle Action Button (ChatGPT-style) */}
+                <button
+                  type="button"
+                  onClick={() => handleSubmit()}
+                  disabled={!canSubmit}
                   className={`
-                    w-full sm:w-auto px-5 py-2 rounded-xl font-ui font-medium text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all cursor-pointer
+                    w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-xs
                     ${
-                      isLoading || narrative.trim().length < 10
-                        ? 'bg-[var(--border-medium)] text-[var(--text-faint)] cursor-not-allowed opacity-60'
-                        : 'btn-verdigris shadow-sm'
+                      canSubmit
+                        ? 'bg-[var(--color-verdigris)] text-white hover:opacity-90 active:scale-95'
+                        : 'bg-[var(--bg-app)] text-[var(--text-faint)] cursor-not-allowed opacity-50 border border-[var(--border-subtle)]'
                     }
                   `}
+                  title="Extract Decision Model (⌘ + Enter)"
+                  aria-label="Extract Decision Model"
                 >
-                  <span>Extract Decision Model</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowUp className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
             </div>
-          </form>
+          </div>
         )}
       </div>
 
-      {/* Starter Dilemma Chips directly under input (hidden during re-edit) */}
+      {/* Starter Dilemma Chips below Capsule */}
       {!isReEdit && (
-        <div className="pt-1">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {STARTER_DILEMMAS.map((starter) => (
-              <button
-                key={starter.title}
-                type="button"
-                onClick={() => setNarrative(starter.text)}
-                className="px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--color-verdigris)]/50 text-xs font-ui text-[var(--text-main)] transition-all flex items-center space-x-1.5 group cursor-pointer shadow-2xs"
-              >
-                <span className="text-[var(--color-verdigris)] font-serif group-hover:rotate-45 transition-transform">
-                  ✦
-                </span>
-                <span>{starter.title}</span>
-              </button>
-            ))}
-          </div>
+        <div className="w-full flex flex-wrap items-center justify-center gap-2 pt-1">
+          {STARTER_DILEMMAS.map((starter) => (
+            <button
+              key={starter.title}
+              type="button"
+              onClick={() => {
+                setNarrative(starter.text);
+                textareaRef.current?.focus();
+              }}
+              className="px-3 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--color-verdigris)]/50 text-xs font-ui text-[var(--text-main)] transition-all flex items-center space-x-1.5 group cursor-pointer shadow-2xs"
+            >
+              <span className="text-[var(--color-verdigris)] text-[10px] group-hover:scale-110 transition-transform">
+                ✦
+              </span>
+              <span>{starter.title}</span>
+            </button>
+          ))}
         </div>
       )}
     </section>

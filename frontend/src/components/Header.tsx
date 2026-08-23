@@ -1,19 +1,21 @@
 import React from 'react';
-import { Menu, Sun, Moon, Share2, Plus, MessageSquareQuote, PenTool, Sliders, LineChart, Check } from 'lucide-react';
+import { Menu, Share2, Plus, MessageSquareQuote, PenTool, Sliders, LineChart, Check, RotateCcw } from 'lucide-react';
 
 interface HeaderProps {
   onReset: () => void;
   currentStep: 'input' | 'editor' | 'report' | 'benchmarks' | 'project';
   activeStage: 'input' | 'editor' | 'report' | 'benchmarks' | 'project';
   onToggleMobileSidebar: () => void;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
+  isDarkMode?: boolean;
+  onToggleTheme?: () => void;
   onOpenExport?: () => void;
   onToggleChat?: () => void;
   isChatOpen?: boolean;
   onScrollToSection: (sectionId: string) => void;
   hasDecision: boolean;
   hasReport: boolean;
+  isTemporarySession?: boolean;
+  onToggleTemporarySession?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,14 +23,14 @@ export const Header: React.FC<HeaderProps> = ({
   currentStep,
   activeStage,
   onToggleMobileSidebar,
-  isDarkMode,
-  onToggleTheme,
   onOpenExport,
   onToggleChat,
   isChatOpen,
   onScrollToSection,
   hasDecision,
   hasReport,
+  isTemporarySession = false,
+  onToggleTemporarySession,
 }) => {
   const steps = [
     {
@@ -117,8 +119,25 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-1" />
         )}
 
-        {/* Right: Export, Socratic Deliberation Chat, Theme Toggle & New Button */}
-        <div className="flex items-center space-x-1.5">
+        {/* Right: Temporary Deliberation Mode (ChatGPT-style), Export, Socratic Deliberate, New Button */}
+        <div className="flex items-center space-x-2">
+          {/* Temporary Deliberation / Ephemeral Mode Toggle */}
+          {onToggleTemporarySession && (
+            <button
+              type="button"
+              onClick={onToggleTemporarySession}
+              className={`temp-chat-toggle ${isTemporarySession ? 'active' : ''}`}
+              title={
+                isTemporarySession
+                  ? 'Temporary Deliberation is ON (Session not saved to history)'
+                  : 'Turn on Temporary Deliberation (Ephemeral session without saving history)'
+              }
+              aria-label="Toggle temporary deliberation"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${isTemporarySession ? 'text-[var(--color-ochre)]' : 'text-[var(--text-muted)]'}`} />
+            </button>
+          )}
+
           {/* Socratic Deliberation Chat Trigger */}
           {onToggleChat && (
             <button
@@ -153,21 +172,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline">Export</span>
             </button>
           )}
-
-          {/* Theme Switcher */}
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-            aria-label="Toggle theme"
-            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {isDarkMode ? (
-              <Sun className="w-4 h-4 text-[var(--color-ochre)]" />
-            ) : (
-              <Moon className="w-4 h-4 text-[var(--color-verdigris)]" />
-            )}
-          </button>
 
           {/* New Decision Shortcut Button */}
           {currentStep !== 'input' && (

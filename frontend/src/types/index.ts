@@ -201,6 +201,7 @@ export interface UpdateProjectRequest {
 }
 
 export type FocusLayerId = 'psychology' | 'logic' | 'philosophy' | 'practical';
+export type FocusMode = 'all' | FocusLayerId;
 
 export interface FocusConfig {
   focused_layers: FocusLayerId[];
@@ -356,4 +357,53 @@ export interface DeliberationResponse {
   attribution?: SourceAttribution | null;
   lens_used: string;
 }
+
+// ──────────────────────────────────────────────
+// Settings & Telemetry Interfaces
+// ──────────────────────────────────────────────
+export interface StorageStats {
+  decision_count: number;
+  project_count: number;
+  outcome_count: number;
+  feedback_count: number;
+  db_size_bytes: number;
+  db_path: string;
+  memory_enabled: boolean;
+}
+
+export interface ImportHistoryResponse {
+  status: string;
+  imported_projects: number;
+  imported_decisions: number;
+  imported_outcomes: number;
+  imported_feedback: number;
+  message?: string;
+}
+
+export interface CustomApiKeys {
+  gemini?: string;
+  openai?: string;
+  anthropic?: string;
+}
+
+export type FontSizeOption = 'compact' | 'standard' | 'relaxed';
+
+export interface UserPreferences {
+  theme: 'dark' | 'light' | 'system';
+  fontSize: FontSizeOption;
+  reduceMotion: boolean;
+  defaultEffort: EffortLevel;
+  defaultFocus: FocusMode;
+  defaultRiskTolerance: 'risk_neutral' | 'risk_averse' | 'risk_seeking';
+  biasSensitivity: 'standard' | 'high';
+  showGlossaryTooltips: boolean;
+  autoFallbackOffline: boolean;
+}
+
+export interface TestKeyResponse {
+  valid: boolean;
+  provider: string;
+  message: string;
+}
+
 

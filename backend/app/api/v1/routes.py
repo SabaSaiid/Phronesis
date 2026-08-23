@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
 from app.schemas.decision import (
@@ -21,7 +21,12 @@ from app.schemas.decision import (
     Project,
     ProjectSummary,
     CreateProjectRequest,
-    UpdateProjectRequest
+    UpdateProjectRequest,
+    StorageStatsResponse,
+    ImportHistoryRequest,
+    ImportHistoryResponse,
+    TestKeyRequest,
+    TestKeyResponse
 )
 from app.services.llm_client import LLMClient
 from app.services.extraction_service import ExtractionService
@@ -39,10 +44,10 @@ from app.core.storage import LocalStorage
 router = APIRouter()
 
 class ExtractRequest(BaseModel):
-    narrative: str
+    narrative: str = Field(min_length=10, max_length=50000)
     llm_config: Optional[LLMConfigOverride] = None
     project_id: Optional[str] = None
-    project_context: Optional[str] = None
+    project_context: Optional[str] = Field(default=None, max_length=10000)
 
 class CounterargumentRequest(BaseModel):
     structured_decision: StructuredDecision
@@ -234,6 +239,24 @@ async def list_history():
 async def export_history_data():
     return LocalStorage.export_history()
 
+@router.post("/history/import", response_model=ImportHistoryResponse)
+async def import_history_data(req: ImportHistoryRequest):
+    if req.decisions and len(req.decisions) > 2000:
+        raise HTTPException(status_code=400, detail="Import payload exceeds maximum allowed decisions (limit: 2000).")
+    if req.projects and len(req.projects) > 500:
+        raise HTTPException(status_code=400, detail="Import payload exceeds maximum allowed projects (limit: 500).")
+
+    data = req.model_dump()
+    res = LocalStorage.import_history(data)
+    return ImportHistoryResponse(
+        status=res.get("status", "success"),
+        imported_projects=res.get("imported_projects", 0),
+        imported_decisions=res.get("imported_decisions", 0),
+        imported_outcomes=res.get("imported_outcomes", 0),
+        imported_feedback=res.get("imported_feedback", 0),
+        message=res.get("message")
+    )
+
 @router.post("/history/purge")
 async def purge_history_data():
     success = LocalStorage.purge_history()
@@ -261,6 +284,21 @@ async def get_memory_settings():
 async def update_memory_settings(req: MemorySettingsRequest):
     LocalStorage.set_memory_enabled(req.enabled)
     return {"status": "success", "memory_enabled": req.enabled}
+
+@router.get("/settings/stats", response_model=StorageStatsResponse)
+async def get_storage_statistics():
+    stats = LocalStorage.get_storage_stats()
+    return StorageStatsResponse(**stats)
+
+@router.post("/models/test-key", response_model=TestKeyResponse)
+async def test_provider_api_key(req: TestKeyRequest):
+    res = await LLMClient.test_api_key(req.provider, req.api_key)
+    return TestKeyResponse(
+        valid=res["valid"],
+        provider=res["provider"],
+        message=res["message"]
+    )
+
 
 # 6 Golden Benchmark Scenarios
 @router.get("/benchmarks", response_model=List[BenchmarkItem])

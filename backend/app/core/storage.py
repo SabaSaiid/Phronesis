@@ -47,6 +47,10 @@ class LocalStorage:
         if db_dir and not os.path.exists(db_dir):
             try:
                 os.makedirs(db_dir, exist_ok=True)
+                try:
+                    os.chmod(db_dir, 0o700)
+                except Exception:
+                    pass
             except Exception:
                 db_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "phronesis.db")
                 os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -56,6 +60,11 @@ class LocalStorage:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL;")
+        if os.path.exists(db_path):
+            try:
+                os.chmod(db_path, 0o600)
+            except Exception:
+                pass
         if not cls._tables_initialized:
             cls._init_tables(conn)
             cls._tables_initialized = True
@@ -598,6 +607,201 @@ class LocalStorage:
             return None
 
     @classmethod
+    def get_storage_stats(cls) -> Dict[str, Any]:
+        try:
+            with cls.get_connection() as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT COUNT(*) as cnt FROM decisions")
+                d_cnt = cur.fetchone()["cnt"]
+                cur.execute("SELECT COUNT(*) as cnt FROM projects")
+                p_cnt = cur.fetchone()["cnt"]
+                cur.execute("SELECT COUNT(*) as cnt FROM decision_outcomes")
+                o_cnt = cur.fetchone()["cnt"]
+                cur.execute("SELECT COUNT(*) as cnt FROM flag_feedback")
+                f_cnt = cur.fetchone()["cnt"]
+
+            db_path = cls.get_db_path()
+            db_size = os.path.getsize(db_path) if os.path.exists(db_path) else 0
+            memory_enabled = cls.is_memory_enabled()
+
+            return {
+                "decision_count": d_cnt,
+                "project_count": p_cnt,
+                "outcome_count": o_cnt,
+                "feedback_count": f_cnt,
+                "db_size_bytes": db_size,
+                "db_path": db_path,
+                "memory_enabled": memory_enabled
+            }
+        except Exception as e:
+            print(f"[LocalStorage Error] Failed to get storage stats: {e}")
+            return {
+                "decision_count": 0,
+                "project_count": 0,
+                "outcome_count": 0,
+                "feedback_count": 0,
+                "db_size_bytes": 0,
+                "db_path": cls.get_db_path(),
+                "memory_enabled": cls.is_memory_enabled()
+            }
+
+    @classmethod
+    def import_history(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        imported_p = 0
+        imported_d = 0
+        imported_o = 0
+        imported_f = 0
+
+        try:
+            with cls.get_connection() as conn:
+                # Projects
+                projects = data.get("projects") or []
+                for p in projects:
+                    if not isinstance(p, dict):
+                        continue
+                    pid = str(p.get("id") or uuid.uuid4())
+                    conn.execute("""
+                    INSERT INTO projects (id, name, background_note, created_at, updated_at, archived)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        name = excluded.name,
+                        background_note = excluded.background_note,
+                        updated_at = excluded.updated_at,
+                        archived = excluded.archived
+                    """, (
+                        pid,
+                        p.get("name", "Imported Project"),
+                        p.get("background_note", ""),
+                        p.get("created_at", datetime.now(timezone.utc).isoformat()),
+                        p.get("updated_at", datetime.now(timezone.utc).isoformat()),
+                        1 if p.get("archived") else 0
+                    ))
+                    imported_p += 1
+
+                # Decisions
+                decisions = data.get("decisions") or []
+                for d in decisions:
+                    if not isinstance(d, dict):
+                        continue
+                    did = str(d.get("id") or uuid.uuid4())
+
+                    struct_json = d.get("structured_decision_json")
+                    if isinstance(struct_json, dict):
+                        struct_json = json.dumps(struct_json)
+                    elif not isinstance(struct_json, str):
+                        struct_json = json.dumps(d.get("structured_decision", {}))
+
+                    bundle_json = d.get("analysis_bundle_json")
+                    if isinstance(bundle_json, dict):
+                        bundle_json = json.dumps(bundle_json)
+                    elif not isinstance(bundle_json, str):
+                        bundle_json = json.dumps(d.get("analysis_bundle", {}))
+
+                    conn.execute("""
+                    INSERT INTO decisions (
+                        id, timestamp, domain, decision_statement,
+                        structured_decision_json, analysis_bundle_json,
+                        report_markdown, key_sensitive_variable,
+                        preferred_eu_alt, minimax_regret_choice,
+                        flagged_bias_ids, project_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        timestamp = excluded.timestamp,
+                        domain = excluded.domain,
+                        decision_statement = excluded.decision_statement,
+                        structured_decision_json = excluded.structured_decision_json,
+                        analysis_bundle_json = excluded.analysis_bundle_json,
+                        report_markdown = excluded.report_markdown,
+                        key_sensitive_variable = excluded.key_sensitive_variable,
+                        preferred_eu_alt = excluded.preferred_eu_alt,
+                        minimax_regret_choice = excluded.minimax_regret_choice,
+                        flagged_bias_ids = excluded.flagged_bias_ids,
+                        project_id = excluded.project_id
+                    """, (
+                        did,
+                        d.get("timestamp", datetime.now(timezone.utc).isoformat()),
+                        d.get("domain", "general"),
+                        d.get("decision_statement", ""),
+                        struct_json,
+                        bundle_json,
+                        d.get("report_markdown", ""),
+                        d.get("key_sensitive_variable"),
+                        d.get("preferred_eu_alt"),
+                        d.get("minimax_regret_choice"),
+                        d.get("flagged_bias_ids") if isinstance(d.get("flagged_bias_ids"), str) else ",".join(d.get("flagged_bias_ids", [])),
+                        d.get("project_id")
+                    ))
+                    imported_d += 1
+
+                # Outcomes
+                outcomes = data.get("outcomes") or []
+                for o in outcomes:
+                    if not isinstance(o, dict) or not o.get("decision_id"):
+                        continue
+                    conn.execute("""
+                    INSERT INTO decision_outcomes (
+                        id, decision_id, recorded_at, chosen_alternative_id,
+                        actual_utility_rating, retrospective_notes
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(decision_id) DO UPDATE SET
+                        recorded_at = excluded.recorded_at,
+                        chosen_alternative_id = excluded.chosen_alternative_id,
+                        actual_utility_rating = excluded.actual_utility_rating,
+                        retrospective_notes = excluded.retrospective_notes
+                    """, (
+                        o.get("id", str(uuid.uuid4())),
+                        o["decision_id"],
+                        o.get("recorded_at", datetime.now(timezone.utc).isoformat()),
+                        o.get("chosen_alternative_id", ""),
+                        o.get("actual_utility_rating"),
+                        o.get("retrospective_notes")
+                    ))
+                    imported_o += 1
+
+                # Feedback
+                feedback = data.get("feedback") or []
+                for fb in feedback:
+                    if not isinstance(fb, dict) or not fb.get("decision_id"):
+                        continue
+                    conn.execute("""
+                    INSERT INTO flag_feedback (
+                        id, decision_id, flag_id, flag_type,
+                        is_positive, feedback_reason, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        is_positive = excluded.is_positive,
+                        feedback_reason = excluded.feedback_reason
+                    """, (
+                        fb.get("id", str(uuid.uuid4())),
+                        fb["decision_id"],
+                        fb.get("flag_id", ""),
+                        fb.get("flag_type", "bias"),
+                        1 if fb.get("is_positive") else 0,
+                        fb.get("feedback_reason"),
+                        fb.get("created_at", datetime.now(timezone.utc).isoformat())
+                    ))
+                    imported_f += 1
+
+            return {
+                "status": "success",
+                "imported_projects": imported_p,
+                "imported_decisions": imported_d,
+                "imported_outcomes": imported_o,
+                "imported_feedback": imported_f,
+                "message": f"Successfully imported {imported_d} decisions and {imported_p} projects."
+            }
+        except Exception as e:
+            print(f"[LocalStorage Error] Failed to import history: {e}")
+            return {
+                "status": "error",
+                "imported_projects": imported_p,
+                "imported_decisions": imported_d,
+                "imported_outcomes": imported_o,
+                "imported_feedback": imported_f,
+                "message": str(e)
+            }
+
+    @classmethod
     def export_history(cls) -> Dict[str, Any]:
         try:
             with cls.get_connection() as conn:
@@ -639,3 +843,4 @@ class LocalStorage:
         except Exception as e:
             print(f"[LocalStorage Error] Failed to purge history: {e}")
             return False
+

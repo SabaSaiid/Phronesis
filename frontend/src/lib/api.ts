@@ -15,7 +15,10 @@ import type {
   Project,
   ProjectSummary,
   CreateProjectRequest,
-  UpdateProjectRequest
+  UpdateProjectRequest,
+  StorageStats,
+  ImportHistoryResponse,
+  TestKeyResponse
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -261,6 +264,40 @@ export async function updateMemorySettings(enabled: boolean): Promise<void> {
   }
 }
 
+export async function fetchStorageStats(): Promise<StorageStats> {
+  const res = await fetch(`${API_BASE}/settings/stats`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch storage stats');
+  }
+  return res.json();
+}
+
+export async function importHistory(data: any): Promise<ImportHistoryResponse> {
+  const res = await fetch(`${API_BASE}/history/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to import history');
+  }
+  return res.json();
+}
+
+export async function testApiKey(provider: string, apiKey: string): Promise<TestKeyResponse> {
+  const res = await fetch(`${API_BASE}/models/test-key`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, api_key: apiKey }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to test API key');
+  }
+  return res.json();
+}
+
 export async function sendDeliberationMessage(req: DeliberationRequest): Promise<DeliberationResponse> {
   const res = await fetch(`${API_BASE}/deliberate/chat`, {
     method: 'POST',
@@ -273,4 +310,5 @@ export async function sendDeliberationMessage(req: DeliberationRequest): Promise
   }
   return res.json();
 }
+
 

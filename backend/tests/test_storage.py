@@ -169,3 +169,31 @@ def test_export_and_purge(temp_db):
     purged = LocalStorage.purge_history()
     assert purged is True
     assert len(LocalStorage.list_decisions()) == 0
+
+def test_storage_stats(temp_db):
+    LocalStorage.set_memory_enabled(True)
+    d, bundle, report = make_sample_bundle()
+    LocalStorage.save_decision("d1", d, bundle, report)
+
+    stats = LocalStorage.get_storage_stats()
+    assert stats["decision_count"] == 1
+    assert stats["project_count"] == 0
+    assert stats["memory_enabled"] is True
+    assert stats["db_size_bytes"] > 0
+
+def test_import_history(temp_db):
+    LocalStorage.set_memory_enabled(True)
+    d, bundle, report = make_sample_bundle()
+    LocalStorage.save_decision("d1", d, bundle, report)
+    exported = LocalStorage.export_history()
+
+    # Clear DB
+    LocalStorage.purge_history()
+    assert len(LocalStorage.list_decisions()) == 0
+
+    # Import back
+    res = LocalStorage.import_history(exported)
+    assert res["status"] == "success"
+    assert res["imported_decisions"] == 1
+    assert len(LocalStorage.list_decisions()) == 1
+

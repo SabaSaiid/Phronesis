@@ -141,6 +141,20 @@ phronesis/
 
 ---
 
+## 🔒 Security, Secrets & Privacy Sovereignty
+
+Phronesis is built from the ground up for strict privacy sovereignty and secret safety:
+
+1. **Zero Cloud Telemetry & Zero Cloud Databases**: All decision histories, evaluations, and structured models are stored locally on your machine in SQLite (`~/.phronesis/phronesis.db`).
+2. **Environment Variable Secret Management**: All backend API keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) must be stored in `.env` files and are never hardcoded. Real `.env` files are strictly ignored by `.gitignore`.
+3. **In-Browser BYOK (Bring Your Own Key) Isolation**: User-entered API keys in the Settings Control Center are persisted exclusively in client-side browser sandbox storage (`localStorage`) and passed per-request. They are never written to SQLite or server logs.
+4. **Git History Secret Rotation Warning**:
+   > [!WARNING]
+   > **Secret Rotation Notice**: If you previously entered or committed any real API keys, tokens, or credentials into a repository or fork, remember that Git history preserves earlier commits. **You must immediately rotate (revoke and re-issue)** any previously exposed keys via your AI provider consoles ([Google AI Studio](https://aistudio.google.com/), [OpenAI Platform](https://platform.openai.com/), or [Anthropic Console](https://console.anthropic.com/)).
+
+---
+
 ## 📄 License & Governance
 
 Phronesis is source-available under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) — free to use, modify, and learn from for personal, educational, and other noncommercial purposes. Commercial use requires a separate license from the copyright holder. It is designed to be fully self-hostable, auditable, and transparent.
+

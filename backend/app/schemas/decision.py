@@ -174,12 +174,12 @@ class ProjectSummary(BaseModel):
     recurring_bias_ids: List[str] = Field(default_factory=list)
 
 class CreateProjectRequest(BaseModel):
-    name: str
-    background_note: Optional[str] = ""
+    name: str = Field(min_length=1, max_length=200)
+    background_note: Optional[str] = Field(default="", max_length=10000)
 
 class UpdateProjectRequest(BaseModel):
-    name: Optional[str] = None
-    background_note: Optional[str] = None
+    name: Optional[str] = Field(default=None, max_length=200)
+    background_note: Optional[str] = Field(default=None, max_length=10000)
     archived: Optional[bool] = None
 
 class FocusConfig(BaseModel):
@@ -253,7 +253,7 @@ class FlagFeedbackRequest(BaseModel):
 class OutcomeRetroRequest(BaseModel):
     chosen_alternative_id: str
     actual_utility_rating: Optional[float] = Field(default=None, ge=0.0, le=100.0)
-    retrospective_notes: Optional[str] = None
+    retrospective_notes: Optional[str] = Field(default=None, max_length=10000)
 
 class HistoryItemSummary(BaseModel):
     id: str
@@ -278,7 +278,7 @@ class SuggestedActionSchema(BaseModel):
 class ChatMessageSchema(BaseModel):
     id: str
     sender: str  # "user" | "assistant"
-    text: str
+    text: str = Field(min_length=1, max_length=10000)
     timestamp: Optional[int] = None
     lens: Optional[str] = "socratic"
     suggested_action: Optional[SuggestedActionSchema] = None
@@ -298,4 +298,39 @@ class DeliberationResponse(BaseModel):
     suggested_followups: List[str] = Field(default_factory=list)
     attribution: Optional[SourceAttribution] = None
     lens_used: str = "socratic"
+
+# Settings & Telemetry Schemas
+class StorageStatsResponse(BaseModel):
+    decision_count: int
+    project_count: int
+    outcome_count: int
+    feedback_count: int
+    db_size_bytes: int
+    db_path: str
+    memory_enabled: bool
+
+class ImportHistoryRequest(BaseModel):
+    version: Optional[str] = "2.0"
+    projects: Optional[List[Dict[str, Any]]] = None
+    decisions: Optional[List[Dict[str, Any]]] = None
+    outcomes: Optional[List[Dict[str, Any]]] = None
+    feedback: Optional[List[Dict[str, Any]]] = None
+
+class ImportHistoryResponse(BaseModel):
+    status: str
+    imported_projects: int
+    imported_decisions: int
+    imported_outcomes: int
+    imported_feedback: int
+    message: Optional[str] = None
+
+class TestKeyRequest(BaseModel):
+    provider: str
+    api_key: str
+
+class TestKeyResponse(BaseModel):
+    valid: bool
+    provider: str
+    message: str
+
 

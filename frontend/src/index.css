@@ -462,3 +462,35 @@ body {
 .sidebar-sovereign-popover {
   animation: popoverSlideUp 0.15s ease-out forwards;
 }
+
+/* Typography Scaling Settings */
+html[data-font-size="compact"] {
+  font-size: 13.5px;
+}
+html[data-font-size="standard"] {
+  font-size: 14.5px;
+}
+html[data-font-size="relaxed"] {
+  font-size: 16px;
+}
+
+/* Reduced Motion Settings */
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+  scroll-behavior: auto !important;
+}
+
+/* Settings Modal Custom Styles */
+.settings-tab-btn {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.settings-tab-btn[data-active="true"] {
+  background-color: var(--color-verdigris-subtle);
+  color: var(--color-verdigris);
+  font-weight: 600;
+}
+

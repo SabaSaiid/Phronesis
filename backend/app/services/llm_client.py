@@ -445,3 +445,58 @@ class LLMClient:
             "violation_reason": ""
         }
 
+    @classmethod
+    async def test_api_key(cls, provider: str, api_key: str) -> Dict[str, Any]:
+        provider = provider.lower().strip()
+        api_key = api_key.strip()
+        if not api_key:
+            return {"valid": False, "provider": provider, "message": "API key cannot be empty."}
+
+        try:
+            if provider == "gemini":
+                from google import genai
+                from google.genai import types
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents="Reply with the single word: OK",
+                    config=types.GenerateContentConfig(max_output_tokens=5, temperature=0.0)
+                )
+                if response and response.text:
+                    return {"valid": True, "provider": "gemini", "message": "Gemini API key verified successfully."}
+                return {"valid": False, "provider": "gemini", "message": "Empty response received from Gemini."}
+
+            elif provider == "openai":
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(api_key=api_key)
+                response = await client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": "Reply with OK"}],
+                    max_tokens=5
+                )
+                if response and response.choices:
+                    return {"valid": True, "provider": "openai", "message": "OpenAI API key verified successfully."}
+                return {"valid": False, "provider": "openai", "message": "Empty response received from OpenAI."}
+
+            elif provider == "anthropic":
+                from anthropic import AsyncAnthropic
+                client = AsyncAnthropic(api_key=api_key)
+                response = await client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=5,
+                    messages=[{"role": "user", "content": "Reply with OK"}]
+                )
+                if response and response.content:
+                    return {"valid": True, "provider": "anthropic", "message": "Anthropic API key verified successfully."}
+                return {"valid": False, "provider": "anthropic", "message": "Empty response received from Anthropic."}
+
+            elif provider == "mock":
+                return {"valid": True, "provider": "mock", "message": "Deterministic offline engine is always operational."}
+
+            else:
+                return {"valid": False, "provider": provider, "message": f"Unsupported provider '{provider}'."}
+
+        except Exception as e:
+            return {"valid": False, "provider": provider, "message": str(e)}
+
+

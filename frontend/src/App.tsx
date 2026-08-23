@@ -203,6 +203,22 @@ function AppContent() {
     localStorage.setItem(LOCAL_STORAGE_SIDEBAR_KEY, String(isSidebarOpen));
   }, [isSidebarOpen]);
 
+  // Initialize Typography & Motion Preferences
+  useEffect(() => {
+    try {
+      const savedFontSize = localStorage.getItem('phronesis_font_size');
+      if (savedFontSize) {
+        document.documentElement.setAttribute('data-font-size', savedFontSize);
+      }
+      const savedReduceMotion = localStorage.getItem('phronesis_reduce_motion');
+      if (savedReduceMotion) {
+        document.documentElement.setAttribute('data-reduce-motion', savedReduceMotion);
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
+
   // Fetch Benchmarks and Projects on mount
   useEffect(() => {
     fetchBenchmarks()
@@ -258,7 +274,24 @@ function AppContent() {
   // (Header, Sidebar, SocraticChatDrawer, CommandPalette)
   const currentStep = activeStage as 'input' | 'editor' | 'report' | 'benchmarks';
 
-  // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘J, ⌘B)
+  const getEffectiveModelConfig = useCallback((): LLMConfigOverride => {
+    const base = { ...modelConfig };
+    try {
+      const customKeysRaw = localStorage.getItem('phronesis_custom_api_keys');
+      if (customKeysRaw) {
+        const customKeys = JSON.parse(customKeysRaw);
+        const provider = (base.provider || 'gemini').toLowerCase();
+        if (customKeys[provider] && !base.api_key) {
+          base.api_key = customKeys[provider];
+        }
+      }
+    } catch {
+      /* noop */
+    }
+    return base;
+  }, [modelConfig]);
+
+  // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘J, ⌘B, ⌘,)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -270,6 +303,9 @@ function AppContent() {
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
         e.preventDefault();
         setIsSidebarOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === ',' || e.key === '/')) {
+        e.preventDefault();
+        setIsSettingsOpen((prev) => !prev);
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'n' && !e.shiftKey) {
         e.preventDefault();
         handleReset();
@@ -283,6 +319,7 @@ function AppContent() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleReset, showToast]);
+
 
   // --- Auto-scroll to newest section ---
   const scrollToSection = useCallback((sectionRef: React.RefObject<HTMLDivElement | null>) => {
@@ -306,7 +343,7 @@ function AppContent() {
     try {
       const extracted = await extractDecision(
         narrative,
-        modelConfig,
+        getEffectiveModelConfig(),
         activeProjectId,
         activeProjectContext
       );
@@ -1099,6 +1136,10 @@ function AppContent() {
           onHistoryPurged={() => {
             handleClearHistory();
           }}
+          onOpenMethodology={() => setIsMethodologyOpen(true)}
+          onOpenLegal={handleOpenLegal}
+          isDarkMode={isDarkMode}
+          onToggleTheme={handleToggleTheme}
         />
 
         {/* Global Command Palette (⌘K Spotlight) */}

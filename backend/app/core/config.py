@@ -11,10 +11,16 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "gemini-2.5-flash"
     
+    # Provider-Specific API Keys (Optional overrides)
+    GEMINI_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    
     # Server & Security
     HOST: str = "0.0.0.0"
     PORT: int = 8010
     CORS_ORIGINS: str = "http://localhost:5180,http://127.0.0.1:5180,http://localhost:5173,http://127.0.0.1:5173"
+    ENABLE_DOCS: bool = True
 
     @property
     def cors_origin_list(self) -> List[str]:

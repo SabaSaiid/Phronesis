@@ -10,7 +10,7 @@ import { BalanceScaleSensitivity } from './BalanceScaleSensitivity';
 import { SensitivityChart } from './SensitivityChart';
 import { RegretMatrixHeatmap } from './RegretMatrixHeatmap';
 import { GlossaryTerm } from '../../components/GlossaryTerm';
-import { useToast } from '../../components/Toast';
+import { useToast } from '../../components/useToast';
 import {
   Sparkles,
   FlaskConical,
@@ -60,17 +60,29 @@ export const ReportView: React.FC<ReportViewProps> = ({
     longitudinal_context
   } = bundle;
 
-  // Focus configuration
+  // Focus configuration — memoize derived arrays so downstream useMemo deps are stable
   const focusConfig = bundle.focus_config || report.focus_config || {
     focused_layers: ['psychology', 'logic', 'philosophy', 'practical'] as FocusLayerId[],
     philosophy_frameworks: [],
   };
 
-  const focusedLayers = focusConfig.focused_layers || ['psychology', 'logic', 'philosophy', 'practical'];
-  const foregroundedFws = focusConfig.philosophy_frameworks || [];
+  const focusedLayers = useMemo(
+    () => focusConfig.focused_layers || ['psychology', 'logic', 'philosophy', 'practical'],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(focusConfig.focused_layers)]
+  );
+  const foregroundedFws = useMemo(
+    () => focusConfig.philosophy_frameworks || [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(focusConfig.philosophy_frameworks)]
+  );
 
-  // Default active philosophy tab
-  const frameworks = philosophy_multi_layer?.frameworks || [];
+  // Stabilize frameworks reference
+  const frameworks = useMemo(
+    () => philosophy_multi_layer?.frameworks || [],
+    [philosophy_multi_layer?.frameworks]
+  );
+
   const defaultPhilosophyTab = useMemo(() => {
     if (foregroundedFws.length > 0 && frameworks.some((f) => f.framework_id === foregroundedFws[0])) {
       return foregroundedFws[0];
@@ -184,7 +196,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Offset for the sticky top-nav (~64px) so the section isn't hidden
+      const yOffset = -80;
+      const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
     }
   };
 

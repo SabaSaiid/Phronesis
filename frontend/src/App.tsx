@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, type HistoryItem } from './components/Sidebar';
-import { ToastProvider, useToast } from './components/Toast';
+import { ToastProvider } from './components/Toast';
+import { useToast } from './components/useToast';
 import { NarrativeInputView } from './features/input/NarrativeInputView';
 import { CollapsedDescribeCard } from './components/CollapsedDescribeCard';
 import { CollapsedCalibrateCard } from './components/CollapsedCalibrateCard';
@@ -464,15 +465,17 @@ function AppContent() {
         setDecision(item.structured_decision);
         setBundle(item.analysis_bundle);
         setReport({
-          report_markdown: item.report_markdown,
-          key_sensitive_variable: item.key_sensitive_variable,
-          proposed_experiment: '',
-          attributed_sources: [],
+          report_markdown: item.report_markdown || '',
+          key_sensitive_variable: item.key_sensitive_variable || '',
+          proposed_experiment: item.proposed_experiment || '',
+          attributed_sources: item.attributed_sources || [],
+          focus_config: item.focus_config || undefined,
+          longitudinal_summary: item.longitudinal_summary || '',
           math_summary: {
-            expected_utility: {},
-            preferred_eu_alt: item.preferred_eu_alt,
-            minimax_regret_choice: item.minimax_regret_choice,
-            inflection_threshold: 0,
+            expected_utility: item.analysis_bundle?.math_layer?.expected_utility?.utilities || {},
+            preferred_eu_alt: item.preferred_eu_alt || '',
+            minimax_regret_choice: item.minimax_regret_choice || '',
+            inflection_threshold: item.analysis_bundle?.math_layer?.sensitivity_analysis?.inflection_threshold || 0,
           },
         });
         setCurrentDecisionId(decisionId);

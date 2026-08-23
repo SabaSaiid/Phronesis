@@ -10,7 +10,7 @@ import {
   Share2
 } from 'lucide-react';
 import type { AnalysisBundle, ReportResponse } from '../types';
-import { useToast } from './Toast';
+import { useToast } from './useToast';
 
 interface ExportModalProps {
   isOpen: boolean;

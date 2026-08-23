@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Folder,
   PlusCircle,
@@ -46,7 +46,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   const [noteInput, setNoteInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [pData, dData] = await Promise.all([
@@ -62,11 +62,11 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
   useEffect(() => {
     loadData();
-  }, [projectId]);
+  }, [loadData]);
 
   const handleSaveHeader = async () => {
     if (!nameInput.trim()) return;

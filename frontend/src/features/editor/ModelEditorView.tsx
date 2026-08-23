@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { StructuredDecision, Assumption, FocusConfig } from '../../types';
 import { FocusSelector } from '../../components/FocusSelector';
 import {
@@ -32,10 +32,24 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
     philosophy_frameworks: [],
   });
 
+  // Ref to skip useEffect re-sync when we ourselves pushed the change upstream
+  const internalEditRef = useRef(false);
+
   // Keep internal model synchronized if external insertions (e.g. Socratic chat actions) occur
   useEffect(() => {
+    if (internalEditRef.current) {
+      internalEditRef.current = false;
+      return;
+    }
     setModel(JSON.parse(JSON.stringify(decision)));
   }, [decision]);
+
+  // Helper: propagate changes and mark as internal so useEffect won't loop
+  const propagate = useCallback((updated: StructuredDecision) => {
+    setModel(updated);
+    internalEditRef.current = true;
+    onUpdateDecision(updated);
+  }, [onUpdateDecision]);
 
   const handlePayoffChange = (altId: string, stateId: string, utility: number) => {
     const clamped = Math.max(0, Math.min(100, utility));
@@ -46,8 +60,7 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
       return p;
     });
     const updated = { ...model, payoff_matrix: newPayoffs };
-    setModel(updated);
-    onUpdateDecision(updated);
+    propagate(updated);
   };
 
   const handleProbabilityChange = (stateId: string, newProb: number) => {
@@ -59,8 +72,7 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
       return s;
     });
     const updated = { ...model, states_of_world: newStates };
-    setModel(updated);
-    onUpdateDecision(updated);
+    propagate(updated);
   };
 
   const handleNormalizeProbabilities = () => {
@@ -70,15 +82,19 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
       ...s,
       prior_probability: Math.round((s.prior_probability / total) * 100) / 100,
     }));
+    // Fix rounding remainder: adjust last state so they sum to exactly 1.00
+    const normTotal = normalized.reduce((acc, s) => acc + s.prior_probability, 0);
+    const remainder = Math.round((1.0 - normTotal) * 100) / 100;
+    if (remainder !== 0 && normalized.length > 0) {
+      normalized[normalized.length - 1].prior_probability += remainder;
+    }
     const updated = { ...model, states_of_world: normalized };
-    setModel(updated);
-    onUpdateDecision(updated);
+    propagate(updated);
   };
 
   const handleDecisionStatementChange = (text: string) => {
     const updated = { ...model, decision_statement: text };
-    setModel(updated);
-    onUpdateDecision(updated);
+    propagate(updated);
   };
 
   const handleToggleAssumptionTestable = (assumptionId: string) => {
@@ -89,8 +105,7 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
       return a;
     });
     const updated = { ...model, assumptions: updatedAssumptions };
-    setModel(updated);
-    onUpdateDecision(updated);
+    propagate(updated);
   };
 
   const handleAddAssumption = (e: React.FormEvent) => {
@@ -103,15 +118,13 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
       testable: true,
     };
     const updated = { ...model, assumptions: [...model.assumptions, newA] };
-    setModel(updated);
-    onUpdateDecision(updated);
+    propagate(updated);
     setNewAssumptionText('');
   };
 
   const handleDeleteAssumption = (id: string) => {
     const updated = { ...model, assumptions: model.assumptions.filter((a) => a.id !== id) };
-    setModel(updated);
-    onUpdateDecision(updated);
+    propagate(updated);
   };
 
   const totalProb = model.states_of_world.reduce((acc, s) => acc + s.prior_probability, 0);

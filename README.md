@@ -64,33 +64,57 @@ flowchart LR
 ## ⚡ Quickstart
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.10+
 - Node.js 18+ and `npm`
-- An API key for an LLM provider (e.g., Anthropic Claude / OpenAI / Gemini API)
+- *(Optional)* An API key for Gemini, OpenAI, or Anthropic (or run in `--mock` mode)
 
-### 1. Clone & Set Up Backend
+### 🚀 One-Command Launch (Recommended)
+
+Phronesis includes an automated orchestration engine that manages environment validation, virtualenv creation, package installation, port conflict resolution, and health checking:
 
 ```bash
 # Clone the repository
 git clone https://github.com/SabaSaiid/Phronesis.git
 cd Phronesis
 
-# Set up Python virtual environment
+# Start both Backend (FastAPI :8010) and Frontend (Vite :5180)
+./start.sh
+```
+
+#### Handy `./start.sh` Flags & Modes
+
+| Command | Purpose |
+| :--- | :--- |
+| `./start.sh` | Full startup with auto-checks, dependency sync, and health verification. |
+| `./start.sh --mock` (`-m`) | Launch in **offline zero-key mock mode** (no LLM API key required). |
+| `./start.sh -b` | Start **backend only** on `http://localhost:8010`. |
+| `./start.sh -f` | Start **frontend only** on `http://localhost:5180`. |
+| `./start.sh --doctor` (`-d`) | Run pre-flight environment and dependency diagnostics. |
+| `./start.sh --install` (`-i`) | Force re-installation of virtualenv and `node_modules`. |
+| `./start.sh --open` (`-o`) | Automatically launch the web app in your default browser. |
+| `./start.sh --help` (`-h`) | View complete CLI documentation and options. |
+
+---
+
+### 🛠 Manual Step-by-Step Setup (Alternative)
+
+<details>
+<summary>Click to expand manual setup instructions</summary>
+
+#### 1. Backend Setup
+```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Configure environment variables
 cp .env.example .env
-# Edit .env and supply your LLM API Key (e.g., OPENAI_API_KEY or GEMINI_API_KEY)
+# Edit .env and supply your LLM API Key (e.g., GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY)
 
-# Start FastAPI development server
 uvicorn app.main:app --reload --port 8010
 ```
 
-### 2. Set Up Frontend
-
+#### 2. Frontend Setup
 ```bash
 cd ../frontend
 npm install
@@ -98,8 +122,9 @@ npm run dev -- --port 5180
 ```
 
 Visit `http://localhost:5180` in your browser.
+</details>
 
-> **💡 Zero-Key Demo Mode:** Phronesis includes built-in, pre-extracted benchmark decisions (e.g., *"Stay in Senior Tech Role vs. Join Early-Stage AI Startup"*) allowing first-time visitors to experience the full deterministic pipeline and report synthesis with zero API configuration.
+> **💡 Zero-Key Demo Mode:** Phronesis includes built-in, pre-extracted benchmark decisions (e.g., *"Stay in Senior Tech Role vs. Join Early-Stage AI Startup"*) and `--mock` mode, allowing first-time visitors to experience the full deterministic pipeline and report synthesis with zero API configuration.
 
 ---
 

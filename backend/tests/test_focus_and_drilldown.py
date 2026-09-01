@@ -40,8 +40,10 @@ async def test_deterministic_analysis_runs_all_engines(sample_decision):
     assert bundle.math_layer.expected_utility is not None
     assert bundle.bias_layer is not None
     assert bundle.philosophy_multi_layer is not None
-    assert len(bundle.philosophy_multi_layer.frameworks) == 4
+    assert len(bundle.philosophy_multi_layer.frameworks) == 8
     assert bundle.critical_thinking_layer is not None
+    assert bundle.economics_layer is not None
+    assert bundle.systems_layer is not None
 
 @pytest.mark.asyncio
 async def test_synthesis_with_custom_focus_config(sample_decision):

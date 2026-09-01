@@ -3,45 +3,62 @@ from app.schemas.decision import AnalysisBundle, ReportResponse, SourceAttributi
 from app.services.llm_client import LLMClient
 from app.core.guardrails import ReportGuardrail
 
-SYNTHESIS_SYSTEM_PROMPT = """You are Phronesis Report Synthesis Engine.
-Your job is to convert structured analytical findings from deterministic engines into a crisp, empathetic, structured markdown report.
+SYNTHESIS_SYSTEM_PROMPT = """You are Phronesis Multi-Disciplinary Report Synthesis Engine (V3).
+Your job is to convert structured analytical findings from deterministic engines across 6 layers into a crisp, empathetic, structured markdown report:
+1. Layer 1: Cognitive Psychology (25 Biases & Structural Grounding)
+2. Layer 2: Decision Theory & Sensitivity Math (Expected Utility, Minimax Regret, Inflection Thresholds)
+3. Layer 3: 8-Lens Philosophy (Stoicism, Utilitarianism, Deontology, Virtue Ethics, Existentialism, Care Ethics, Pragmatism, Eastern Flow)
+4. Layer 4: Critical Thinking & Epistemic Antifragility (Base Rates, Bayesian Anchor, Falsifiability)
+5. Layer 5: Economics & Valuation (EVPI/EVSI, Prospect Theory, Intertemporal Discounting, Real Options)
+6. Layer 6: Systems Thinking & Game Theory (Feedback Loops, Strategic Signaling, Rawlsian Fairness Audit)
 
 CRITICAL NON-NEGOTIABLE CONSTRAINTS:
 1. Every single sentence MUST trace directly to a supplied data field or value.
 2. NEVER prescribe a decision or give life advice ("You should choose X" is FORBIDDEN).
-3. Always cite the scientific/philosophical field and literature source for every flagged bias or philosophical framework.
-4. Frame the conclusion around the Value of Information (VoI): what is the single most sensitive uncertain parameter and what cheap real-world experiment tests it before committing?
+3. Always cite the scientific/philosophical field and literature source for every flagged bias, philosophical lens, economic solver, and systems concept.
+4. Frame the conclusion around the Value of Information (VoI) and EVPI: what is the ceiling on rational information acquisition and what cheap real-world experiment tests the most sensitive variable before committing?
 5. Use observational pattern language ("consistent with X"), never personal diagnostic labels.
-6. Present all four philosophical lenses (Stoicism, Utilitarianism, Kantian Deontology, Aristotelian Virtue Ethics) as parallel evaluative dimensions without declaring any framework correct.
+6. Present all philosophical, economic, and systems lenses as parallel evaluative dimensions without declaring any framework correct.
 
 Required Markdown Structure:
 # Decision Reasoning Audit: [Title]
 
 ## Executive Summary of Reasoning Dynamics
-[1 concise paragraph summarizing EU vs Minimax Regret tension and primary tradeoff]
+[1 concise paragraph summarizing EU vs Minimax Regret tension, EVPI information value, and primary multi-disciplinary tradeoffs]
 
 ---
 
 ## 1. Mathematical Sensitivity & Inflection Thresholds
-- [Bulleted points with exact computed numbers, inflection thresholds p*, and utility deltas]
+- [Bulleted points with exact computed numbers, inflection thresholds p*, EVPI/EVSI values, and utility deltas]
 
 ---
 
-## 2. Sourced Cognitive & Philosophical Tradeoffs
+## 2. Quantitative Economics & Valuation
+- **Expected Value of Perfect Information (EVPI):** [EVPI utility ceiling and fractional bound narrative]
+- **Prospect Theory & Risk Preference:** [CPT vs EU framing comparison, loss-aversion penalty]
+- **Intertemporal Choice & Discounting:** [Present-bias penalty under hyperbolic discounting vs exponential baseline]
+- **Real Options & Convexity:** [Reversibility classification (Type 1 vs Type 2), hurdle rate premium, and Barbell Strategy applicability]
+
+---
+
+## 3. Sourced Cognitive & Systems Tradeoffs
 ### Cognitive Pattern Grounding
 - [Flagged biases with literature citations (Field / Author / Theory) and grounding badges: [Explicit Variable] or [Narrative Nuance]]
 
-### Multi-Lens Philosophical Reflection
-- [Stoic Dichotomy of Control reflection]
-- [Utilitarian Consequentialist stakeholder consideration]
-- [Kantian Deontological universalizability test]
-- [Aristotelian Virtue Ethics character & golden mean inquiry]
+### Systems Dynamics & Game Theoretic Strategic Context
+- [Meadows Feedback Loops (R and B loops), Time Delays, Strategic Signaling credibility (Spence), and Rawlsian Veil of Ignorance fairness audit]
 
 ---
 
-## 3. High-Leverage Value of Information (VoI) Experiments
+## 4. Multi-Lens Philosophical Reflection
+- [Synthesized reflection across active philosophical lenses (Stoicism, Utilitarianism, Kantian, Virtue Ethics, Existentialism, Care Ethics, Pragmatism, Eastern Wisdom)]
+
+---
+
+## 5. High-Leverage Value of Information (VoI) Experiments
 - **Most Critical Variable:** [Identify the sensitive parameter]
-- **Proposed Low-Cost Experiments:** [1-2 concrete, low-cost/time-boxed experiments]
+- **EVPI Information Ceiling:** [Maximum rational budget for information acquisition]
+- **Proposed Low-Cost Experiments:** [1-2 concrete, low-cost/time-boxed experiments grounded in Pragmatist living-hypothesis framing]
 """
 
 class SynthesisService:
@@ -57,6 +74,8 @@ class SynthesisService:
         p_legacy = bundle.philosophy_layer
         p_multi = bundle.philosophy_multi_layer
         ct = bundle.critical_thinking_layer
+        econ = getattr(bundle, "economics_layer", None)
+        systems = getattr(bundle, "systems_layer", None)
         longitudinal = bundle.longitudinal_context
         effort = (getattr(bundle, "effort_level", None) or "standard").lower()
         project_context = getattr(bundle, "project_context", None)
@@ -100,8 +119,63 @@ class SynthesisService:
                 )
             )
 
+        # Economic attributions
+        if econ:
+            attributions.append(
+                SourceAttribution(
+                    field="decision_theory",
+                    source="Raiffa & Schlaifer (1961); Howard (1966)",
+                    referenced_item="Expected Value of Perfect Information (EVPI)"
+                )
+            )
+            attributions.append(
+                SourceAttribution(
+                    field="behavioral_economics",
+                    source="Tversky & Kahneman (1992); Arrow (1965)",
+                    referenced_item="Cumulative Prospect Theory (CPT) & CRRA"
+                )
+            )
+            attributions.append(
+                SourceAttribution(
+                    field="behavioral_economics",
+                    source="Laibson (1997); Samuelson (1937)",
+                    referenced_item="Quasi-Hyperbolic Discounting"
+                )
+            )
+            attributions.append(
+                SourceAttribution(
+                    field="real_options",
+                    source="Dixit & Pindyck (1994); Taleb (2012)",
+                    referenced_item="Option Value of Waiting & Convexity"
+                )
+            )
+
+        # Systems attributions
+        if systems:
+            attributions.append(
+                SourceAttribution(
+                    field="systems_thinking",
+                    source="Meadows (2008), Thinking in Systems",
+                    referenced_item="Feedback Loops & Structural Delays"
+                )
+            )
+            attributions.append(
+                SourceAttribution(
+                    field="game_theory",
+                    source="Spence (1973); Schelling (1960)",
+                    referenced_item="Strategic Signaling & Commitment Devices"
+                )
+            )
+            attributions.append(
+                SourceAttribution(
+                    field="political_philosophy",
+                    source="Rawls (1971), A Theory of Justice",
+                    referenced_item="Veil of Ignorance & Difference Principle"
+                )
+            )
+
         focus = getattr(bundle, "focus_config", None)
-        focused_layers = focus.focused_layers if focus and focus.focused_layers else ["psychology", "logic", "philosophy", "practical"]
+        focused_layers = focus.focused_layers if focus and focus.focused_layers else ["psychology", "logic", "philosophy", "economics", "systems", "practical"]
         foreground_fws = focus.philosophy_frameworks if focus and focus.philosophy_frameworks else []
 
         # Decided Depth Resolution: Effort (Coarse) x Focus Mode (Fine)
@@ -118,6 +192,8 @@ class SynthesisService:
         bias_depth = resolve_depth("psychology")
         phil_depth = resolve_depth("philosophy")
         logic_depth = resolve_depth("logic")
+        econ_depth = resolve_depth("economics")
+        sys_depth = resolve_depth("systems")
 
         context_payload = {
             "decision_statement": d.decision_statement,
@@ -129,14 +205,18 @@ class SynthesisService:
             "flagged_biases": [pat.model_dump() for pat in b.flagged_patterns],
             "philosophy_frameworks": [fw.model_dump() for fw in (p_multi.frameworks if p_multi else [])],
             "critical_thinking": ct.model_dump(),
+            "economics_layer": econ.model_dump() if econ else None,
+            "systems_layer": systems.model_dump() if systems else None,
             "longitudinal_context": longitudinal.model_dump() if longitudinal else None,
             "project_context": project_context,
             "depth_directives": {
                 "math_layer_depth": math_depth,
                 "bias_layer_depth": bias_depth,
                 "philosophy_layer_depth": phil_depth,
-                "philosophy_foreground_frameworks": foreground_fws if effort != "thorough" else ["all_4_lenses_extended"],
+                "philosophy_foreground_frameworks": foreground_fws if effort != "thorough" else ["all_8_lenses_extended"],
                 "critical_thinking_layer_depth": logic_depth,
+                "economics_layer_depth": econ_depth,
+                "systems_layer_depth": sys_depth,
                 "effort_level": effort
             }
         }

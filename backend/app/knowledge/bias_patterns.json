@@ -193,5 +193,135 @@
       "confusing good luck with good judgment"
     ],
     "question_to_surface": "If you separated the quality of your forward reasoning from random luck, would this choice still be justifiable in advance?"
+  },
+  {
+    "id": "affect_heuristic",
+    "name": "Affect Heuristic / Emotional Valence Substitution",
+    "field": "cognitive_psychology",
+    "source": "Slovic, P., Finucane, M., Peters, E., & MacGregor, D.G. (2007). 'The Affect Heuristic'. European Journal of Operational Research, 177(3), 1333–1352.",
+    "core_idea": "Using gut emotional feelings about a choice (fear, excitement, disgust) as a proxy for analytical risk-benefit assessment.",
+    "signals": [
+      "positive or negative emotional charge assigned to an option without quantitative justification",
+      "risk estimates tracking emotional comfort rather than actual probability data",
+      "options described in vivid emotional language detached from payoff matrix numbers"
+    ],
+    "question_to_surface": "If you stripped away the emotional charge you associate with each option and evaluated only the probability-weighted payoffs, would your preference ranking change?"
+  },
+  {
+    "id": "narrow_bracketing",
+    "name": "Narrow Bracketing / Portfolio Isolation",
+    "field": "behavioral_economics",
+    "source": "Read, D., Loewenstein, G., & Rabin, M. (1999). 'Choice Bracketing'. Journal of Risk and Uncertainty, 19(1–3), 171–197.",
+    "core_idea": "Evaluating a choice in isolation rather than as one component of a broader life or financial portfolio — ignoring covariances and cross-portfolio effects.",
+    "signals": [
+      "decision framed as all-or-nothing without considering partial commitment",
+      "ignoring how this choice interacts with existing income streams, relationships, or career assets",
+      "treating a single outcome as independent of all other ongoing life variables"
+    ],
+    "question_to_surface": "Viewed as one component of your full life portfolio — including existing assets, income, relationships, and career capital — does this option look different than when evaluated in isolation?"
+  },
+  {
+    "id": "durability_bias",
+    "name": "Durability Bias / Affective Forecasting Error",
+    "field": "social_psychology",
+    "source": "Gilbert, D.T., & Wilson, T.D. (2000). 'Miswanting: Some Problems in the Forecasting of Future Affective States'. In Forgas, J.P. (Ed.), Thinking and Feeling.",
+    "core_idea": "Overestimating how long and how intensely a future positive or negative emotional event will affect well-being — the immune system of the mind recovers faster than we predict.",
+    "signals": [
+      "treating a feared failure as a permanent catastrophic emotional outcome",
+      "assuming long-duration negative affect from a setback that research shows typically attenuates within months",
+      "or conversely: overestimating the duration of expected positive emotions from a favorable outcome"
+    ],
+    "question_to_surface": "In 3 years, if the worst-case scenario had materialized, what would your actual daily emotional life look like — and would it resemble your current fear projection?"
+  },
+  {
+    "id": "ikea_effect",
+    "name": "IKEA Effect / Labor-Love Overvaluation",
+    "field": "behavioral_economics",
+    "source": "Norton, M.I., Mochon, D., & Ariely, D. (2012). 'The IKEA Effect: When Labor Leads to Love'. Journal of Consumer Psychology, 22(3), 453–460.",
+    "core_idea": "Disproportionately overvaluing a project, product, codebase, or business merely because of personal effort invested in its creation.",
+    "signals": [
+      "refusing to abandon a personal project or startup idea because of pride in what was built, despite weak market validation",
+      "overvaluing the internal quality or uniqueness of self-built systems relative to market comparators",
+      "resistance to pivoting framed around not wasting the creative effort already invested"
+    ],
+    "question_to_surface": "If an independent expert evaluated this project or system without knowing you built it, what objective market value would they assign to it?"
+  },
+  {
+    "id": "social_proof_cascade",
+    "name": "Social Proof Cascade / Informational Herding",
+    "field": "social_psychology",
+    "source": "Cialdini, R.B. (1984). Influence: The Psychology of Persuasion. HarperCollins. Bikhchandani, S., Hirshleifer, D., & Welch, I. (1992). 'A Theory of Fads, Fashion, Custom, and Cultural Change as Informational Cascades'. Journal of Political Economy, 100(5), 992–1026.",
+    "core_idea": "Adopting an alternative primarily because peers, industry insiders, or social networks are doing so — treating the behavior of others as a substitute for independent probabilistic reasoning.",
+    "signals": [
+      "primary justification for the preferred option is that it is a trend, everyone is doing it, or a respected peer did it",
+      "decisions anchored to what the median peer group has done rather than individual payoff structure",
+      "fear of being left behind or looking uncool driving urgency above rational probability analysis"
+    ],
+    "question_to_surface": "If none of your peers or network were pursuing this path, would the expected utility of this option remain as compelling based purely on your own payoff and probability analysis?"
+  },
+  {
+    "id": "hot_cold_empathy_gap",
+    "name": "Hot-Cold Empathy Gap / Visceral State Mismatch",
+    "field": "behavioral_economics",
+    "source": "Loewenstein, G. (1996). 'Out of Control: Visceral Influences on Behavior'. Organizational Behavior and Human Decision Processes, 65(3), 272–292.",
+    "core_idea": "Failure to accurately predict how future emotional, physical, or visceral states (stress, hunger, fear, excitement) will alter one's preferences and decision quality.",
+    "signals": [
+      "high-pressure or emotionally charged context driving the urgency of this decision",
+      "reasoning from a burned-out, fearful, or exceptionally excited emotional state without acknowledging the temperature bias",
+      "underestimating how stress, fatigue, or emotional pressure will feel during execution of the chosen path"
+    ],
+    "question_to_surface": "Would you make this same choice on a calm, physically rested, emotionally neutral afternoon — or does the current emotional temperature materially influence your urgency?"
+  },
+  {
+    "id": "cognitive_dissonance_shield",
+    "name": "Cognitive Dissonance Shield / Ego-Protective Rationalization",
+    "field": "social_psychology",
+    "source": "Festinger, L. (1957). A Theory of Cognitive Dissonance. Stanford University Press.",
+    "core_idea": "Pre-emptively rationalizing a preferred choice to reduce psychic discomfort caused by conflicting beliefs or impulses — constructing logical-sounding justifications for emotionally-driven preferences.",
+    "signals": [
+      "reasoning appears reverse-engineered: conclusion stated first, supporting arguments assembled afterward",
+      "contradictory evidence systematically trivialized or reframed",
+      "strong identity investment in one option regardless of analytical evidence"
+    ],
+    "question_to_surface": "Have you genuinely stress-tested the case against your preferred option, or have you assembled arguments to justify a conclusion you already feel emotionally committed to?"
+  },
+  {
+    "id": "self_handicapping",
+    "name": "Self-Handicapping / Ego-Protective Obstruction",
+    "field": "social_psychology",
+    "source": "Berglas, S., & Jones, E.E. (1978). 'Drug Choice as a Self-Handicapping Strategy in Response to Noncontingent Success'. Journal of Personality and Social Psychology, 36(4), 405–417.",
+    "core_idea": "Strategically creating obstacles or excuses in advance to protect self-esteem in case of failure — preferring an option with a built-in excuse over one that requires maximal effort and full accountability.",
+    "signals": [
+      "framing the safer option as a strategic hedge while unconsciously using it to avoid full commitment and potential failure",
+      "creating limiting conditions upfront that make failure explainable",
+      "choosing a path where external factors can absorb blame rather than one that requires full accountability"
+    ],
+    "question_to_surface": "Is any part of your preference for this option driven by the fact that if it fails, the failure can be attributed to factors outside your control?"
+  },
+  {
+    "id": "base_rate_neglect",
+    "name": "Base Rate Neglect / Representativeness Substitution",
+    "field": "cognitive_psychology",
+    "source": "Kahneman, D., & Tversky, A. (1973). 'On the Psychology of Prediction'. Psychological Review, 80(4), 237–251.",
+    "core_idea": "Ignoring the underlying statistical base rates and population frequencies when evaluating vivid individual cases — substituting how representative a case feels for how probable it actually is.",
+    "signals": [
+      "citing a vivid anecdotal success story as evidence rather than empirical population rates",
+      "dismissing or ignoring the failure rate of similar ventures or paths",
+      "treating one's own case as uniquely exempt from the statistical base rate due to perceived personal talent or circumstance"
+    ],
+    "question_to_surface": "Among 100 people who faced the same objective circumstances as your situation, what fraction succeeded under the path you are evaluating — and do your stated probabilities reflect that base rate?"
+  },
+  {
+    "id": "escalation_of_commitment",
+    "name": "Escalation of Commitment / Throwing Good Money After Bad",
+    "field": "organizational_behavior",
+    "source": "Staw, B.M. (1976). 'Knee-Deep in the Big Muddy: A Study of Escalating Commitment to a Chosen Course of Action'. Organizational Behavior and Human Performance, 16(1), 27–44.",
+    "core_idea": "Continuing to increase investment of time, capital, or resources into a failing course of action primarily to justify prior investments, even when objective evidence signals the need to exit.",
+    "signals": [
+      "doubling down or expanding commitment to a project that has shown multiple negative indicators",
+      "treating continued investment as proof of conviction rather than examining objective evidence of trajectory",
+      "increasing resource allocation triggered by fear of publicly acknowledging a prior error"
+    ],
+    "question_to_surface": "If you had not previously invested in this course of action and were evaluating it fresh today with no prior commitment, would the current evidence justify beginning the investment now?"
   }
 ]

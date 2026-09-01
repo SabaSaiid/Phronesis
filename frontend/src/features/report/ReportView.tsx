@@ -5,10 +5,14 @@ import type {
   FocusLayerId,
   DrillDownResponse
 } from '../../types';
-import { submitFlagFeedback, fetchDrillDown } from '../../lib/api';
+import { fetchDrillDown } from '../../lib/api';
 import { BalanceScaleSensitivity } from './BalanceScaleSensitivity';
 import { SensitivityChart } from './SensitivityChart';
 import { RegretMatrixHeatmap } from './RegretMatrixHeatmap';
+import { EconomicsExplorer } from './EconomicsExplorer';
+import { PhilosophyMatrixView } from './PhilosophyMatrixView';
+import { CognitivePsychologyView } from './CognitivePsychologyView';
+import { SystemsThinkingView } from './SystemsThinkingView';
 import { GlossaryTerm } from '../../components/GlossaryTerm';
 import { useToast } from '../../components/useToast';
 import {
@@ -20,17 +24,13 @@ import {
   Compass,
   FileText,
   Target,
-  Shield,
-  AlertCircle,
   ChevronDown,
   ChevronUp,
   RotateCcw,
-  ThumbsUp,
-  ThumbsDown,
-  Check,
   History,
   Share2,
-  Zap
+  DollarSign,
+  Network
 } from 'lucide-react';
 
 interface ReportViewProps {
@@ -54,7 +54,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
     structured_decision,
     math_layer,
     bias_layer,
-    philosophy_layer,
     philosophy_multi_layer,
     critical_thinking_layer,
     longitudinal_context
@@ -71,11 +70,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [JSON.stringify(focusConfig.focused_layers)]
   );
-  const foregroundedFws = useMemo(
-    () => focusConfig.philosophy_frameworks || [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(focusConfig.philosophy_frameworks)]
-  );
 
   // Stabilize frameworks reference
   const frameworks = useMemo(
@@ -83,25 +77,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
     [philosophy_multi_layer?.frameworks]
   );
 
-  const defaultPhilosophyTab = useMemo(() => {
-    if (foregroundedFws.length > 0 && frameworks.some((f) => f.framework_id === foregroundedFws[0])) {
-      return foregroundedFws[0];
-    }
-    return frameworks[0]?.framework_id || 'stoicism_v1';
-  }, [foregroundedFws, frameworks]);
-
-  const [activePhilosophyTab, setActivePhilosophyTab] = useState<string>(defaultPhilosophyTab);
-
   // Card expansion states: focused layers start expanded; unfocused layers start collapsed
   const [expandedLayers, setExpandedLayers] = useState<Record<FocusLayerId, boolean>>(() => ({
     practical: focusedLayers.includes('practical'),
+    economics: focusedLayers.includes('economics'),
     psychology: focusedLayers.includes('psychology'),
     philosophy: focusedLayers.includes('philosophy'),
+    systems: focusedLayers.includes('systems'),
     logic: focusedLayers.includes('logic'),
   }));
-
-  // Feedback states
-  const [feedbackStates, setFeedbackStates] = useState<Record<string, { voted: boolean; isPositive?: boolean }>>({});
 
   // Single-item drill-down states
   const [drillDownStates, setDrillDownStates] = useState<
@@ -113,33 +97,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
       ...prev,
       [layerId]: !prev[layerId],
     }));
-  };
-
-  const handleFeedback = async (flagId: string, flagType: 'bias' | 'philosophy', isPositive: boolean) => {
-    try {
-      await submitFlagFeedback({
-        decision_id: structured_decision.decision_statement,
-        flag_id: flagId,
-        flag_type: flagType,
-        is_positive: isPositive,
-      });
-      setFeedbackStates((prev) => ({
-        ...prev,
-        [flagId]: { voted: true, isPositive },
-      }));
-      showToast({
-        type: 'success',
-        title: 'Feedback Recorded',
-        description: isPositive ? 'Flag confirmed helpful.' : 'Flag noted for calibration.',
-      });
-    } catch (err) {
-      console.warn('Feedback submission error:', err);
-      showToast({
-        type: 'error',
-        title: 'Submission Failed',
-        description: 'Could not record calibration feedback.',
-      });
-    }
   };
 
   const handleTriggerDrillDown = async (
@@ -212,7 +169,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   // Dynamic Layer Ordering: focused layers come first, unfocused follow
   const orderedLayerIds = useMemo<FocusLayerId[]>(() => {
-    const allLayers: FocusLayerId[] = ['practical', 'psychology', 'philosophy', 'logic'];
+    const allLayers: FocusLayerId[] = ['practical', 'economics', 'psychology', 'philosophy', 'systems', 'logic'];
     const focusedInOrder = focusedLayers.filter((id) => allLayers.includes(id));
     const unfocused = allLayers.filter((id) => !focusedLayers.includes(id));
     return [...focusedInOrder, ...unfocused];
@@ -422,6 +379,92 @@ export const ReportView: React.FC<ReportViewProps> = ({
         );
 
       // -----------------------------------------------------------------------
+      // Economics & Valuation (EVPI, CPT, Discounting, Real Options)
+      // -----------------------------------------------------------------------
+      case 'economics':
+        if (!bundle.economics_layer) return null;
+        return (
+          <section
+            key="economics"
+            id="sec-economics"
+            className={`phronesis-card transition-all duration-300 ${
+              isExpanded ? 'p-6 space-y-6' : 'p-4 sm:p-5'
+            }`}
+          >
+            <div
+              onClick={() => toggleLayerExpanded('economics')}
+              className="flex items-center justify-between cursor-pointer group"
+            >
+              <div className="flex items-center space-x-2.5">
+                <div
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    isFocused
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-[var(--bg-app)] text-[var(--text-muted)]'
+                  }`}
+                >
+                  <DollarSign className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-display font-semibold text-base text-[var(--text-main)] group-hover:text-emerald-400 transition-colors">
+                      Quantitative Economics & <GlossaryTerm term="Value of Information">Valuation Solvers</GlossaryTerm>
+                    </h3>
+                    {isFocused && (
+                      <span className="font-ui text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium">
+                        Focus
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-body text-xs text-[var(--text-muted)]">
+                    EVPI information ceiling, Cumulative Prospect Theory, and Hyperbolic Discounting
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <span className="font-data text-xs text-emerald-400 font-medium hidden sm:inline">
+                  EVPI: {bundle.economics_layer.evpi.evpi_utility.toFixed(2)} pts
+                </span>
+                <button
+                  type="button"
+                  className="p-1 rounded-lg text-[var(--text-muted)] group-hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors"
+                  aria-label={isExpanded ? 'Collapse layer' : 'Expand layer'}
+                >
+                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {!isExpanded ? (
+              <div className="pt-2 flex items-center justify-between text-xs font-body text-[var(--text-muted)] border-t border-[var(--border-subtle)] mt-3">
+                <p className="truncate pr-2">
+                  EVPI Bound: <strong className="text-emerald-400 font-data">{(bundle.economics_layer.evpi.evpi_fractional * 100).toFixed(1)}%</strong> · Reversibility: <strong className="text-[var(--text-main)] font-ui">{bundle.economics_layer.real_options.reversibility_type}</strong>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => toggleLayerExpanded('economics')}
+                  className="text-xs font-ui text-[var(--color-verdigris)] hover:underline shrink-0 flex items-center space-x-1 cursor-pointer"
+                >
+                  <span>Expand Economics</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="pt-2">
+                <EconomicsExplorer
+                  economics={bundle.economics_layer}
+                  decision={structured_decision}
+                  onDrillDown={({ item_type, item_id, item_title, item_context }) =>
+                    handleTriggerDrillDown(item_type, item_id, item_title, item_context)
+                  }
+                />
+              </div>
+            )}
+          </section>
+        );
+
+      // -----------------------------------------------------------------------
       // 2. Psychology (Cognitive Bias Pattern Recognition)
       // -----------------------------------------------------------------------
       case 'psychology':
@@ -502,170 +545,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
               </div>
             ) : (
               /* Expanded Full Content */
-              <div className="space-y-4 pt-2">
-                {bias_layer.flagged_patterns.length === 0 ? (
-                  <div className="p-4 rounded-xl bg-[var(--bg-app)] text-xs text-[var(--text-muted)] font-body text-center">
-                    No acute cognitive bias triggers detected in current assumptions.
-                  </div>
-                ) : (
-                  bias_layer.flagged_patterns.map((pat) => {
-                    const fb = feedbackStates[pat.id];
-                    const isExplicit = pat.grounding_tier === 'explicit_variable';
-                    const drill = drillDownStates[pat.id];
-
-                    return (
-                      <div
-                        key={pat.id}
-                        className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-3"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <h4 className="font-display font-semibold text-sm text-[var(--text-main)]">
-                                {pat.name}
-                              </h4>
-                              <span
-                                className={`font-ui text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                                  isExplicit
-                                    ? 'bg-[var(--color-ochre)]/15 text-[var(--color-ochre)] border border-[var(--color-ochre)]/30'
-                                    : 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]'
-                                }`}
-                              >
-                                {isExplicit ? 'Explicit Variable' : 'Narrative Nuance'}
-                              </span>
-                            </div>
-                            <div className="font-body text-[11px] text-[var(--text-muted)] italic mt-0.5">
-                              Attributed: {pat.source}
-                            </div>
-                          </div>
-
-                          {/* Action Bar: Deep Dive + Discreet Thumbs */}
-                          <div className="flex items-center space-x-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleTriggerDrillDown('bias', pat.id, pat.name, {
-                                  field: pat.field,
-                                  source: pat.source,
-                                  caveat_analysis: pat.caveat_analysis,
-                                  question_to_surface: pat.question_to_surface,
-                                })
-                              }
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-ui font-medium transition-all flex items-center space-x-1 cursor-pointer ${
-                                drill?.isOpen
-                                  ? 'bg-[var(--color-verdigris)] text-white shadow-2xs'
-                                  : 'bg-[var(--bg-surface)] text-[var(--color-verdigris)] hover:bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/30'
-                              }`}
-                            >
-                              <Sparkles className="w-3 h-3" />
-                              <span>{drill?.isOpen ? 'Close Deep Dive' : 'Go Deeper'}</span>
-                            </button>
-
-                            {/* Feedback */}
-                            {fb?.voted ? (
-                              <span className="font-ui text-[10px] text-[var(--color-verdigris)] flex items-center space-x-1">
-                                <Check className="w-3 h-3" />
-                                <span>Saved</span>
-                              </span>
-                            ) : (
-                              <div className="flex items-center space-x-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleFeedback(pat.id, 'bias', true)}
-                                  title="Helpful / Accurate Flag"
-                                  className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-verdigris)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-                                >
-                                  <ThumbsUp className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleFeedback(pat.id, 'bias', false)}
-                                  title="False Positive / Misidentified"
-                                  className="p-1 rounded text-[var(--text-muted)] hover:text-rose-500 hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-                                >
-                                  <ThumbsDown className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <p className="font-body text-xs text-[var(--text-main)] leading-relaxed">
-                          {pat.caveat_analysis}
-                        </p>
-
-                        <div className="p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs">
-                          <span className="font-ui font-semibold text-[var(--color-verdigris)]">
-                            Reframing Inquiry:{' '}
-                          </span>
-                          <span className="font-body text-[var(--text-main)] italic">
-                            "{pat.question_to_surface}"
-                          </span>
-                        </div>
-
-                        {/* Inline Drill-Down Drawer */}
-                        {drill?.isOpen && (
-                          <div className="mt-3 p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--color-verdigris)]/40 space-y-3 animate-fade-in text-xs">
-                            {drill.loading ? (
-                              <div className="py-4 flex flex-col items-center justify-center space-y-2 text-center">
-                                <div className="w-5 h-5 border-2 border-[var(--color-verdigris)]/30 border-t-[var(--color-verdigris)] rounded-full animate-spin" />
-                                <span className="font-ui text-[11px] text-[var(--color-verdigris)] animate-pulse">
-                                  Unpacking academic literature and counterfactual reframing...
-                                </span>
-                              </div>
-                            ) : drill.data ? (
-                              <>
-                                <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
-                                  <span className="font-ui font-semibold text-[var(--color-verdigris)] uppercase tracking-wider text-[10px] flex items-center space-x-1">
-                                    <Sparkles className="w-3 h-3" />
-                                    <span>Academic Deep Dive & Countermeasures</span>
-                                  </span>
-                                  <span className="font-mono text-[10px] text-[var(--text-muted)]">
-                                    {drill.data.academic_context}
-                                  </span>
-                                </div>
-
-                                <div className="font-body text-xs text-[var(--text-main)] leading-relaxed space-y-2 whitespace-pre-line">
-                                  {drill.data.deep_dive_markdown}
-                                </div>
-
-                                {drill.data.probing_questions.length > 0 && (
-                                  <div className="p-3 rounded-lg bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-1.5">
-                                    <span className="font-ui font-semibold text-[11px] text-[var(--color-verdigris)]">
-                                      Targeted Probing Questions:
-                                    </span>
-                                    <ul className="space-y-1 font-body text-xs text-[var(--text-main)]">
-                                      {drill.data.probing_questions.map((q, qIdx) => (
-                                        <li key={qIdx} className="flex items-start space-x-1.5">
-                                          <span className="text-[var(--color-verdigris)] font-bold">•</span>
-                                          <span className="italic">"{q}"</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {drill.data.concrete_action_or_test && (
-                                  <div className="p-3 rounded-lg bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30 text-xs flex items-start space-x-2">
-                                    <Zap className="w-3.5 h-3.5 text-[var(--color-ochre)] shrink-0 mt-0.5" />
-                                    <div className="space-y-0.5">
-                                      <span className="font-ui font-semibold text-[var(--color-ochre)]">
-                                        Actionable Reframing Exercise:{' '}
-                                      </span>
-                                      <span className="font-body text-[var(--text-main)]">
-                                        {drill.data.concrete_action_or_test}
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
-                              </>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+              <div className="pt-2">
+                <CognitivePsychologyView
+                  biasLayer={bias_layer}
+                  onDrillDown={({ item_type, item_id, item_title, item_context }) =>
+                    handleTriggerDrillDown(item_type, item_id, item_title, item_context)
+                  }
+                />
               </div>
             )}
           </section>
@@ -716,8 +602,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
               </div>
 
               <div className="flex items-center space-x-2">
-                <span className="font-data text-xs text-[var(--color-verdigris)] font-medium hidden sm:inline">
-                  4 Lenses
+                <span className="font-data text-xs text-purple-400 font-medium hidden sm:inline">
+                  8 Lenses
                 </span>
                 <button
                   type="button"
@@ -733,7 +619,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
             {!isExpanded ? (
               <div className="pt-2 flex items-center justify-between text-xs font-body text-[var(--text-muted)] border-t border-[var(--border-subtle)] mt-3">
                 <p className="truncate pr-2">
-                  Evaluated across 4 ethical lenses (<GlossaryTerm term="Prohairesis">Stoic Agency</GlossaryTerm>, Utilitarian, Kantian, <GlossaryTerm term="Golden Mean">Virtue Ethics</GlossaryTerm>)
+                  Evaluated across 8 ethical lenses (Stoic, Utilitarian, Kantian, Virtue Ethics, Existentialist, Care Ethics, Pragmatist, Eastern Flow)
                 </p>
                 <button
                   type="button"
@@ -746,173 +632,98 @@ export const ReportView: React.FC<ReportViewProps> = ({
               </div>
             ) : (
               /* Expanded Full Content */
-              <div className="space-y-4 pt-2">
-                {frameworks.length > 0 ? (
-                  <div className="space-y-4">
-                    {/* Tabs */}
-                    <div className="flex flex-wrap gap-1.5 p-1 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)]">
-                      {frameworks.map((fw) => (
-                        <button
-                          key={fw.framework_id}
-                          type="button"
-                          onClick={() => setActivePhilosophyTab(fw.framework_id)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-ui font-medium transition-all cursor-pointer ${
-                            activePhilosophyTab === fw.framework_id
-                              ? 'bg-[var(--bg-surface)] text-[var(--color-verdigris)] shadow-sm border border-[var(--border-subtle)]'
-                              : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                          }`}
-                        >
-                          {fw.framework_name.split('(')[0].trim()}
-                        </button>
-                      ))}
-                    </div>
+              <div className="pt-2">
+                <PhilosophyMatrixView
+                  philosophy={philosophy_multi_layer || { frameworks }}
+                  onDrillDown={({ item_type, item_id, item_title, item_context }) =>
+                    handleTriggerDrillDown(item_type, item_id, item_title, item_context)
+                  }
+                />
+              </div>
+            )}
+          </section>
+        );
 
-                    {/* Selected Framework Body */}
-                    {frameworks
-                      .filter((fw) => fw.framework_id === activePhilosophyTab)
-                      .map((fw) => {
-                        const drill = drillDownStates[fw.framework_id];
-                        return (
-                          <div
-                            key={fw.framework_id}
-                            className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-3"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="font-display font-semibold text-sm text-[var(--text-main)]">
-                                  {fw.framework_name}
-                                </h4>
-                                <p className="font-body text-[11px] text-[var(--text-muted)] italic">
-                                  Source: {fw.source}
-                                </p>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleTriggerDrillDown('philosophy', fw.framework_id, fw.framework_name, {
-                                      field: fw.field,
-                                      source: fw.source,
-                                      core_idea: fw.core_idea,
-                                      surfaced_questions: fw.surfaced_questions,
-                                    })
-                                  }
-                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-ui font-medium transition-all flex items-center space-x-1 cursor-pointer ${
-                                    drill?.isOpen
-                                      ? 'bg-[var(--color-verdigris)] text-white'
-                                      : 'bg-[var(--bg-surface)] text-[var(--color-verdigris)] hover:bg-[var(--color-verdigris-subtle)] border border-[var(--color-verdigris)]/30'
-                                  }`}
-                                >
-                                  <Sparkles className="w-3 h-3" />
-                                  <span>{drill?.isOpen ? 'Close Deep Dive' : 'Go Deeper'}</span>
-                                </button>
-                                <span className="font-ui text-[10px] text-[var(--color-verdigris)] px-2 py-0.5 rounded-full bg-[var(--color-verdigris-subtle)]">
-                                  {fw.field}
-                                </span>
-                              </div>
-                            </div>
-
-                            <p className="font-body text-xs text-[var(--text-main)] leading-relaxed">
-                              {fw.core_idea}
-                            </p>
-
-                            <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
-                              <span className="font-ui font-semibold text-xs text-[var(--color-verdigris)]">
-                                Socratic Reflective Inquiries:
-                              </span>
-                              <ul className="space-y-1.5 font-body text-xs text-[var(--text-main)]">
-                                {fw.surfaced_questions.map((q, idx) => (
-                                  <li
-                                    key={idx}
-                                    className="flex items-start space-x-1.5 p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)]"
-                                  >
-                                    <span className="text-[var(--color-verdigris)] font-bold shrink-0">?</span>
-                                    <span className="italic">"{q}"</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-
-                            {/* Inline Drill-Down Drawer */}
-                            {drill?.isOpen && (
-                              <div className="mt-3 p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--color-verdigris)]/40 space-y-3 animate-fade-in text-xs">
-                                {drill.loading ? (
-                                  <div className="py-4 flex flex-col items-center justify-center space-y-2 text-center">
-                                    <div className="w-5 h-5 border-2 border-[var(--color-verdigris)]/30 border-t-[var(--color-verdigris)] rounded-full animate-spin" />
-                                    <span className="font-ui text-[11px] text-[var(--color-verdigris)] animate-pulse">
-                                      Deepening philosophical inquiry...
-                                    </span>
-                                  </div>
-                                ) : drill.data ? (
-                                  <>
-                                    <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
-                                      <span className="font-ui font-semibold text-[var(--color-verdigris)] uppercase tracking-wider text-[10px] flex items-center space-x-1">
-                                        <Sparkles className="w-3 h-3" />
-                                        <span>Socratic Dialectic & Agency Tension</span>
-                                      </span>
-                                      <span className="font-mono text-[10px] text-[var(--text-muted)]">
-                                        {drill.data.academic_context}
-                                      </span>
-                                    </div>
-
-                                    <div className="font-body text-xs text-[var(--text-main)] leading-relaxed space-y-2 whitespace-pre-line">
-                                      {drill.data.deep_dive_markdown}
-                                    </div>
-
-                                    {drill.data.concrete_action_or_test && (
-                                      <div className="p-3 rounded-lg bg-[var(--bg-app)] border border-[var(--border-subtle)] text-xs flex items-start space-x-2">
-                                        <Shield className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0 mt-0.5" />
-                                        <div className="space-y-0.5">
-                                          <span className="font-ui font-semibold text-[var(--color-verdigris)]">
-                                            Philosophical Practice:{' '}
-                                          </span>
-                                          <span className="font-body text-[var(--text-main)]">
-                                            {drill.data.concrete_action_or_test}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </>
-                                ) : null}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+      // -----------------------------------------------------------------------
+      // Systems Thinking & Strategic Game Theory (Meadows, Spence, Rawls)
+      // -----------------------------------------------------------------------
+      case 'systems':
+        if (!bundle.systems_layer) return null;
+        return (
+          <section
+            key="systems"
+            id="sec-systems"
+            className={`phronesis-card transition-all duration-300 ${
+              isExpanded ? 'p-6 space-y-6' : 'p-4 sm:p-5'
+            }`}
+          >
+            <div
+              onClick={() => toggleLayerExpanded('systems')}
+              className="flex items-center justify-between cursor-pointer group"
+            >
+              <div className="flex items-center space-x-2.5">
+                <div
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    isFocused
+                      ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                      : 'bg-[var(--bg-app)] text-[var(--text-muted)]'
+                  }`}
+                >
+                  <Network className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-display font-semibold text-base text-[var(--text-main)] group-hover:text-cyan-400 transition-colors">
+                      Systems Thinking & <GlossaryTerm term="Game Theory">Strategic Game Theory</GlossaryTerm>
+                    </h3>
+                    {isFocused && (
+                      <span className="font-ui text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-medium">
+                        Focus
+                      </span>
+                    )}
                   </div>
-                ) : (
-                  /* Legacy Stoic Fallback */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <div className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2">
-                      <h4 className="font-ui font-semibold text-[var(--color-verdigris)] flex items-center space-x-1.5">
-                        <Shield className="w-3.5 h-3.5" />
-                        <span><GlossaryTerm term="Prohairesis">Internal Controllables</GlossaryTerm></span>
-                      </h4>
-                      <ul className="space-y-1.5 font-body text-[var(--text-main)]">
-                        {philosophy_layer.dichotomy_of_control.internal_controllables.map((item, idx) => (
-                          <li key={idx} className="flex items-start space-x-1.5">
-                            <span className="text-[var(--color-verdigris)] font-bold">•</span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2">
-                      <h4 className="font-ui font-semibold text-[var(--text-muted)] flex items-center space-x-1.5">
-                        <AlertCircle className="w-3.5 h-3.5" />
-                        <span><GlossaryTerm term="Preferred Indifferents">External Indifferents</GlossaryTerm></span>
-                      </h4>
-                      <ul className="space-y-1.5 font-body text-[var(--text-main)]">
-                        {philosophy_layer.dichotomy_of_control.external_uncontrollables.map((item, idx) => (
-                          <li key={idx} className="flex items-start space-x-1.5">
-                            <span className="text-[var(--color-slate)] font-bold">•</span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
+                  <p className="font-body text-xs text-[var(--text-muted)]">
+                    Feedback loops, signaling credibility (Spence), and Rawlsian Veil of Ignorance audit
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <span className="font-data text-xs text-cyan-400 font-medium hidden sm:inline">
+                  {bundle.systems_layer.feedback_loops.dominant_loop_type} Loop
+                </span>
+                <button
+                  type="button"
+                  className="p-1 rounded-lg text-[var(--text-muted)] group-hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors"
+                  aria-label={isExpanded ? 'Collapse layer' : 'Expand layer'}
+                >
+                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {!isExpanded ? (
+              <div className="pt-2 flex items-center justify-between text-xs font-body text-[var(--text-muted)] border-t border-[var(--border-subtle)] mt-3">
+                <p className="truncate pr-2">
+                  Game Type: <strong className="text-[var(--text-main)] font-ui">{bundle.systems_layer.game_theory.game_type}</strong> · Rawlsian: <strong className="text-rose-400 font-ui">{bundle.systems_layer.rawlsian_audit.veil_verdict}</strong>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => toggleLayerExpanded('systems')}
+                  className="text-xs font-ui text-[var(--color-verdigris)] hover:underline shrink-0 flex items-center space-x-1 cursor-pointer"
+                >
+                  <span>Expand Systems</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="pt-2">
+                <SystemsThinkingView
+                  systems={bundle.systems_layer}
+                  onDrillDown={({ item_type, item_id, item_title, item_context }) =>
+                    handleTriggerDrillDown(item_type, item_id, item_title, item_context)
+                  }
+                />
               </div>
             )}
           </section>
@@ -1127,17 +938,31 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => scrollToSection('sec-economics')}
+            className="px-2.5 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors whitespace-nowrap cursor-pointer"
+          >
+            Economics & VoI
+          </button>
+          <button
+            type="button"
             onClick={() => scrollToSection('sec-bias')}
             className="px-2.5 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors whitespace-nowrap cursor-pointer"
           >
-            Cognitive Biases
+            Cognitive Biases (25)
           </button>
           <button
             type="button"
             onClick={() => scrollToSection('sec-philosophy')}
             className="px-2.5 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors whitespace-nowrap cursor-pointer"
           >
-            4 Lenses
+            8 Lenses
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('sec-systems')}
+            className="px-2.5 py-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] transition-colors whitespace-nowrap cursor-pointer"
+          >
+            Systems & Game Theory
           </button>
           <button
             type="button"

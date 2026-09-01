@@ -136,3 +136,138 @@ export function calculateClientMinimaxRegret(
   };
 }
 
+/**
+ * Computes Expected Value of Perfect Information (EVPI) client-side.
+ * Formally: EVPI = sum_j p_j * max_i U[i, j] - max_i sum_j p_j * U[i, j]
+ */
+export function calculateClientEVPI(
+  altIds: string[],
+  stateIds: string[],
+  probabilities: number[],
+  payoffLookup: (altId: string, stateId: string) => number
+): {
+  evpi: number;
+  priorMaxEU: number;
+  posteriorMaxEU: number;
+  fractionalEVPI: number;
+} {
+  const pSum = probabilities.reduce((a, b) => a + b, 0);
+  const p = pSum > 0 ? probabilities.map((val) => val / pSum) : probabilities.map(() => 1 / probabilities.length);
+
+  // 1. Prior max EU
+  let priorMaxEU = -Infinity;
+  for (const aId of altIds) {
+    let eu = 0;
+    for (let j = 0; j < stateIds.length; j++) {
+      eu += p[j] * payoffLookup(aId, stateIds[j]);
+    }
+    if (eu > priorMaxEU) priorMaxEU = eu;
+  }
+
+  // 2. Posterior max EU under perfect information
+  let posteriorMaxEU = 0;
+  for (let j = 0; j < stateIds.length; j++) {
+    let maxUForState = -Infinity;
+    for (const aId of altIds) {
+      const u = payoffLookup(aId, stateIds[j]);
+      if (u > maxUForState) maxUForState = u;
+    }
+    posteriorMaxEU += p[j] * maxUForState;
+  }
+
+  const evpi = Math.max(0, posteriorMaxEU - priorMaxEU);
+  const fractionalEVPI = priorMaxEU > 0 ? evpi / priorMaxEU : 0;
+
+  return {
+    evpi: Math.round(evpi * 100) / 100,
+    priorMaxEU: Math.round(priorMaxEU * 100) / 100,
+    posteriorMaxEU: Math.round(posteriorMaxEU * 100) / 100,
+    fractionalEVPI: Math.round(fractionalEVPI * 1000) / 1000,
+  };
+}
+
+/**
+ * Computes Cumulative Prospect Theory (CPT) values client-side for dynamic slider adjustments.
+ * Tversky & Kahneman (1992): v(x) = (x - ref)^alpha if x >= ref, else -lambda * (ref - x)^beta
+ */
+export function calculateClientCPT(
+  altIds: string[],
+  stateIds: string[],
+  probabilities: number[],
+  payoffLookup: (altId: string, stateId: string) => number,
+  refPoint: number = 50,
+  lambda: number = 2.25,
+  alpha: number = 0.88,
+  beta: number = 0.88
+): Record<string, number> {
+  const pSum = probabilities.reduce((a, b) => a + b, 0);
+  const p = pSum > 0 ? probabilities.map((val) => val / pSum) : probabilities.map(() => 1 / probabilities.length);
+
+  const cptValues: Record<string, number> = {};
+
+  for (const aId of altIds) {
+    let sum = 0;
+    for (let j = 0; j < stateIds.length; j++) {
+      const u = payoffLookup(aId, stateIds[j]);
+      const delta = u - refPoint;
+      let val = 0;
+      if (delta >= 0) {
+        val = Math.pow(delta, alpha);
+      } else {
+        val = -lambda * Math.pow(-delta, beta);
+      }
+      sum += p[j] * val;
+    }
+    cptValues[aId] = Math.round(sum * 100) / 100;
+  }
+
+  return cptValues;
+}
+
+/**
+ * Computes discounting curves (exponential vs quasi-hyperbolic) for interactive time-horizon exploration.
+ */
+export function calculateClientDiscounting(
+  timeHorizonYears: number,
+  futureValue: number,
+  delta: number = 0.07,
+  beta: number = 0.70
+): {
+  expPV: number;
+  hypPV: number;
+  penalty: number;
+  penaltyPct: number;
+  trajectory: { year: number; expPV: number; hypPV: number }[];
+} {
+  const T = Math.max(0.1, timeHorizonYears);
+  const expFactor = Math.exp(-delta * T);
+  const hypFactor = beta * Math.exp(-delta * T);
+
+  const expPV = Math.round(expFactor * futureValue * 10) / 10;
+  const hypPV = Math.round(hypFactor * futureValue * 10) / 10;
+  const penalty = Math.max(0, Math.round((expPV - hypPV) * 10) / 10);
+  const penaltyPct = expPV > 0 ? Math.round((penalty / expPV) * 1000) / 10 : 0;
+
+  const trajectory: { year: number; expPV: number; hypPV: number }[] = [];
+  const steps = 10;
+  for (let i = 0; i <= steps; i++) {
+    const yr = Math.round((i * T / steps) * 10) / 10;
+    const ef = Math.exp(-delta * yr);
+    const hf = yr === 0 ? 1 : beta * Math.exp(-delta * yr);
+    trajectory.push({
+      year: yr,
+      expPV: Math.round(ef * futureValue * 10) / 10,
+      hypPV: Math.round(hf * futureValue * 10) / 10,
+    });
+  }
+
+  return {
+    expPV,
+    hypPV,
+    penalty,
+    penaltyPct,
+    trajectory,
+  };
+}
+
+

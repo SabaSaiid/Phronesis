@@ -39,6 +39,8 @@ from app.engines.math_engine import DecisionTheoryMathEngine
 from app.engines.stoic_engine import StoicPhilosophyEngine
 from app.engines.philosophy_engine import PhilosophyEngine
 from app.engines.critical_thinking_engine import CriticalThinkingEngine
+from app.engines.economics_engine import EconomicsEngine
+from app.engines.systems_engine import SystemsEngine
 from app.core.storage import LocalStorage
 
 router = APIRouter()
@@ -168,17 +170,24 @@ async def analyze_deterministic(decision: StructuredDecision):
     # 1. Math Engine (Pure deterministic)
     math_result = DecisionTheoryMathEngine.compute(decision)
 
-    # 2. Multi-Framework Philosophy Layer (Stoicism, Utilitarianism, Kantian, Virtue Ethics)
+    # 2. Multi-Framework Philosophy Layer (8 frameworks: Stoicism, Utilitarianism, Kantian,
+    #    Virtue Ethics, Existentialism, Care Ethics, Pragmatism, Eastern Flow)
     multi_philosophy = PhilosophyEngine.evaluate(decision)
     legacy_stoic = multi_philosophy.stoic_legacy or StoicPhilosophyEngine.evaluate(decision)
 
-    # 3. Critical Thinking Layer (12 Base Rates + Falsifiability)
+    # 3. Critical Thinking Layer (16 Base Rates + Falsifiability + Antifragility)
     critical_result = CriticalThinkingEngine.evaluate(decision)
 
-    # 4. Longitudinal Context (Threshold-gated: N >= 5)
+    # 4. Economics & Valuation Layer (EVPI/EVSI, Prospect Theory, Discounting, Real Options)
+    economics_result = EconomicsEngine.evaluate(decision, math_result=math_result)
+
+    # 5. Systems Thinking & Game Theory Layer (Feedback Loops, Signaling, Rawlsian Audit)
+    systems_result = SystemsEngine.evaluate(decision)
+
+    # 6. Longitudinal Context (Threshold-gated: N >= 5)
     longitudinal_ctx = LocalStorage.get_longitudinal_summary(decision.domain)
 
-    # Await async bias rubric matching
+    # Await async bias rubric matching (25 biases)
     bias_result = await bias_task
 
     return AnalysisBundle(
@@ -188,6 +197,8 @@ async def analyze_deterministic(decision: StructuredDecision):
         philosophy_layer=legacy_stoic,
         philosophy_multi_layer=multi_philosophy,
         critical_thinking_layer=critical_result,
+        economics_layer=economics_result,
+        systems_layer=systems_result,
         longitudinal_context=longitudinal_ctx
     )
 

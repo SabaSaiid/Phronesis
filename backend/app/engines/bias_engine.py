@@ -3,13 +3,19 @@ import os
 import functools
 from typing import List, Dict, Any
 from app.schemas.decision import StructuredDecision, FlaggedBiasPattern, BiasLayerResult
+from app.engines.base import BaseDeterministicEngine, EngineRegistry
 
-class BiasPatternEngine:
+
+@EngineRegistry.register
+class BiasPatternEngine(BaseDeterministicEngine):
     """
-    Cognitive Bias Pattern Matching Engine for V2 (15 Biases).
+    Cognitive Bias Pattern Matching Engine for V3 (25 Biases).
     Evaluates structured decisions against the human-curated static lookup table.
     Enforces Structural Grounding Tiers (explicit_variable vs narrative_nuance).
     """
+    engine_id = "bias_engine_v1"
+    engine_name = "Cognitive Psychology & Bias Pattern Engine"
+    layer_number = 1
 
     @classmethod
     @functools.lru_cache(maxsize=1)
@@ -330,5 +336,210 @@ class BiasPatternEngine:
                     )
                 )
 
-        # Keep the most salient 2 to 4 flags to maintain report focus
-        return BiasLayerResult(flagged_patterns=flagged[:4])
+        # 16. Affect Heuristic / Emotional Valence Substitution
+        if "affect_heuristic" in kb_map:
+            e = kb_map["affect_heuristic"]
+            affect_words = ["excited", "dread", "gut feeling", "just feels right", "feel good about", "scary", "thrilling", "repulsed"]
+            if any(k in all_narrative_text for k in affect_words):
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger="Emotional valence language (excitement, fear, disgust) appears as a primary driver of preference without quantitative grounding.",
+                        caveat_analysis="The affect heuristic substitutes emotional charge for probabilistic risk-benefit computation. Vivid emotional responses correlate poorly with accurate risk assessment (Slovic et al. 2007).",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="narrative_nuance"
+                    )
+                )
+
+        # 17. Narrow Bracketing / Portfolio Isolation
+        if "narrow_bracketing" in kb_map:
+            e = kb_map["narrow_bracketing"]
+            narrow_words = ["all or nothing", "everything on this", "only option", "this is my one shot", "binary choice"]
+            has_single_income_constraint = any("only" in c.lower() and "income" in c.lower() for c in decision.constraints)
+            if any(k in all_narrative_text for k in narrow_words) or has_single_income_constraint:
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger="Decision framed in all-or-nothing terms, without integrating existing portfolio assets or partial commitment options.",
+                        caveat_analysis="Narrow bracketing treats this choice as a stand-alone event rather than one component of a broader life or financial portfolio, ignoring covariances and diversification (Read, Loewenstein, & Rabin 1999).",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="narrative_nuance"
+                    )
+                )
+
+        # 18. Durability Bias / Affective Forecasting Error
+        if "durability_bias" in kb_map:
+            e = kb_map["durability_bias"]
+            durability_words = ["will never recover", "ruin my life", "catastrophic failure", "permanently damaged",
+                                "destroy my reputation", "will be amazing forever", "best thing ever"]
+            if any(k in all_narrative_text for k in durability_words):
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger="Extreme permanence framing detected — projecting enduring catastrophic or euphoric emotional states far into the future.",
+                        caveat_analysis="Affective forecasting errors (Gilbert & Wilson 2000) consistently show that the psychological immune system adapts more rapidly than anticipated. Both negative and positive emotional intensities attenuate within months of a major life change.",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="narrative_nuance"
+                    )
+                )
+
+        # 19. IKEA Effect / Labor-Love Overvaluation
+        if "ikea_effect" in kb_map:
+            e = kb_map["ikea_effect"]
+            ikea_words = ["built this", "i created", "my product", "my startup", "something i built", "our codebase", "my project"]
+            if any(k in all_narrative_text for k in ikea_words):
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger="Strong ownership or creative investment language detected — the decision may involve retaining or defending a self-built project or system.",
+                        caveat_analysis="The IKEA Effect (Norton, Mochon, & Ariely 2012) produces systematic overvaluation of self-created objects relative to independently assessed market value.",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="narrative_nuance"
+                    )
+                )
+
+        # 20. Social Proof Cascade / Informational Herding
+        if "social_proof_cascade" in kb_map:
+            e = kb_map["social_proof_cascade"]
+            social_words = ["everyone is doing", "all my friends", "it's a trend", "everyone in my field",
+                            "people i know are", "my peers are", "the market is moving to", "fomo"]
+            if any(k in all_narrative_text for k in social_words):
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger="Peer behavior or trend language appears as a significant driver of the preferred alternative's attractiveness.",
+                        caveat_analysis="Social proof cascades (Bikhchandani et al. 1992) cause individuals to treat others' behavior as a substitute for independent probabilistic reasoning — potentially amplifying collective errors.",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="narrative_nuance"
+                    )
+                )
+
+        # 21. Hot-Cold Empathy Gap
+        if "hot_cold_empathy_gap" in kb_map:
+            e = kb_map["hot_cold_empathy_gap"]
+            hotcold_words = ["burned out", "exhausted", "fed up", "can't take it anymore", "desperate",
+                             "extremely excited", "euphoric", "under pressure", "stressed", "anxious"]
+            if any(k in all_narrative_text for k in hotcold_words):
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger="Emotionally heightened or viscerally intense state indicators present — burnout, acute excitement, or high-pressure urgency shaping the decision context.",
+                        caveat_analysis="Loewenstein (1996) demonstrates that visceral states (hunger, fatigue, stress, excitement) systematically alter preferences in predictable but underestimated ways. Decisions made in 'hot' states frequently diverge from 'cold-state' preferences.",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="narrative_nuance"
+                    )
+                )
+
+        # 22. Cognitive Dissonance Shield
+        if "cognitive_dissonance_shield" in kb_map:
+            e = kb_map["cognitive_dissonance_shield"]
+            cd_words = ["already decided", "made up my mind", "just looking for confirmation", "know what i want",
+                        "just need someone to tell me it's okay", "validate my decision"]
+            if any(k in all_narrative_text for k in cd_words):
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger="Pre-decided conclusion language detected — the decision may be presented for validation rather than genuine deliberation.",
+                        caveat_analysis="Festinger (1957): Cognitive dissonance motivates construction of post-hoc rationalizations rather than genuine evaluative reasoning. Distinguishing between decision-making and decision-justification is methodologically critical.",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="narrative_nuance"
+                    )
+                )
+
+        # 23. Self-Handicapping
+        if "self_handicapping" in kb_map:
+            e = kb_map["self_handicapping"]
+            sh_words = ["if it fails", "not my fault if", "circumstances beyond my control", "hedging my bets",
+                        "strategic retreat", "safe option just in case"]
+            if any(k in all_narrative_text for k in sh_words):
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger="External attribution language detected — framing that pre-allocates blame to circumstances if the preferred option fails.",
+                        caveat_analysis="Berglas & Jones (1978): Self-handicapping protects self-esteem by creating external excuses for potential failure, but may systematically lead to under-commitment to higher-expected-value alternatives.",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="narrative_nuance"
+                    )
+                )
+
+        # 24. Base Rate Neglect
+        if "base_rate_neglect" in kb_map:
+            e = kb_map["base_rate_neglect"]
+            base_words = ["i'm different", "but my case is unique", "exceptional", "not like others",
+                          "unlike most people", "my situation is special"]
+            user_p_high = any(s.prior_probability > 0.65 for s in decision.states_of_world
+                              if any(w in s.name.lower() for w in ["success", "win", "achieve", "work out", "succeed"]))
+            if any(k in all_narrative_text for k in base_words) or user_p_high:
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger=(
+                            "Uniqueness or exceptionalism claims detected in narrative, or stated success probability materially exceeds typical empirical base rates for this domain."
+                            if any(k in all_narrative_text for k in base_words)
+                            else "High success probability (>65%) assigned to a complex multi-step outcome without explicit base rate reference."
+                        ),
+                        caveat_analysis="Kahneman & Tversky (1973): Base rate neglect causes individuals to judge their own case by vivid representativeness rather than the statistical frequency of success across comparable situations.",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="explicit_variable" if user_p_high else "narrative_nuance"
+                    )
+                )
+
+        # 25. Escalation of Commitment
+        if "escalation_of_commitment" in kb_map:
+            e = kb_map["escalation_of_commitment"]
+            esc_words = ["too far in to stop", "already invested so much", "can't quit now", "give up",
+                         "double down", "more resources", "stay the course despite", "despite the losses"]
+            if any(k in all_narrative_text for k in esc_words):
+                flagged.append(
+                    FlaggedBiasPattern(
+                        id=e["id"],
+                        name=e["name"],
+                        field=e["field"],
+                        source=e["source"],
+                        core_idea=e["core_idea"],
+                        observed_trigger="Commitment escalation language detected — increasing investment triggered by prior sunk costs rather than updated expected future value.",
+                        caveat_analysis="Staw (1976): Escalation of commitment is structurally distinct from rational perseverance — it is characterized by increasing resource allocation in the presence of negative trajectory evidence rather than genuine expected-value recalculation.",
+                        question_to_surface=e["question_to_surface"],
+                        grounding_tier="narrative_nuance"
+                    )
+                )
+
+        # Return up to 6 most salient flags (expanded from 4) for comprehensive reporting
+        return BiasLayerResult(flagged_patterns=flagged[:6])
+

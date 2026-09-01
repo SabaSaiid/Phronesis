@@ -48,14 +48,18 @@ async def test_golden_benchmarks_bias_and_philosophy():
             assert p.source != "", f"Missing source in {p.name}"
             assert p.grounding_tier in ["explicit_variable", "narrative_nuance"], f"Invalid grounding tier in {p.name}"
 
-        # Test Philosophy Engine (all 4 frameworks)
+        # Test Philosophy Engine (all 8 frameworks)
         phil_res = PhilosophyEngine.evaluate(decision)
-        assert len(phil_res.frameworks) == 4, f"Expected 4 philosophical frameworks for {bm.id}"
+        assert len(phil_res.frameworks) == 8, f"Expected 8 philosophical frameworks for {bm.id}"
         fw_ids = [fw.framework_id for fw in phil_res.frameworks]
         assert "stoicism_v1" in fw_ids
         assert "utilitarianism_v1" in fw_ids
         assert "kantian_deontology_v1" in fw_ids
         assert "virtue_ethics_v1" in fw_ids
+        assert "existentialism_v1" in fw_ids
+        assert "care_ethics_v1" in fw_ids
+        assert "pragmatism_v1" in fw_ids
+        assert "eastern_flow_v1" in fw_ids
 
         # Test Critical Thinking Base Rates
         ct_res = CriticalThinkingEngine.evaluate(decision)

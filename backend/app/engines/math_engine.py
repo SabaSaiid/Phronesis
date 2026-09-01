@@ -8,8 +8,11 @@ from app.schemas.decision import (
     SensitivityAnalysisResult,
     SensitivityPayoffItem
 )
+from app.engines.base import BaseDeterministicEngine, EngineRegistry
 
-class DecisionTheoryMathEngine:
+
+@EngineRegistry.register
+class DecisionTheoryMathEngine(BaseDeterministicEngine):
     """
     Pure deterministic mathematical engine for decision theory.
     - Zero stochasticity or LLM dependencies
@@ -19,6 +22,13 @@ class DecisionTheoryMathEngine:
     Any changes to Expected Utility or inflection threshold formulas must stay synchronized
     with `DESIGN.md` §3.2 and the TypeScript client port in `frontend/src/lib/decisionMath.ts`.
     """
+    engine_id = "math_engine_v1"
+    engine_name = "Decision Theory Math Engine"
+    layer_number = 2
+
+    @classmethod
+    def evaluate(cls, decision: StructuredDecision, **kwargs) -> MathLayerResult:
+        return cls.compute(decision)
 
     @staticmethod
     def compute(decision: StructuredDecision) -> MathLayerResult:

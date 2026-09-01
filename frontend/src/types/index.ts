@@ -137,6 +137,128 @@ export interface CriticalThinkingLayerResult {
   falsifiability_audit: FalsifiabilityAuditItem[];
   base_rate_check?: BaseRateComparisonItem;
   steelmanned_counterargument?: string;
+  antifragility_score?: number;
+  bayesian_update_narrative?: string;
+}
+
+// Economics & Valuation Layer Types
+export interface EVPIResult {
+  evpi_utility: number;
+  evpi_fractional: number;
+  voi_ceiling_narrative: string;
+  algebraic_derivation: string;
+  prior_eu_max: number;
+  posterior_eu_max: number;
+}
+
+export interface EVSIResult {
+  evsi_utility: number;
+  information_efficiency: number;
+  recommended_threshold_narrative: string;
+  reliability_matrix_used: number[][];
+}
+
+export interface ProspectTheoryResult {
+  cpt_values_per_alt: Record<string, number>;
+  eu_preferred_alt: string;
+  cpt_preferred_alt: string;
+  framing_divergence: boolean;
+  loss_aversion_penalty: number;
+  framing_vulnerability_narrative: string;
+  reference_point_sensitivity_narrative: string;
+  alpha_used: number;
+  beta_used: number;
+  lambda_used: number;
+}
+
+export interface RiskAverseProfile {
+  alt_ids: string[];
+  certainty_equivalents: Record<string, number>;
+  risk_premiums: Record<string, number>;
+  gamma_used: number;
+  risk_class: string;
+  narrative: string;
+}
+
+export interface DiscountingResult {
+  time_horizon_years: number;
+  exponential_discount_factor: number;
+  exponential_present_value: number;
+  hyperbolic_discount_factor: number;
+  hyperbolic_present_value: number;
+  present_bias_penalty: number;
+  present_bias_penalty_pct: number;
+  delta_used: number;
+  beta_used: number;
+  exponential_trajectory: [number, number][];
+  hyperbolic_trajectory: [number, number][];
+  impatience_narrative: string;
+  npv_multi_rate_narrative: string;
+}
+
+export interface IntertemporalComparisonResult {
+  long_run_preferred_alt: string;
+  short_run_preferred_alt: string;
+  preference_reversal: boolean;
+  reversal_narrative: string;
+  patience_leverage_narrative: string;
+}
+
+export interface RealOptionsResult {
+  reversibility_type: string;
+  reversibility_score: number;
+  reversibility_narrative: string;
+  option_value_of_waiting: number;
+  hurdle_premium_pct: number;
+  staging_indicated: boolean;
+  staging_narrative: string;
+  convexity_class: string;
+  convexity_score: number;
+  convexity_narrative: string;
+  barbell_applicable: boolean;
+  barbell_narrative: string;
+}
+
+export interface EconomicsLayerResult {
+  evpi: EVPIResult;
+  evsi: EVSIResult;
+  prospect_theory: ProspectTheoryResult;
+  crra_profile: RiskAverseProfile;
+  discounting: DiscountingResult;
+  intertemporal_comparison?: IntertemporalComparisonResult;
+  real_options: RealOptionsResult;
+  opportunity_cost_narrative: string;
+}
+
+// Systems Thinking & Game Theory Layer Types
+export interface FeedbackLoopResult {
+  reinforcing_loops_detected: string[];
+  balancing_loops_detected: string[];
+  dominant_loop_type: string;
+  delay_risk_narrative: string;
+  leverage_point_narrative: string;
+}
+
+export interface GameTheoryResult {
+  game_type: string;
+  signaling_credibility: string;
+  strategic_narrative: string;
+  nash_equilibrium_note: string;
+  cooperation_vs_defection: string;
+}
+
+export interface RawlsianAuditResult {
+  least_advantaged_stakeholder: string;
+  veil_verdict: string;
+  fairness_narrative: string;
+  maximin_alternative?: string;
+}
+
+export interface SystemsLayerResult {
+  feedback_loops: FeedbackLoopResult;
+  game_theory: GameTheoryResult;
+  rawlsian_audit: RawlsianAuditResult;
+  systems_synthesis_narrative: string;
 }
 
 export interface LongitudinalPatternContext {
@@ -200,7 +322,7 @@ export interface UpdateProjectRequest {
   archived?: boolean;
 }
 
-export type FocusLayerId = 'psychology' | 'logic' | 'philosophy' | 'practical';
+export type FocusLayerId = 'psychology' | 'logic' | 'philosophy' | 'economics' | 'systems' | 'practical';
 export type FocusMode = 'all' | FocusLayerId;
 
 export interface FocusConfig {
@@ -215,6 +337,8 @@ export interface AnalysisBundle {
   philosophy_layer: StoicAnalysisResult;
   philosophy_multi_layer?: PhilosophyLayerResult;
   critical_thinking_layer: CriticalThinkingLayerResult;
+  economics_layer?: EconomicsLayerResult;
+  systems_layer?: SystemsLayerResult;
   longitudinal_context?: LongitudinalPatternContext;
   focus_config?: FocusConfig;
   effort_level?: EffortLevel;

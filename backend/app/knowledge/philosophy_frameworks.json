@@ -117,5 +117,138 @@
         "target_signal": "Framing choices as extremes between absolute passivity and reckless overreach."
       }
     ]
+  },
+  {
+    "id": "existentialism_v1",
+    "framework_name": "Existentialist Ethics & Radical Agency (Sartre / Beauvoir)",
+    "field": "continental_philosophy",
+    "source": "Sartre, J-P. (1943). Being and Nothingness. Gallimard. De Beauvoir, S. (1947). The Ethics of Ambiguity. Philosophical Library. Sartre, J-P. (1945). Existentialism Is a Humanism. Yale University Press.",
+    "core_idea": "Existence precedes essence — the individual is radically free and fully responsible for who they become through choices. Bad Faith (mauvaise foi) is the denial of this freedom by pretending one is compelled by role, duty, circumstance, or external authority.",
+    "classification_rules": {
+      "bad_faith_keywords": [
+        "have to", "no choice", "forced", "expected of me", "duty", "can't leave",
+        "obligation", "contractually bound", "everyone expects", "role demands",
+        "family expects", "society expects", "no way out"
+      ],
+      "authentic_agency_keywords": [
+        "choose", "decide", "own", "take responsibility", "create", "author",
+        "commit", "define myself", "self-define", "genuinely want"
+      ]
+    },
+    "lens_questions": [
+      {
+        "dimension": "bad_faith_detection",
+        "question": "Are you describing this choice as one you 'have to' make, or one you 'must' do because of your role or obligations — while concealing from yourself that it is genuinely your free choice?",
+        "target_signal": "Language of compulsion, duty, or inevitability masking an authentic choice."
+      },
+      {
+        "dimension": "radical_responsibility",
+        "question": "In making this decision, are you accepting full authorship of the consequences — including the possibility of failure — without attributing outcomes to external forces?",
+        "target_signal": "Framing that externalizes responsibility or blames circumstances for what is genuinely a chosen path."
+      },
+      {
+        "dimension": "authentic_project",
+        "question": "Does this alternative align with your own authentic project — the values and way of being you have freely chosen — rather than an adopted script from family, culture, or career norms?",
+        "target_signal": "Preferences that seem driven entirely by external scripts or inherited expectations."
+      }
+    ]
+  },
+  {
+    "id": "care_ethics_v1",
+    "framework_name": "Care Ethics & Relational Ontology (Gilligan / Noddings)",
+    "field": "feminist_moral_philosophy",
+    "source": "Gilligan, C. (1982). In a Different Voice: Psychological Theory and Women's Development. Harvard University Press. Noddings, N. (1984). Caring: A Feminine Approach to Ethics and Moral Education. University of California Press.",
+    "core_idea": "Moral reasoning is grounded in maintaining and nurturing particular relationships, trust, interdependence, and responsiveness to vulnerability — rather than applying abstract universal rules or maximizing aggregate utility across faceless others.",
+    "classification_rules": {
+      "relational_keywords": [
+        "relationship", "trust", "family", "partner", "children", "team", "colleagues",
+        "dependency", "care for", "support", "loyalty", "promise", "community",
+        "friendship", "mentor", "impact on others", "emotional needs"
+      ]
+    },
+    "lens_questions": [
+      {
+        "dimension": "relational_impact",
+        "question": "Which particular individuals — with names and specific vulnerabilities — are most affected by this decision, and whose relational needs are being silenced by the abstract language of your analysis?",
+        "target_signal": "Treating affected others as abstract 'stakeholders' rather than particular human beings in relationship with the decision-maker."
+      },
+      {
+        "dimension": "trust_and_dependency",
+        "question": "Does any of your alternatives involve breaking a web of trust or creating a new dependency that someone close to you cannot easily escape — and is that being acknowledged rather than rationalized?",
+        "target_signal": "Language that minimizes relational disruption or treats relational obligations as secondary to strategic goals."
+      },
+      {
+        "dimension": "contextual_responsiveness",
+        "question": "Are you responding to this specific situation in its full human particularity, or applying a generic rule that ignores the emotional and relational context of who is affected?",
+        "target_signal": "Heavy reliance on principle-based reasoning that abstracts away from the lived emotional reality of those affected."
+      }
+    ]
+  },
+  {
+    "id": "pragmatism_v1",
+    "framework_name": "American Pragmatism & Instrumental Value (James / Dewey)",
+    "field": "american_philosophy",
+    "source": "James, W. (1907). Pragmatism: A New Name for Some Old Ways of Thinking. Longmans, Green. Dewey, J. (1922). Human Nature and Conduct. Henry Holt. Peirce, C.S. (1878). 'How to Make Our Ideas Clear'. Popular Science Monthly.",
+    "core_idea": "The value and truth of an idea, belief, or choice are determined by its concrete practical consequences in lived experience. Dilemmas are best resolved by treating options as living hypotheses to be tested rather than as final philosophical commitments.",
+    "classification_rules": {
+      "testable_outcome_keywords": [
+        "test", "experiment", "pilot", "try", "prototype", "evidence", "outcome",
+        "practical", "work", "result", "difference", "experience", "consequences",
+        "action", "effective", "feasible", "improve", "verify"
+      ]
+    },
+    "lens_questions": [
+      {
+        "dimension": "concrete_difference",
+        "question": "What specific, observable difference in your daily lived experience will distinguishing between these options actually produce — and can you describe that difference in concrete behavioral terms rather than abstractions?",
+        "target_signal": "Decision framed in abstract conceptual terms without concrete experiential consequences."
+      },
+      {
+        "dimension": "living_hypothesis",
+        "question": "Can you reframe your preferred option as a time-limited, empirically testable hypothesis rather than a permanent commitment — and what specific evidence over the next 90 days would confirm or falsify it?",
+        "target_signal": "All-or-nothing framing that forecloses reversible experimentation."
+      },
+      {
+        "dimension": "instrumental_inquiry",
+        "question": "Which beliefs or assumptions underlying your preference can you actually test through low-cost real-world actions — and have you identified the cheapest way to run that test?",
+        "target_signal": "Preference for a path without identifying any actionable test of the core underlying assumption."
+      }
+    ]
+  },
+  {
+    "id": "eastern_flow_v1",
+    "framework_name": "Eastern Wisdom & Dynamic Non-Attachment (Laozi / Zhuangzi / Nagarjuna)",
+    "field": "eastern_philosophy",
+    "source": "Laozi (c. 400 BCE). Dao De Jing. Zhuangzi (c. 300 BCE). Zhuangzi. Nagarjuna (c. 150 CE). Mulamadhyamakakarika. Thich Nhat Hanh (1988). The Heart of Understanding. Parallax Press.",
+    "core_idea": "Wu Wei (effortless action aligned with reality's natural momentum) and Anicca (impermanence of all conditioned phenomena) together suggest that grasping rigidly at outcomes, identities, or roles generates unnecessary suffering. Wise action flows with reality rather than forcing resistance against it.",
+    "classification_rules": {
+      "forcing_resistance_keywords": [
+        "force", "fight against", "resist", "holding on", "must succeed", "identity",
+        "prove myself", "can't let go", "need to win", "ego", "reputation defense",
+        "prestige", "status threat", "clinging", "attached to outcome"
+      ],
+      "flow_alignment_keywords": [
+        "natural", "momentum", "timing", "season", "let go", "adapt", "flow",
+        "organic", "effortless", "right time", "release", "surrender control"
+      ]
+    },
+    "lens_questions": [
+      {
+        "dimension": "wu_wei_alignment",
+        "question": "Which of these alternatives flows with the natural momentum of your current reality — and which requires you to force, resist, or strain against existing conditions?",
+        "target_signal": "Strong effortful forcing framing where one alternative requires sustained resistance against structural reality."
+      },
+      {
+        "dimension": "non_attachment_to_outcomes",
+        "question": "Are you clinging to a specific outcome (a title, a validation, a particular form of success) that has become more important to your identity than the actual quality of your daily practice and engagement?",
+        "target_signal": "Decision primarily driven by outcome attachment rather than intrinsic quality of the process or action itself."
+      },
+      {
+        "dimension": "impermanence_recognition",
+        "question": "The current circumstances — the job, the opportunity, the relationship — are impermanent and will change regardless. Are you making this choice as if current conditions are permanent and fixed?",
+        "target_signal": "Planning and preference structure that treats current conditions as permanent rather than as one moment in an ongoing dynamic process."
+      }
+    ]
   }
 ]
+

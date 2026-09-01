@@ -132,6 +132,116 @@ class CriticalThinkingLayerResult(BaseModel):
     falsifiability_audit: List[FalsifiabilityAuditItem] = Field(default_factory=list)
     base_rate_check: Optional[BaseRateComparisonItem] = None
     steelmanned_counterargument: Optional[str] = None
+    antifragility_score: Optional[float] = None
+    bayesian_update_narrative: Optional[str] = None
+
+# Economics & Valuation Layer Schemas
+class EVPIResultSchema(BaseModel):
+    evpi_utility: float
+    evpi_fractional: float
+    voi_ceiling_narrative: str
+    algebraic_derivation: str
+    prior_eu_max: float
+    posterior_eu_max: float
+
+class EVSIResultSchema(BaseModel):
+    evsi_utility: float
+    information_efficiency: float
+    recommended_threshold_narrative: str
+    reliability_matrix_used: List[List[float]] = Field(default_factory=list)
+
+class ProspectTheoryResultSchema(BaseModel):
+    cpt_values_per_alt: Dict[str, float] = Field(default_factory=dict)
+    eu_preferred_alt: str
+    cpt_preferred_alt: str
+    framing_divergence: bool
+    loss_aversion_penalty: float
+    framing_vulnerability_narrative: str
+    reference_point_sensitivity_narrative: str
+    alpha_used: float
+    beta_used: float
+    lambda_used: float
+
+class RiskAverseProfileSchema(BaseModel):
+    alt_ids: List[str] = Field(default_factory=list)
+    certainty_equivalents: Dict[str, float] = Field(default_factory=dict)
+    risk_premiums: Dict[str, float] = Field(default_factory=dict)
+    gamma_used: float
+    risk_class: str
+    narrative: str
+
+class DiscountingResultSchema(BaseModel):
+    time_horizon_years: float
+    exponential_discount_factor: float
+    exponential_present_value: float
+    hyperbolic_discount_factor: float
+    hyperbolic_present_value: float
+    present_bias_penalty: float
+    present_bias_penalty_pct: float
+    delta_used: float
+    beta_used: float
+    exponential_trajectory: List[Any] = Field(default_factory=list)
+    hyperbolic_trajectory: List[Any] = Field(default_factory=list)
+    impatience_narrative: str
+    npv_multi_rate_narrative: str
+
+class IntertemporalComparisonResultSchema(BaseModel):
+    long_run_preferred_alt: str
+    short_run_preferred_alt: str
+    preference_reversal: bool
+    reversal_narrative: str
+    patience_leverage_narrative: str
+
+class RealOptionsResultSchema(BaseModel):
+    reversibility_type: str
+    reversibility_score: float
+    reversibility_narrative: str
+    option_value_of_waiting: float
+    hurdle_premium_pct: float
+    staging_indicated: bool
+    staging_narrative: str
+    convexity_class: str
+    convexity_score: float
+    convexity_narrative: str
+    barbell_applicable: bool
+    barbell_narrative: str
+
+class EconomicsLayerResult(BaseModel):
+    evpi: EVPIResultSchema
+    evsi: EVSIResultSchema
+    prospect_theory: ProspectTheoryResultSchema
+    crra_profile: RiskAverseProfileSchema
+    discounting: DiscountingResultSchema
+    intertemporal_comparison: Optional[IntertemporalComparisonResultSchema] = None
+    real_options: RealOptionsResultSchema
+    opportunity_cost_narrative: str
+
+# Systems Thinking & Game Theory Layer Schemas
+class FeedbackLoopResultSchema(BaseModel):
+    reinforcing_loops_detected: List[str] = Field(default_factory=list)
+    balancing_loops_detected: List[str] = Field(default_factory=list)
+    dominant_loop_type: str
+    delay_risk_narrative: str
+    leverage_point_narrative: str
+
+class GameTheoryResultSchema(BaseModel):
+    game_type: str
+    signaling_credibility: str
+    strategic_narrative: str
+    nash_equilibrium_note: str
+    cooperation_vs_defection: str
+
+class RawlsianAuditResultSchema(BaseModel):
+    least_advantaged_stakeholder: str
+    veil_verdict: str
+    fairness_narrative: str
+    maximin_alternative: Optional[str] = None
+
+class SystemsLayerResult(BaseModel):
+    feedback_loops: FeedbackLoopResultSchema
+    game_theory: GameTheoryResultSchema
+    rawlsian_audit: RawlsianAuditResultSchema
+    systems_synthesis_narrative: str
 
 class LongitudinalPatternContext(BaseModel):
     total_decisions_logged: int = 0
@@ -184,8 +294,8 @@ class UpdateProjectRequest(BaseModel):
 
 class FocusConfig(BaseModel):
     focused_layers: List[str] = Field(
-        default_factory=lambda: ["psychology", "logic", "philosophy", "practical"],
-        description="List of focused layers: psychology, logic, philosophy, practical"
+        default_factory=lambda: ["psychology", "logic", "philosophy", "economics", "systems", "practical"],
+        description="List of focused layers: psychology, logic, philosophy, economics, systems, practical"
     )
     philosophy_frameworks: List[str] = Field(
         default_factory=list,
@@ -199,6 +309,8 @@ class AnalysisBundle(BaseModel):
     philosophy_layer: StoicAnalysisResult # Preserved for backward compatibility
     philosophy_multi_layer: Optional[PhilosophyLayerResult] = None
     critical_thinking_layer: CriticalThinkingLayerResult
+    economics_layer: Optional[EconomicsLayerResult] = None
+    systems_layer: Optional[SystemsLayerResult] = None
     longitudinal_context: Optional[LongitudinalPatternContext] = None
     focus_config: Optional[FocusConfig] = None
     effort_level: Optional[str] = Field(default="standard", description="quick, standard, or thorough")

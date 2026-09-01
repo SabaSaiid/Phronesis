@@ -94,5 +94,37 @@
     "empirical_base_rate_percentage": 72.0,
     "description": "72% of new physical commercial establishments survive their first 12 months of operation; 50% survive past year 5.",
     "keywords": ["retail store", "restaurant", "physical location", "commercial lease", "brick and mortar", "cafe", "storefront"]
+  },
+  {
+    "reference_class": "AI / Deep Tech Venture Seed-to-Product Revenue (18 Months)",
+    "domain": "venture_capital",
+    "source": "Sequoia Capital Partner Reports; Scale AI / Andreessen Horowitz AI State of AI Benchmarks (2024-2025)",
+    "empirical_base_rate_percentage": 18.0,
+    "description": "Only 18% of AI/ML deep-tech seed-stage ventures generate meaningful product revenue within 18 months of founding, largely due to infrastructure costs, enterprise sales cycles, and regulatory friction.",
+    "keywords": ["ai startup", "machine learning", "deep tech", "llm product", "artificial intelligence", "foundation model", "ml infrastructure"]
+  },
+  {
+    "reference_class": "Sabbatical / Career Break Re-entry to Equivalent Compensation (12 Months)",
+    "domain": "labor_economics",
+    "source": "LinkedIn Workforce Insights (2024); Bureau of Labor Statistics Re-entry Longitudinal Study",
+    "empirical_base_rate_percentage": 61.0,
+    "description": "61% of professionals returning from an intentional career break (sabbatical, parental leave, or voluntary departure) successfully re-enter at equivalent or higher compensation within 12 months of active search, contingent on maintaining professional network engagement.",
+    "keywords": ["sabbatical", "career break", "gap year", "take time off", "leave of absence", "burnout recovery", "rest and return"]
+  },
+  {
+    "reference_class": "Bootstrapped SaaS reaching $1M ARR (Without Institutional Funding)",
+    "domain": "software_engineering",
+    "source": "Indie Hackers / Baremetrics Benchmarks; Sahil Lavingia / Gumroad Revenue Studies (2023-2025)",
+    "empirical_base_rate_percentage": 4.0,
+    "description": "Approximately 4% of bootstrapped SaaS ventures founded by solo or small teams (1-3 founders, no institutional capital) reach $1M Annual Recurring Revenue within 3 years.",
+    "keywords": ["bootstrapped", "indie hacker", "no funding", "solo founder", "self-funded", "saas product", "mrr", "arr target"]
+  },
+  {
+    "reference_class": "First-Time Homebuyer Transaction Satisfaction (2+ Years Post-Purchase)",
+    "domain": "personal_finance",
+    "source": "National Association of Realtors Annual Survey; Gallup American Housing Satisfaction Index (2023-2025)",
+    "empirical_base_rate_percentage": 67.0,
+    "description": "67% of first-time homebuyers report overall satisfaction with their purchase decision at the 2-year mark, with dissatisfaction drivers primarily relating to unexpected maintenance costs (73%) and location regret (41%).",
+    "keywords": ["buy house", "first home", "homebuyer", "mortgage", "property purchase", "real estate", "own a home"]
   }
 ]

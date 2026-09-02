@@ -471,6 +471,7 @@ if [ "$START_FRONTEND" = true ]; then
     cd "$SCRIPT_DIR/frontend"
     log_info "Launching Vite Frontend on ${BOLD}http://${HOST}:${PORT_FRONTEND}${RESET}..."
 
+    export VITE_BACKEND_URL="http://127.0.0.1:${PORT_BACKEND}"
     if [ "$PROD_MODE" = true ]; then
         npm run build
         npx vite preview --host "$HOST" --port "$PORT_FRONTEND" &

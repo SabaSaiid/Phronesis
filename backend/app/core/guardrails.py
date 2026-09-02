@@ -161,6 +161,29 @@ class ReportGuardrail:
             else:
                 biases_formatted = "- No acute cognitive bias patterns flagged."
 
+        # Economics Layer Formatting if available
+        econ = getattr(bundle, "economics_layer", None)
+        econ_section = ""
+        if econ:
+            econ_bullets = [
+                f"- **Expected Value of Perfect Information (EVPI):** The theoretical ceiling on uncertainty reduction is {econ.evpi.evpi_utility:.1f} EU units ({econ.evpi.evpi_fractional * 100:.1f}% of base payoff). {econ.evpi.voi_ceiling_narrative}",
+                f"- **Prospect Theory & Risk Framing:** {econ.prospect_theory.framing_vulnerability_narrative}",
+                f"- **Intertemporal Choice & Discounting:** {econ.discounting.impatience_narrative}",
+                f"- **Real Options & Reversibility:** Classified as {econ.real_options.reversibility_type} (score {econ.real_options.reversibility_score:.2f}). {econ.real_options.reversibility_narrative}"
+            ]
+            econ_section = "\n---\n\n## 2. Quantitative Economics & Valuation\n" + "\n".join(econ_bullets) + "\n"
+
+        # Systems Layer Formatting if available
+        systems = getattr(bundle, "systems_layer", None)
+        systems_section = ""
+        if systems:
+            sys_bullets = [
+                f"- **Feedback Dynamics:** Dominant structure is {systems.feedback_loops.dominant_loop_type}. {systems.feedback_loops.delay_risk_narrative}",
+                f"- **Strategic Signaling & Game Theory:** Classified as {systems.game_theory.game_type}. Signaling credibility assessed as {systems.game_theory.signaling_credibility}. {systems.game_theory.strategic_narrative}",
+                f"- **Rawlsian Fairness Audit:** {systems.rawlsian_audit.fairness_narrative}"
+            ]
+            systems_section = "\n### Systems Dynamics & Game Theoretic Strategic Context\n" + "\n".join(sys_bullets) + "\n"
+
         # Multi-Framework Philosophy formatting (Full vs Condensed)
         if "philosophy" in focused_layers:
             philosophy_sections = []
@@ -188,7 +211,7 @@ class ReportGuardrail:
         # Longitudinal context block if present
         longitudinal_block = ""
         if longitudinal and longitudinal.summary_text:
-            longitudinal_block = f"\n---\n\n## 4. Longitudinal Decision Patterns (Local Memory)\n{longitudinal.summary_text}\n"
+            longitudinal_block = f"\n---\n\n## 5. Longitudinal Decision Patterns (Local Memory)\n{longitudinal.summary_text}\n"
 
         return f"""# Decision Reasoning Audit: {d.decision_statement}
 
@@ -199,19 +222,21 @@ Analysis of the structured decision model reveals a primary structural tension b
 
 ## 1. Mathematical Sensitivity & Inflection Thresholds
 {math_section}
-
+{econ_section}
 ---
 
-## 2. Sourced Cognitive & Philosophical Tradeoffs
+## 3. Sourced Cognitive & Systems Tradeoffs
 ### Cognitive Pattern Grounding
 {biases_formatted}
+{systems_section}
+---
 
-### Multi-Lens Philosophical Reflection
+## 4. Multi-Lens Philosophical Reflection
 {philosophy_formatted}
 
 ---
 
-## 3. High-Leverage Value of Information (VoI) Experiments
+## 5. High-Leverage Value of Information (VoI) Experiments
 - **Most Critical Variable:** {critical_param}
 - **Proposed Low-Cost Verification:** Run a focused 48-hour informational test on '{critical_param}' before committing resources.
 {longitudinal_block}"""

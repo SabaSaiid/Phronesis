@@ -127,6 +127,83 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
     propagate(updated);
   };
 
+  const handleAddAlternative = () => {
+    const newId = `alt_${Date.now()}`;
+    const newAlt = {
+      id: newId,
+      name: `Alternative ${model.alternatives.length + 1}`,
+      description: 'Custom added alternative option',
+    };
+    const newCells = model.states_of_world.map((st) => ({
+      alternative_id: newId,
+      state_id: st.id,
+      utility: 50,
+    }));
+    const updated: StructuredDecision = {
+      ...model,
+      alternatives: [...model.alternatives, newAlt],
+      payoff_matrix: [...model.payoff_matrix, ...newCells],
+    };
+    propagate(updated);
+  };
+
+  const handleRemoveAlternative = (altId: string) => {
+    if (model.alternatives.length <= 2) return;
+    const updated: StructuredDecision = {
+      ...model,
+      alternatives: model.alternatives.filter((a) => a.id !== altId),
+      payoff_matrix: model.payoff_matrix.filter((p) => p.alternative_id !== altId),
+    };
+    propagate(updated);
+  };
+
+  const handleAddState = () => {
+    const newId = `state_${Date.now()}`;
+    const count = model.states_of_world.length + 1;
+    const equalProb = Math.round((1.0 / count) * 100) / 100;
+    const updatedStates = model.states_of_world.map((st) => ({
+      ...st,
+      prior_probability: equalProb,
+    }));
+    const remainder = Math.round((1.0 - (equalProb * count)) * 100) / 100;
+    updatedStates.push({
+      id: newId,
+      name: `State ${count}`,
+      prior_probability: equalProb + remainder,
+    });
+    const newCells = model.alternatives.map((alt) => ({
+      alternative_id: alt.id,
+      state_id: newId,
+      utility: 50,
+    }));
+    const updated: StructuredDecision = {
+      ...model,
+      states_of_world: updatedStates,
+      payoff_matrix: [...model.payoff_matrix, ...newCells],
+    };
+    propagate(updated);
+  };
+
+  const handleRemoveState = (stateId: string) => {
+    if (model.states_of_world.length <= 2) return;
+    const remaining = model.states_of_world.filter((s) => s.id !== stateId);
+    const total = remaining.reduce((sum, s) => sum + s.prior_probability, 0);
+    const rebalanced = remaining.map((s) => ({
+      ...s,
+      prior_probability: total > 0 ? Math.round((s.prior_probability / total) * 100) / 100 : Math.round((1 / remaining.length) * 100) / 100,
+    }));
+    const rem = Math.round((1.0 - rebalanced.reduce((sum, s) => sum + s.prior_probability, 0)) * 100) / 100;
+    if (rem !== 0 && rebalanced.length > 0) {
+      rebalanced[rebalanced.length - 1].prior_probability += rem;
+    }
+    const updated: StructuredDecision = {
+      ...model,
+      states_of_world: rebalanced,
+      payoff_matrix: model.payoff_matrix.filter((p) => p.state_id !== stateId),
+    };
+    propagate(updated);
+  };
+
   const totalProb = model.states_of_world.reduce((acc, s) => acc + s.prior_probability, 0);
   const isProbValid = Math.abs(totalProb - 1.0) < 0.01;
 
@@ -200,6 +277,14 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
               Subjective satisfaction scores (0–100 scale) for each alternative under each world state.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={handleAddAlternative}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-ui font-medium bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] text-[var(--text-main)] transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
+            <span>Add Alternative</span>
+          </button>
         </div>
 
         <div className="space-y-4 pt-2">
@@ -208,14 +293,26 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
               key={alt.id}
               className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-3"
             >
-              <div>
-                <div className="font-ui font-semibold text-sm text-[var(--text-main)]">
-                  {alt.name}
-                </div>
-                {alt.description && (
-                  <div className="font-body text-xs text-[var(--text-muted)] mt-0.5">
-                    {alt.description}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="font-ui font-semibold text-sm text-[var(--text-main)]">
+                    {alt.name}
                   </div>
+                  {alt.description && (
+                    <div className="font-body text-xs text-[var(--text-muted)] mt-0.5">
+                      {alt.description}
+                    </div>
+                  )}
+                </div>
+                {model.alternatives.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAlternative(alt.id)}
+                    title="Remove alternative (minimum 2 required)"
+                    className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
 
@@ -285,6 +382,14 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={handleAddState}
+              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-ui bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] text-[var(--text-main)] transition-colors cursor-pointer"
+            >
+              <Plus className="w-3 h-3 text-[var(--color-verdigris)]" />
+              <span>Add State</span>
+            </button>
             <div
               className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-data ${
                 isProbValid
@@ -315,7 +420,19 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
               className="p-3.5 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2"
             >
               <div className="flex items-center justify-between text-xs">
-                <span className="font-ui font-medium text-[var(--text-main)]">{st.name}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="font-ui font-medium text-[var(--text-main)]">{st.name}</span>
+                  {model.states_of_world.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveState(st.id)}
+                      title="Remove state (minimum 2 required)"
+                      className="p-0.5 rounded text-[var(--text-muted)] hover:text-rose-400 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
                 <span className="font-data font-bold text-[var(--color-verdigris)]">
                   {Math.round(st.prior_probability * 100)}%
                 </span>

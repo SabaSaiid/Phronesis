@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import type { EconomicsLayerResult, StructuredDecision } from '../../types';
 import { calculateClientEVPI, calculateClientCPT, calculateClientDiscounting } from '../../lib/decisionMath';
 import { DollarSign, ShieldAlert, ArrowRight } from 'lucide-react';
@@ -20,30 +20,34 @@ export const EconomicsExplorer: React.FC<EconomicsExplorerProps> = ({
   const [horizonYears, setHorizonYears] = useState<number>(economics.discounting.time_horizon_years || 2);
   const [presentBiasBeta, setPresentBiasBeta] = useState<number>(economics.discounting.beta_used || 0.70);
 
-  const altIds = useMemo(() => decision.alternatives.map((a) => a.id), [decision]);
-  const stateIds = useMemo(() => decision.states_of_world.map((s) => s.id), [decision]);
-  const probabilities = useMemo(() => decision.states_of_world.map((s) => s.prior_probability), [decision]);
+  const altIds = useMemo(() => decision.alternatives.map((a) => a.id), [decision.alternatives]);
+  const stateIds = useMemo(() => decision.states_of_world.map((s) => s.id), [decision.states_of_world]);
+  const probabilities = useMemo(() => decision.states_of_world.map((s) => s.prior_probability), [decision.states_of_world]);
 
-  const payoffLookup = (altId: string, stateId: string) => {
+  const payoffLookup = useCallback((altId: string, stateId: string) => {
     const cell = decision.payoff_matrix.find((p) => p.alternative_id === altId && p.state_id === stateId);
     return cell ? cell.utility : 50;
-  };
+  }, [decision.payoff_matrix]);
 
   // Live dynamic EVPI
   const liveEVPI = useMemo(() => {
     return calculateClientEVPI(altIds, stateIds, probabilities, payoffLookup);
-  }, [altIds, stateIds, probabilities, decision]);
+  }, [altIds, stateIds, probabilities, payoffLookup]);
 
   // Live dynamic CPT
   const liveCPT = useMemo(() => {
     return calculateClientCPT(altIds, stateIds, probabilities, payoffLookup, referencePoint, lambda);
-  }, [altIds, stateIds, probabilities, decision, referencePoint, lambda]);
+  }, [altIds, stateIds, probabilities, payoffLookup, referencePoint, lambda]);
 
   // Live dynamic Discounting
   const liveDiscounting = useMemo(() => {
-    const futureVal = economics.discounting.exponential_present_value || 75;
+    const futureVal =
+      economics.discounting.future_utility_value ??
+      (economics.discounting.exponential_discount_factor > 0
+        ? economics.discounting.exponential_present_value / economics.discounting.exponential_discount_factor
+        : 75);
     return calculateClientDiscounting(horizonYears, futureVal, 0.07, presentBiasBeta);
-  }, [horizonYears, presentBiasBeta, economics]);
+  }, [horizonYears, presentBiasBeta, economics.discounting]);
 
   const bestAltName = (id: string) => {
     const a = decision.alternatives.find((alt) => alt.id === id);

@@ -56,6 +56,9 @@ class DiscountingResult:
     impatience_narrative: str
     npv_multi_rate_narrative: str            # NPV under 3%, 7%, 12%
 
+    # Undiscounted future utility reference
+    future_utility_value: float = 75.0
+
 
 @dataclass
 class IntertemporalComparisonResult:
@@ -220,6 +223,7 @@ def compute_discounting_analysis(
         hyperbolic_trajectory=hyp_traj,
         impatience_narrative=impatience_narrative,
         npv_multi_rate_narrative=npv_narrative,
+        future_utility_value=round(future_utility_value, 2),
     )
 
 
@@ -258,7 +262,7 @@ def compare_intertemporal(
             f"the ranking is indicated."
         )
         patience_narrative = (
-            f"Increasing patience (reducing β toward 1.0 or extending commitment) would shift the "
+            f"Increasing patience (raising β toward 1.0 or extending commitment) would shift the "
             f"intertemporal preference toward '{long_run_pref}'. "
             f"A staged or pre-committed approach (e.g., Ulysses contract) can help align "
             f"present-self preferences with long-run projected values."

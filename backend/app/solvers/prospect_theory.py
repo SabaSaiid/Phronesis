@@ -224,7 +224,7 @@ def compute_crra_profile(
             ce = math.exp(eu_sum)
         else:
             inner = eu_sum * (1 - gamma)
-            if inner < 0:
+            if inner <= 1e-9:
                 ce = 0.01
             else:
                 ce = inner ** (1.0 / (1 - gamma))

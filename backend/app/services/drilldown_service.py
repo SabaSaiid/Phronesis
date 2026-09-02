@@ -40,7 +40,8 @@ class DrillDownService:
         try:
             raw_response = await LLMClient.generate_structured_json(
                 system_prompt=DRILLDOWN_SYSTEM_PROMPT,
-                user_prompt=user_prompt
+                user_prompt=user_prompt,
+                llm_config=req.llm_config
             )
             
             deep_dive_md = raw_response.get("deep_dive_markdown", "")

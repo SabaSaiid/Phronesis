@@ -233,21 +233,17 @@ class EconomicsEngine(BaseDeterministicEngine):
 
         best_eu = eu_values.get(best, 0)
         runner_eu = eu_values.get(runner_up, 0)
-        opp_cost = round(runner_eu - best_eu, 2)
+        delta = round(best_eu - runner_eu, 2)
 
-        if opp_cost >= 0:
+        if delta == 0:
             return (
-                f"The opportunity cost of selecting '{best}' over '{runner_up}' is structurally zero — "
-                f"'{best}' leads on Expected Utility ({best_eu:.1f}) by {abs(opp_cost):.1f} units. "
-                f"Selecting '{runner_up}' would carry an implicit shadow cost of {abs(opp_cost):.1f} "
-                f"Expected Utility units foregone."
+                f"Selecting either '{best}' or '{runner_up}' carries negligible expected opportunity cost "
+                f"(both yield ~{best_eu:.1f} Expected Utility units), indicating near-indifference on expected payoff alone."
             )
         else:
-            foregone = round(abs(opp_cost), 2)
             return (
-                f"The opportunity cost of selecting '{best}' instead of '{runner_up}' is "
-                f"{foregone:.1f} Expected Utility units — the implicit yield sacrificed by "
-                f"not pursuing the alternative with the next-highest expected payoff. "
-                f"This shadow price grounds the rational willingness-to-pay for uncertainty "
-                f"reduction via targeted experiments."
+                f"Choosing the runner-up alternative '{runner_up}' instead of the leading choice '{best}' "
+                f"carries an expected opportunity cost of {delta:.1f} Expected Utility units — the implicit yield "
+                f"sacrificed by not pursuing the payoff-maximizing path. Conversely, selecting '{best}' captures "
+                f"a +{delta:.1f} EU yield premium over the closest competitor."
             )

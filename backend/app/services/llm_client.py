@@ -156,7 +156,7 @@ class LLMClient:
             if provider == "gemini":
                 from google.genai import types
                 client = cls._get_gemini_client(api_key)
-                response = client.models.generate_content(
+                response = await client.aio.models.generate_content(
                     model=model,
                     contents=f"{system_prompt}\n\nUser Input:\n{user_prompt}",
                     config=types.GenerateContentConfig(
@@ -217,7 +217,7 @@ class LLMClient:
         try:
             if provider == "gemini":
                 client = cls._get_gemini_client(api_key)
-                response = client.models.generate_content(
+                response = await client.aio.models.generate_content(
                     model=model,
                     contents=f"{system_prompt}\n\nContext Data:\n{user_prompt}"
                 )
@@ -373,7 +373,7 @@ class LLMClient:
             if provider == "gemini":
                 from google.genai import types
                 client = cls._get_gemini_client(api_key)
-                response = client.models.generate_content(
+                response = await client.aio.models.generate_content(
                     model=model,
                     contents=f"{system_prompt}\n\n{user_prompt}",
                     config=types.GenerateContentConfig(
@@ -457,7 +457,7 @@ class LLMClient:
                 from google import genai
                 from google.genai import types
                 client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(
+                response = await client.aio.models.generate_content(
                     model="gemini-2.5-flash",
                     contents="Reply with the single word: OK",
                     config=types.GenerateContentConfig(max_output_tokens=5, temperature=0.0)

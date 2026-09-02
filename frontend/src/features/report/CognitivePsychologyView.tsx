@@ -1,18 +1,36 @@
 import React, { useState } from 'react';
 import type { BiasLayerResult } from '../../types';
-import { Brain, HelpCircle, ArrowRight } from 'lucide-react';
+import { Brain, HelpCircle, ArrowRight, ThumbsUp, ThumbsDown, Check } from 'lucide-react';
+import { submitFlagFeedback } from '../../lib/api';
 
 interface CognitivePsychologyViewProps {
   biasLayer: BiasLayerResult;
+  decisionId?: string;
   onDrillDown?: (item: { item_type: string; item_id: string; item_title: string; item_context?: Record<string, any> }) => void;
 }
 
 export const CognitivePsychologyView: React.FC<CognitivePsychologyViewProps> = ({
   biasLayer,
+  decisionId,
   onDrillDown,
 }) => {
   const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, boolean>>({});
   const patterns = biasLayer.flagged_patterns || [];
+
+  const handleVote = async (patId: string, isPositive: boolean) => {
+    try {
+      setFeedbackMap((prev) => ({ ...prev, [patId]: isPositive }));
+      await submitFlagFeedback({
+        decision_id: decisionId || 'current_session',
+        flag_id: patId,
+        flag_type: 'bias',
+        is_positive: isPositive,
+      });
+    } catch (e) {
+      console.error('Failed to submit flag feedback:', e);
+    }
+  };
 
   const filteredPatterns = selectedTier === 'all'
     ? patterns
@@ -134,11 +152,37 @@ export const CognitivePsychologyView: React.FC<CognitivePsychologyViewProps> = (
                 </div>
               </div>
 
-              {/* Footer with Academic Source & Deep-Dive */}
+              {/* Footer with Academic Source, Feedback, & Deep-Dive */}
               <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                <span className="truncate max-w-[220px]" title={pat.source}>
-                  {pat.source}
-                </span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="truncate max-w-[140px]" title={pat.source}>
+                    {pat.source}
+                  </span>
+                  <div className="flex items-center gap-1 border-l border-slate-800 pl-2 shrink-0">
+                    <button
+                      onClick={() => handleVote(pat.id, true)}
+                      title="Relevant observation"
+                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                        feedbackMap[pat.id] === true
+                          ? 'text-emerald-400 bg-emerald-500/10'
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {feedbackMap[pat.id] === true ? <Check className="w-3.5 h-3.5" /> : <ThumbsUp className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => handleVote(pat.id, false)}
+                      title="Not relevant / false positive"
+                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                        feedbackMap[pat.id] === false
+                          ? 'text-rose-400 bg-rose-500/10'
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      <ThumbsDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
                 {onDrillDown && (
                   <button
                     onClick={() =>
@@ -149,7 +193,7 @@ export const CognitivePsychologyView: React.FC<CognitivePsychologyViewProps> = (
                         item_context: { trigger: pat.observed_trigger, caveat: pat.caveat_analysis },
                       })
                     }
-                    className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-medium"
+                    className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-medium ml-2 shrink-0"
                   >
                     Deep-Dive <ArrowRight className="w-3 h-3" />
                   </button>

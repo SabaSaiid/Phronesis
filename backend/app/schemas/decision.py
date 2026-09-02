@@ -33,6 +33,7 @@ class StructuredDecision(BaseModel):
     assumptions: List[Assumption] = Field(default_factory=list)
     unknowns: List[str] = Field(default_factory=list)
     domain: Optional[str] = "general"
+    project_id: Optional[str] = None
 
     @field_validator("states_of_world")
     def validate_probabilities(cls, states: List[StateOfWorld]) -> List[StateOfWorld]:
@@ -184,6 +185,7 @@ class DiscountingResultSchema(BaseModel):
     hyperbolic_trajectory: List[Any] = Field(default_factory=list)
     impatience_narrative: str
     npv_multi_rate_narrative: str
+    future_utility_value: float = 75.0
 
 class IntertemporalComparisonResultSchema(BaseModel):
     long_run_preferred_alt: str
@@ -332,6 +334,11 @@ class ReportResponse(BaseModel):
     focus_config: Optional[FocusConfig] = None
     effort_level: Optional[str] = "standard"
     project_id: Optional[str] = None
+    decision_id: Optional[str] = None
+
+class SynthesizeReportRequest(BaseModel):
+    bundle: AnalysisBundle
+    llm_config: Optional[LLMConfigOverride] = None
 
 class DrillDownRequest(BaseModel):
     decision_statement: str
@@ -339,6 +346,7 @@ class DrillDownRequest(BaseModel):
     item_id: str
     item_title: str
     item_context: Dict[str, Any] = Field(default_factory=dict)
+    llm_config: Optional[LLMConfigOverride] = None
 
 class DrillDownResponse(BaseModel):
     item_id: str
@@ -403,6 +411,7 @@ class DeliberationRequest(BaseModel):
     structured_decision: Optional[StructuredDecision] = None
     math_summary: Optional[Dict[str, Any]] = None
     flagged_biases: Optional[List[str]] = Field(default_factory=list)
+    llm_config: Optional[LLMConfigOverride] = None
 
 class DeliberationResponse(BaseModel):
     reply_text: str

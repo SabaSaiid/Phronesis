@@ -34,6 +34,7 @@ export interface StructuredDecision {
   assumptions: Assumption[];
   unknowns: string[];
   domain?: string;
+  project_id?: string;
 }
 
 export interface FlaggedBiasPattern {
@@ -194,6 +195,7 @@ export interface DiscountingResult {
   hyperbolic_trajectory: [number, number][];
   impatience_narrative: string;
   npv_multi_rate_narrative: string;
+  future_utility_value?: number;
 }
 
 export interface IntertemporalComparisonResult {
@@ -367,6 +369,7 @@ export interface ReportResponse {
   focus_config?: FocusConfig;
   effort_level?: EffortLevel;
   project_id?: string;
+  decision_id?: string;
 }
 
 export interface DrillDownRequest {
@@ -375,6 +378,7 @@ export interface DrillDownRequest {
   item_id: string;
   item_title: string;
   item_context?: Record<string, any>;
+  llm_config?: LLMConfigOverride;
 }
 
 export interface DrillDownResponse {
@@ -472,6 +476,7 @@ export interface DeliberationRequest {
   structured_decision?: StructuredDecision | null;
   math_summary?: Record<string, any>;
   flagged_biases?: string[];
+  llm_config?: LLMConfigOverride;
 }
 
 export interface DeliberationResponse {

@@ -548,6 +548,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <div className="pt-2">
                 <CognitivePsychologyView
                   biasLayer={bias_layer}
+                  decisionId={report.decision_id}
                   onDrillDown={({ item_type, item_id, item_title, item_context }) =>
                     handleTriggerDrillDown(item_type, item_id, item_title, item_context)
                   }

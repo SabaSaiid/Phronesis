@@ -53,6 +53,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self.requests: Dict[str, List[float]] = {}
+        self.last_cleanup: float = time.time()
         self.rate_limited_prefixes = [
             f"{settings.API_V1_STR}/extract",
             f"{settings.API_V1_STR}/analyze/counterargument",
@@ -65,6 +66,17 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(prefix) for prefix in self.rate_limited_prefixes):
             client_ip = request.client.host if request.client else "127.0.0.1"
             now = time.time()
+
+            # Periodic cleanup of inactive IPs (every 5 minutes)
+            if now - self.last_cleanup > 300.0:
+                self.last_cleanup = now
+                stale_ips = [
+                    ip for ip, ts_list in self.requests.items()
+                    if not ts_list or (now - ts_list[-1] >= self.window_seconds)
+                ]
+                for ip in stale_ips:
+                    self.requests.pop(ip, None)
+
             timestamps = self.requests.get(client_ip, [])
             # Prune timestamps older than window
             timestamps = [ts for ts in timestamps if now - ts < self.window_seconds]

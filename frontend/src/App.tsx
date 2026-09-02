@@ -402,6 +402,7 @@ function AppContent() {
     try {
       // 1. Run deterministic engines
       setLoadingStage('Scanning 15 cognitive bias patterns & 4 philosophical frameworks...');
+      decision.project_id = activeProjectId;
       const analysisBundle = await runDeterministicAnalysis(decision);
       if (focusConfig) {
         analysisBundle.focus_config = focusConfig;
@@ -413,11 +414,11 @@ function AppContent() {
 
       // 2. Synthesize report
       setLoadingStage('Synthesizing auditable reasoning dossier with Value of Information...');
-      const rep = await synthesizeReport(analysisBundle);
+      const rep = await synthesizeReport(analysisBundle, getEffectiveModelConfig());
       setReport(rep);
 
       // 3. Save to history (only if not temporary session)
-      const historyId = `dec-${Date.now()}`;
+      const historyId = rep.decision_id || `dec-${Date.now()}`;
       setCurrentDecisionId(historyId);
 
       if (!isTemporarySession) {
@@ -997,6 +998,7 @@ function AppContent() {
               bundle={bundle}
               layoutMode={chatLayoutMode}
               onChangeLayoutMode={handleChangeChatLayoutMode}
+              llmConfig={getEffectiveModelConfig()}
               onInsertText={(text) => {
                 setExternalTextToAppend(text);
                 showToast({
@@ -1023,6 +1025,7 @@ function AppContent() {
             bundle={bundle}
             layoutMode={chatLayoutMode}
             onChangeLayoutMode={handleChangeChatLayoutMode}
+            llmConfig={getEffectiveModelConfig()}
             onInsertText={(text) => {
               setExternalTextToAppend(text);
               showToast({

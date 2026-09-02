@@ -14,6 +14,8 @@ from app.schemas.decision import (
     HistoryItemSummary
 )
 
+from contextlib import contextmanager
+
 DEFAULT_DB_DIR = os.path.expanduser("~/.phronesis")
 DEFAULT_DB_PATH = os.path.join(DEFAULT_DB_DIR, "phronesis.db")
 
@@ -41,25 +43,27 @@ class LocalStorage:
         return cls._db_path
 
     @classmethod
-    def get_connection(cls) -> sqlite3.Connection:
+    def _create_connection(cls) -> sqlite3.Connection:
         db_path = cls.get_db_path()
         db_dir = os.path.dirname(db_path)
-        if db_dir and not os.path.exists(db_dir):
-            try:
+        try:
+            if db_dir and not os.path.exists(db_dir):
                 os.makedirs(db_dir, exist_ok=True)
-                try:
-                    os.chmod(db_dir, 0o700)
-                except Exception:
-                    pass
-            except Exception:
-                db_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "phronesis.db")
-                os.makedirs(os.path.dirname(db_path), exist_ok=True)
-                cls._db_path = db_path
-                cls._tables_initialized = False
+            conn = sqlite3.connect(db_path, timeout=5.0)
+        except Exception:
+            fallback_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+            os.makedirs(fallback_dir, exist_ok=True)
+            db_path = os.path.join(fallback_dir, "phronesis.db")
+            cls._db_path = db_path
+            cls._tables_initialized = False
+            conn = sqlite3.connect(db_path, timeout=5.0)
 
-        conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL;")
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+        except Exception:
+            pass
+        conn.execute("PRAGMA busy_timeout=5000;")
         if os.path.exists(db_path):
             try:
                 os.chmod(db_path, 0o600)
@@ -69,6 +73,16 @@ class LocalStorage:
             cls._init_tables(conn)
             cls._tables_initialized = True
         return conn
+
+    @classmethod
+    @contextmanager
+    def get_connection(cls):
+        conn = cls._create_connection()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     @classmethod
     def _init_tables(cls, conn: sqlite3.Connection):
@@ -102,10 +116,11 @@ class LocalStorage:
                 preferred_eu_alt TEXT,
                 minimax_regret_choice TEXT,
                 flagged_bias_ids TEXT,
-                project_id TEXT REFERENCES projects(id) ON DELETE SET NULL
+                project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+                report_response_json TEXT
             );
             """)
-            # Migration check: ensure project_id column exists if table was created previously
+            # Migration check: ensure project_id and report_response_json columns exist
             cur = conn.cursor()
             cur.execute("PRAGMA table_info(decisions)")
             columns = [row["name"] for row in cur.fetchall()]
@@ -114,6 +129,11 @@ class LocalStorage:
                     conn.execute("ALTER TABLE decisions ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE SET NULL;")
                 except Exception as e:
                     print(f"[LocalStorage Migration Warning] Could not add project_id: {e}")
+            if "report_response_json" not in columns:
+                try:
+                    conn.execute("ALTER TABLE decisions ADD COLUMN report_response_json TEXT;")
+                except Exception as e:
+                    print(f"[LocalStorage Migration Warning] Could not add report_response_json: {e}")
 
             conn.execute("""
             CREATE TABLE IF NOT EXISTS decision_outcomes (
@@ -175,28 +195,56 @@ class LocalStorage:
             with cls.get_connection() as conn:
                 bias_ids = ",".join(p.id for p in bundle.bias_layer.flagged_patterns)
                 project_id = getattr(bundle, "project_id", None) or getattr(report, "project_id", None)
-                conn.execute("""
-                INSERT INTO decisions (
-                    id, timestamp, domain, decision_statement,
-                    structured_decision_json, analysis_bundle_json,
-                    report_markdown, key_sensitive_variable,
-                    preferred_eu_alt, minimax_regret_choice,
-                    flagged_bias_ids, project_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    decision_id,
-                    datetime.now(timezone.utc).isoformat(),
-                    decision.domain or "general",
-                    decision.decision_statement,
-                    decision.model_dump_json(),
-                    bundle.model_dump_json(),
-                    report.report_markdown,
-                    report.key_sensitive_variable,
-                    bundle.math_layer.expected_utility.preferred_alternative_id,
-                    bundle.math_layer.minimax_regret.minimax_regret_choice,
-                    bias_ids,
-                    project_id
-                ))
+                cur = conn.cursor()
+                cur.execute("PRAGMA table_info(decisions)")
+                cols = [c["name"] for c in cur.fetchall()]
+                if "report_response_json" in cols:
+                    conn.execute("""
+                    INSERT INTO decisions (
+                        id, timestamp, domain, decision_statement,
+                        structured_decision_json, analysis_bundle_json,
+                        report_markdown, key_sensitive_variable,
+                        preferred_eu_alt, minimax_regret_choice,
+                        flagged_bias_ids, project_id, report_response_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        decision_id,
+                        datetime.now(timezone.utc).isoformat(),
+                        decision.domain or "general",
+                        decision.decision_statement,
+                        decision.model_dump_json(),
+                        bundle.model_dump_json(),
+                        report.report_markdown,
+                        report.key_sensitive_variable,
+                        bundle.math_layer.expected_utility.preferred_alternative_id,
+                        bundle.math_layer.minimax_regret.minimax_regret_choice,
+                        bias_ids,
+                        project_id,
+                        report.model_dump_json()
+                    ))
+                else:
+                    conn.execute("""
+                    INSERT INTO decisions (
+                        id, timestamp, domain, decision_statement,
+                        structured_decision_json, analysis_bundle_json,
+                        report_markdown, key_sensitive_variable,
+                        preferred_eu_alt, minimax_regret_choice,
+                        flagged_bias_ids, project_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        decision_id,
+                        datetime.now(timezone.utc).isoformat(),
+                        decision.domain or "general",
+                        decision.decision_statement,
+                        decision.model_dump_json(),
+                        bundle.model_dump_json(),
+                        report.report_markdown,
+                        report.key_sensitive_variable,
+                        bundle.math_layer.expected_utility.preferred_alternative_id,
+                        bundle.math_layer.minimax_regret.minimax_regret_choice,
+                        bias_ids,
+                        project_id
+                    ))
             return True
         except Exception as e:
             print(f"[LocalStorage Error] Failed to save decision: {e}")
@@ -403,6 +451,13 @@ class LocalStorage:
                 if not row:
                     return None
                 
+                rep_json = None
+                if "report_response_json" in row.keys() and row["report_response_json"]:
+                    try:
+                        rep_json = json.loads(row["report_response_json"])
+                    except Exception:
+                        rep_json = None
+
                 return {
                     "id": row["id"],
                     "timestamp": row["timestamp"],
@@ -416,6 +471,10 @@ class LocalStorage:
                     "minimax_regret_choice": row["minimax_regret_choice"],
                     "flagged_bias_ids": [b.strip() for b in row["flagged_bias_ids"].split(",") if b.strip()] if row["flagged_bias_ids"] else [],
                     "project_id": row["project_id"],
+                    "proposed_experiment": rep_json.get("proposed_experiment") if rep_json else None,
+                    "attributed_sources": rep_json.get("attributed_sources", []) if rep_json else [],
+                    "longitudinal_summary": rep_json.get("longitudinal_summary") if rep_json else None,
+                    "focus_config": rep_json.get("focus_config") if rep_json else None,
                     "outcome": {
                         "chosen_alternative_id": row["chosen_alternative_id"],
                         "actual_utility_rating": row["actual_utility_rating"],

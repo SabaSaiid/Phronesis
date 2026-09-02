@@ -2,7 +2,7 @@ import asyncio
 import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 
 from app.schemas.decision import (
     StructuredDecision,
@@ -26,7 +26,8 @@ from app.schemas.decision import (
     ImportHistoryRequest,
     ImportHistoryResponse,
     TestKeyRequest,
-    TestKeyResponse
+    TestKeyResponse,
+    SynthesizeReportRequest
 )
 from app.services.llm_client import LLMClient
 from app.services.extraction_service import ExtractionService
@@ -58,10 +59,6 @@ class CounterargumentRequest(BaseModel):
 
 class MemorySettingsRequest(BaseModel):
     enabled: bool
-
-class SynthesizeReportRequest(BaseModel):
-    bundle: AnalysisBundle
-    llm_config: Optional[LLMConfigOverride] = None
 
 # ──────────────────────────────────────────────
 # Models Discovery Endpoint
@@ -185,7 +182,10 @@ async def analyze_deterministic(decision: StructuredDecision):
     systems_result = SystemsEngine.evaluate(decision)
 
     # 6. Longitudinal Context (Threshold-gated: N >= 5)
-    longitudinal_ctx = LocalStorage.get_longitudinal_summary(decision.domain)
+    longitudinal_ctx = LocalStorage.get_longitudinal_summary(
+        decision.domain,
+        project_id=decision.project_id
+    )
 
     # Await async bias rubric matching (25 biases)
     bias_result = await bias_task
@@ -199,7 +199,8 @@ async def analyze_deterministic(decision: StructuredDecision):
         critical_thinking_layer=critical_result,
         economics_layer=economics_result,
         systems_layer=systems_result,
-        longitudinal_context=longitudinal_ctx
+        longitudinal_context=longitudinal_ctx,
+        project_id=decision.project_id
     )
 
 @router.post("/analyze/counterargument")
@@ -221,11 +222,19 @@ async def deliberate_chat(req: DeliberationRequest):
 
 
 @router.post("/report/synthesize", response_model=ReportResponse)
-async def synthesize_report(bundle: AnalysisBundle):
-    report_response = await SynthesisService.synthesize_report(bundle)
+async def synthesize_report(payload: Union[SynthesizeReportRequest, AnalysisBundle]):
+    if isinstance(payload, SynthesizeReportRequest):
+        bundle = payload.bundle
+        llm_config = payload.llm_config
+    else:
+        bundle = payload
+        llm_config = None
+
+    report_response = await SynthesisService.synthesize_report(bundle, llm_config=llm_config)
 
     # Auto-save decision if memory opt-in is active
     decision_id = str(uuid.uuid4())
+    report_response.decision_id = decision_id
     LocalStorage.save_decision(
         decision_id=decision_id,
         decision=bundle.structured_decision,

@@ -142,11 +142,15 @@ export async function runDeterministicAnalysis(decision: StructuredDecision): Pr
   return res.json();
 }
 
-export async function synthesizeReport(bundle: AnalysisBundle): Promise<ReportResponse> {
+export async function synthesizeReport(
+  bundle: AnalysisBundle,
+  llmConfig?: LLMConfigOverride
+): Promise<ReportResponse> {
+  const payload = llmConfig ? { bundle, llm_config: llmConfig } : bundle;
   const res = await fetch(`${API_BASE}/report/synthesize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(bundle),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));

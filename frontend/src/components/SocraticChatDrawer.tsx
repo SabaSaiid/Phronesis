@@ -18,7 +18,8 @@ import type {
   DeliberationLensId,
   ChatLayoutMode,
   ChatMessage,
-  SuggestedAction
+  SuggestedAction,
+  LLMConfigOverride,
 } from '../types';
 import { sendDeliberationMessage } from '../lib/api';
 import { ChatLensSelector, LENSES } from './chat/ChatLensSelector';
@@ -36,6 +37,7 @@ interface SocraticChatDrawerProps {
   onInsertText?: (text: string) => void;
   onInsertAlternative?: (alt: { name: string; description: string }) => void;
   onInsertAssumption?: (assump: { text: string; type?: string; testable?: boolean }) => void;
+  llmConfig?: LLMConfigOverride;
 }
 
 export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
@@ -49,6 +51,7 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
   onInsertText,
   onInsertAlternative,
   onInsertAssumption,
+  llmConfig,
 }) => {
   const [selectedLens, setSelectedLens] = useState<DeliberationLensId>('socratic');
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
@@ -134,6 +137,7 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
         structured_decision: decision || null,
         math_summary: mathSummary,
         flagged_biases: flaggedBiases,
+        llm_config: llmConfig,
       });
 
       const assistantMsg: ChatMessage = {

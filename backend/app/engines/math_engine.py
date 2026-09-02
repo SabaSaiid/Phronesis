@@ -140,15 +140,38 @@ class DecisionTheoryMathEngine(BaseDeterministicEngine):
         a1_name = alt_ids[a1_idx]
         a2_name = alt_ids[a2_idx]
 
-        # 2-state exact algebraic inflection for primary state p0
-        # p0* = (U(a2, s1) - U(a1, s1)) / ((U(a1, s0) - U(a1, s1)) - (U(a2, s0) - U(a2, s1)))
-        u_a1_s0 = U[a1_idx, 0]
-        u_a1_s1 = U[a1_idx, 1] if num_states >= 2 else U[a1_idx, 0]
-        u_a2_s0 = U[a2_idx, 0]
-        u_a2_s1 = U[a2_idx, 1] if num_states >= 2 else U[a2_idx, 0]
+        # Exact algebraic inflection for primary state p0
+        if num_states == 2:
+            u_a1_s0 = U[a1_idx, 0]
+            u_a1_s1 = U[a1_idx, 1]
+            u_a2_s0 = U[a2_idx, 0]
+            u_a2_s1 = U[a2_idx, 1]
 
-        denominator = (u_a1_s0 - u_a1_s1) - (u_a2_s0 - u_a2_s1)
-        numerator = u_a2_s1 - u_a1_s1
+            denominator = (u_a1_s0 - u_a1_s1) - (u_a2_s0 - u_a2_s1)
+            numerator = u_a2_s1 - u_a1_s1
+            formula_str = (
+                f"p*({state_ids[0]}) = [U({a2_name}, {state_ids[1]}) - U({a1_name}, {state_ids[1]})] / "
+                f"[(U({a1_name}, {state_ids[0]}) - U({a1_name}, {state_ids[1]})) - "
+                f"(U({a2_name}, {state_ids[0]}) - U({a2_name}, {state_ids[1]}))]"
+            )
+        else:
+            # Multi-state exact conditional inflection for primary state p0
+            # Conditioned on state 0 not occurring, the remaining states scale proportionally:
+            # U_bar(a, ~0) = sum_{j != 0} (p_j * U[a, j]) / (1 - p_0)
+            p0 = float(probabilities[0])
+            sum_other_p = max(1e-6, 1.0 - p0)
+            u_bar_a1 = float(sum(probabilities[j] * U[a1_idx, j] for j in range(1, num_states)) / sum_other_p)
+            u_bar_a2 = float(sum(probabilities[j] * U[a2_idx, j] for j in range(1, num_states)) / sum_other_p)
+            u_a1_s0 = U[a1_idx, 0]
+            u_a2_s0 = U[a2_idx, 0]
+
+            denominator = (u_a1_s0 - u_bar_a1) - (u_a2_s0 - u_bar_a2)
+            numerator = u_bar_a2 - u_bar_a1
+            formula_str = (
+                f"p*({state_ids[0]}) = [E[U({a2_name})|~{state_ids[0]}] - E[U({a1_name})|~{state_ids[0]}]] / "
+                f"[(U({a1_name}, {state_ids[0]}) - E[U({a1_name})|~{state_ids[0]}]) - "
+                f"(U({a2_name}, {state_ids[0]}) - E[U({a2_name})|~{state_ids[0]}])]"
+            )
 
         if abs(denominator) > 1e-6:
             p_inflection = numerator / denominator
@@ -157,12 +180,6 @@ class DecisionTheoryMathEngine(BaseDeterministicEngine):
         else:
             p_inflection = 0.5
             p_inflection_clamped = 0.5
-
-        formula_str = (
-            f"p*({state_ids[0]}) = [U({a2_name}, {state_ids[1]}) - U({a1_name}, {state_ids[1]})] / "
-            f"[(U({a1_name}, {state_ids[0]}) - U({a1_name}, {state_ids[1]})) - "
-            f"(U({a2_name}, {state_ids[0]}) - U({a2_name}, {state_ids[1]}))]"
-        )
 
         curr_p = float(probabilities[0])
         p_inf_round = round(float(p_inflection_clamped), 3)

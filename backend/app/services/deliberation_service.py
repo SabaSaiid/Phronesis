@@ -110,10 +110,8 @@ class DeliberationService:
         lens_meta: Dict[str, str],
         user_query: str
     ) -> Optional[DeliberationResponse]:
-        from app.core.config import settings
-        import os
-        api_key = settings.LLM_API_KEY or os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key or (settings.LLM_PROVIDER or "").lower() == "mock":
+        provider, model, api_key = LLMClient._resolve_provider_model_key(req.llm_config)
+        if not api_key or provider == "mock":
             return None
 
         # Build context prompt
@@ -177,7 +175,11 @@ Recent Conversation:
 User Inquiry ({req.current_step} step):
 {user_query}"""
 
-        resp_json = await LLMClient.generate_structured_json(system_prompt, user_prompt)
+        resp_json = await LLMClient.generate_structured_json(
+            system_prompt,
+            user_prompt,
+            llm_config=req.llm_config
+        )
         if not resp_json or "reply_text" not in resp_json:
             return None
 

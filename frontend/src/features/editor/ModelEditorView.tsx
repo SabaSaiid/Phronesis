@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { StructuredDecision, Assumption, FocusConfig } from '../../types';
 import { FocusSelector } from '../../components/FocusSelector';
+import { PayoffMatrixGrid } from './PayoffMatrixGrid';
 import {
   Play,
   Sliders,
@@ -9,7 +10,11 @@ import {
   Plus,
   Trash2,
   Sparkles,
-  Scale
+  Scale,
+  LayoutGrid,
+  Lock,
+  Unlock,
+  TrendingUp
 } from 'lucide-react';
 
 interface ModelEditorViewProps {
@@ -26,6 +31,8 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
   isLoading,
 }) => {
   const [model, setModel] = useState<StructuredDecision>(() => JSON.parse(JSON.stringify(decision)));
+  const [matrixViewMode, setMatrixViewMode] = useState<'table' | 'cards'>('table');
+  const [lockedStates, setLockedStates] = useState<Record<string, boolean>>({});
   const [newAssumptionText, setNewAssumptionText] = useState('');
   const [focusConfig, setFocusConfig] = useState<FocusConfig>({
     focused_layers: ['psychology', 'logic', 'philosophy', 'practical'],
@@ -63,14 +70,32 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
     propagate(updated);
   };
 
+  const handleToggleLockState = (stateId: string) => {
+    setLockedStates((prev) => ({ ...prev, [stateId]: !prev[stateId] }));
+  };
+
   const handleProbabilityChange = (stateId: string, newProb: number) => {
-    const prob = Math.max(0, Math.min(1, newProb));
-    const newStates = model.states_of_world.map((s) => {
-      if (s.id === stateId) {
-        return { ...s, prior_probability: prob };
-      }
+    const clamped = Math.max(0, Math.min(1, newProb));
+    const currentProb = model.states_of_world.find((s) => s.id === stateId)?.prior_probability ?? 0;
+    const delta = clamped - currentProb;
+
+    // Distribute delta among unlocked states if more than 1 unlocked exists
+    const unlocked = model.states_of_world.filter((s) => s.id !== stateId && !lockedStates[s.id]);
+
+    let newStates = model.states_of_world.map((s) => {
+      if (s.id === stateId) return { ...s, prior_probability: clamped };
       return s;
     });
+
+    if (unlocked.length > 0 && Math.abs(delta) > 0.001) {
+      const share = delta / unlocked.length;
+      newStates = newStates.map((s) => {
+        if (s.id === stateId || lockedStates[s.id]) return s;
+        const adjusted = Math.max(0, Math.min(1, s.prior_probability - share));
+        return { ...s, prior_probability: Math.round(adjusted * 100) / 100 };
+      });
+    }
+
     const updated = { ...model, states_of_world: newStates };
     propagate(updated);
   };
@@ -214,14 +239,53 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
     return cell ? cell.utility : 50;
   };
 
+  // Compute live Expected Utility preview
+  const liveEU = useMemo(() => {
+    const map: Record<string, number> = {};
+    model.alternatives.forEach((alt) => {
+      let eu = 0;
+      model.states_of_world.forEach((st) => {
+        const cell = model.payoff_matrix.find(
+          (p) => p.alternative_id === alt.id && p.state_id === st.id
+        );
+        const u = cell ? cell.utility : 50;
+        eu += st.prior_probability * u;
+      });
+      map[alt.id] = eu;
+    });
+    return map;
+  }, [model]);
+
+  const leadingAlt = useMemo(() => {
+    let bestId = '';
+    let bestVal = -Infinity;
+    Object.entries(liveEU).forEach(([id, val]) => {
+      if (val > bestVal) {
+        bestVal = val;
+        bestId = id;
+      }
+    });
+    const alt = model.alternatives.find((a) => a.id === bestId);
+    return { alt, score: bestVal };
+  }, [liveEU, model.alternatives]);
+
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8 space-y-6 animate-fade-in">
       {/* Top Navigation & Action Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div>
-          <h2 className="font-display text-2xl font-semibold text-[var(--text-main)] tracking-tight">
-            Examine & Calibrate Model Parameters
-          </h2>
+          <div className="flex items-center space-x-2">
+            <h2 className="font-display text-2xl font-semibold text-[var(--text-main)] tracking-tight">
+              Examine & Calibrate Model Parameters
+            </h2>
+            {leadingAlt.alt && (
+              <span className="hidden md:inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-xs font-ui font-medium bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] border border-[var(--color-verdigris)]/30">
+                <TrendingUp className="w-3 h-3" />
+                <span>Live Leading: <strong>{leadingAlt.alt.name}</strong></span>
+                <span className="font-data font-bold">({leadingAlt.score.toFixed(1)} EU)</span>
+              </span>
+            )}
+          </div>
           <p className="font-body text-xs sm:text-sm text-[var(--text-muted)] mt-0.5 leading-relaxed">
             Verify extracted alternatives, priors, and payoff utilities before deterministic reasoning audits run.
           </p>
@@ -265,9 +329,9 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
         />
       </div>
 
-      {/* Payoff Utility Matrix (Heatmapped interactive cards) */}
+      {/* Payoff Utility Matrix (Dual-mode: Grid Matrix vs Card Sliders) */}
       <div className="phronesis-card p-5 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="font-display font-semibold text-sm sm:text-base text-[var(--text-main)] flex items-center space-x-2">
               <Sliders className="w-4 h-4 text-[var(--color-verdigris)]" />
@@ -277,95 +341,141 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
               Subjective satisfaction scores (0–100 scale) for each alternative under each world state.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleAddAlternative}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-ui font-medium bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] text-[var(--text-main)] transition-colors cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
-            <span>Add Alternative</span>
-          </button>
+
+          {/* View Mode Toggle Button */}
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center p-0.5 rounded-lg bg-[var(--bg-app)] border border-[var(--border-subtle)] text-xs font-ui">
+              <button
+                type="button"
+                onClick={() => setMatrixViewMode('table')}
+                className={`px-2.5 py-1 rounded-md flex items-center space-x-1.5 transition-all cursor-pointer ${
+                  matrixViewMode === 'table'
+                    ? 'bg-[var(--bg-surface-raised)] text-[var(--color-verdigris)] font-semibold shadow-2xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+                title="Spreadsheet Table View (Tab-navigable)"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Grid Table</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMatrixViewMode('cards')}
+                className={`px-2.5 py-1 rounded-md flex items-center space-x-1.5 transition-all cursor-pointer ${
+                  matrixViewMode === 'cards'
+                    ? 'bg-[var(--bg-surface-raised)] text-[var(--color-verdigris)] font-semibold shadow-2xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+                title="Slider Cards View"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Card Sliders</span>
+              </button>
+            </div>
+
+            {matrixViewMode === 'cards' && (
+              <button
+                type="button"
+                onClick={handleAddAlternative}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-ui font-medium bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] text-[var(--text-main)] transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
+                <span>Add Alternative</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-4 pt-2">
-          {model.alternatives.map((alt) => (
-            <div
-              key={alt.id}
-              className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-3"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-ui font-semibold text-sm text-[var(--text-main)]">
-                    {alt.name}
-                  </div>
-                  {alt.description && (
-                    <div className="font-body text-xs text-[var(--text-muted)] mt-0.5">
-                      {alt.description}
+        {/* Render selected view mode */}
+        {matrixViewMode === 'table' ? (
+          <PayoffMatrixGrid
+            model={model}
+            onPayoffChange={handlePayoffChange}
+            onAddAlternative={handleAddAlternative}
+            onRemoveAlternative={handleRemoveAlternative}
+            onAddState={handleAddState}
+            onRemoveState={handleRemoveState}
+          />
+        ) : (
+          <div className="space-y-4 pt-2">
+            {model.alternatives.map((alt) => (
+              <div
+                key={alt.id}
+                className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-3"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-ui font-semibold text-sm text-[var(--text-main)]">
+                      {alt.name}
                     </div>
+                    {alt.description && (
+                      <div className="font-body text-xs text-[var(--text-muted)] mt-0.5">
+                        {alt.description}
+                      </div>
+                    )}
+                  </div>
+                  {model.alternatives.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAlternative(alt.id)}
+                      title="Remove alternative (minimum 2 required)"
+                      className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
-                {model.alternatives.length > 2 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAlternative(alt.id)}
-                    title="Remove alternative (minimum 2 required)"
-                    className="p-1 rounded text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {model.states_of_world.map((st) => {
-                  const val = getPayoff(alt.id, st.id);
-                  // Dynamic utility heat tint
-                  const isHigh = val >= 70;
-                  const isLow = val <= 30;
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {model.states_of_world.map((st) => {
+                    const val = getPayoff(alt.id, st.id);
+                    const isHigh = val >= 70;
+                    const isLow = val <= 30;
 
-                  return (
-                    <div
-                      key={st.id}
-                      className={`p-3 rounded-xl bg-[var(--bg-surface)] border transition-all space-y-2 ${
-                        isHigh
-                          ? 'border-[var(--color-verdigris)]/40 shadow-xs'
-                          : isLow
-                          ? 'border-rose-500/20'
-                          : 'border-[var(--border-subtle)]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-ui text-[var(--text-muted)] truncate max-w-[150px]">
-                          Under: <strong className="text-[var(--text-main)]">{st.name}</strong>
-                        </span>
-                        <span
-                          className={`font-data font-bold text-xs ${
-                            isHigh
-                              ? 'text-[var(--color-verdigris)]'
-                              : isLow
-                              ? 'text-rose-400'
-                              : 'text-[var(--text-main)]'
-                          }`}
-                        >
-                          {val} / 100
-                        </span>
+                    return (
+                      <div
+                        key={st.id}
+                        className={`p-3 rounded-xl bg-[var(--bg-surface)] border transition-all space-y-2 ${
+                          isHigh
+                            ? 'border-[var(--color-verdigris)]/40 shadow-xs'
+                            : isLow
+                            ? 'border-rose-500/20'
+                            : 'border-[var(--border-subtle)]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-ui text-[var(--text-muted)] truncate max-w-[150px]">
+                            Under: <strong className="text-[var(--text-main)]">{st.name}</strong>
+                          </span>
+                          <span
+                            className={`font-data font-bold text-xs ${
+                              isHigh
+                                ? 'text-[var(--color-verdigris)]'
+                                : isLow
+                                ? 'text-rose-400'
+                                : 'text-[var(--text-main)]'
+                            }`}
+                          >
+                            {val} / 100
+                          </span>
+                        </div>
+
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={val}
+                          onChange={(e) => handlePayoffChange(alt.id, st.id, Number(e.target.value))}
+                          className="w-full h-1.5 bg-[var(--bg-app)] rounded-lg appearance-none cursor-pointer accent-[var(--color-verdigris)] border border-[var(--border-subtle)]"
+                        />
                       </div>
-
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={val}
-                        onChange={(e) => handlePayoffChange(alt.id, st.id, Number(e.target.value))}
-                        className="w-full h-1.5 bg-[var(--bg-app)] rounded-lg appearance-none cursor-pointer accent-[var(--color-verdigris)] border border-[var(--border-subtle)]"
-                      />
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* State Prior Probabilities */}
@@ -377,7 +487,7 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
               <span>State Prior Probabilities</span>
             </h3>
             <p className="font-body text-xs text-[var(--text-muted)] mt-0.5">
-              Your estimated likelihood for each state of the world. Must sum to 100%.
+              Your estimated likelihood for each state of the world. Must sum to 100%. Lock states to preserve their values while adjusting others.
             </p>
           </div>
 
@@ -414,41 +524,71 @@ export const ModelEditorView: React.FC<ModelEditorViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-          {model.states_of_world.map((st) => (
-            <div
-              key={st.id}
-              className="p-3.5 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2"
-            >
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-2">
-                  <span className="font-ui font-medium text-[var(--text-main)]">{st.name}</span>
-                  {model.states_of_world.length > 2 && (
+          {model.states_of_world.map((st) => {
+            const isLocked = !!lockedStates[st.id];
+
+            return (
+              <div
+                key={st.id}
+                className="p-3.5 rounded-xl bg-[var(--bg-app)] border border-[var(--border-subtle)] space-y-2"
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
                     <button
                       type="button"
-                      onClick={() => handleRemoveState(st.id)}
-                      title="Remove state (minimum 2 required)"
-                      className="p-0.5 rounded text-[var(--text-muted)] hover:text-rose-400 transition-colors"
+                      onClick={() => handleToggleLockState(st.id)}
+                      className={`p-1 rounded transition-colors cursor-pointer ${
+                        isLocked
+                          ? 'bg-[var(--color-ochre-subtle)] text-[var(--color-ochre)]'
+                          : 'text-[var(--text-faint)] hover:text-[var(--text-main)]'
+                      }`}
+                      title={isLocked ? 'Unlock state probability' : 'Lock state probability'}
                     >
-                      <Trash2 className="w-3 h-3" />
+                      {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                     </button>
-                  )}
+                    <span className="font-ui font-medium text-[var(--text-main)]">{st.name}</span>
+                    {model.states_of_world.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveState(st.id)}
+                        title="Remove state (minimum 2 required)"
+                        className="p-0.5 rounded text-[var(--text-muted)] hover:text-rose-400 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={Math.round(st.prior_probability * 100)}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        handleProbabilityChange(st.id, Math.max(0, Math.min(100, val)) / 100);
+                      }}
+                      className="w-12 h-6 text-center font-data font-bold text-xs matrix-cell-input"
+                    />
+                    <span className="font-data text-xs text-[var(--color-verdigris)]">%</span>
+                  </div>
                 </div>
-                <span className="font-data font-bold text-[var(--color-verdigris)]">
-                  {Math.round(st.prior_probability * 100)}%
-                </span>
-              </div>
 
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={st.prior_probability}
-                onChange={(e) => handleProbabilityChange(st.id, parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-[var(--bg-surface)] rounded-lg appearance-none cursor-pointer accent-[var(--color-verdigris)] border border-[var(--border-subtle)]"
-              />
-            </div>
-          ))}
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={st.prior_probability}
+                  disabled={isLocked}
+                  onChange={(e) => handleProbabilityChange(st.id, parseFloat(e.target.value))}
+                  className={`w-full h-1.5 bg-[var(--bg-surface)] rounded-lg appearance-none cursor-pointer accent-[var(--color-verdigris)] border border-[var(--border-subtle)] ${
+                    isLocked ? 'opacity-40 cursor-not-allowed' : ''
+                  }`}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
 

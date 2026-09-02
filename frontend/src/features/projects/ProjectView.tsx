@@ -22,6 +22,7 @@ import {
   deleteProject
 } from '../../lib/api';
 import { formatTimeAgo } from '../../lib/formatTime';
+import { DecisionRetrospectiveModal } from './DecisionRetrospectiveModal';
 
 interface ProjectViewProps {
   projectId: string;
@@ -45,6 +46,11 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   const [nameInput, setNameInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [retroDecision, setRetroDecision] = useState<{
+    id: string;
+    title: string;
+    alternatives: { id: string; name: string }[];
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -421,10 +427,17 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
               const hasOutcome = Boolean(item.chosen_alternative_id);
 
               return (
-                <button
+                <div
                   key={item.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectDecision(item.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectDecision(item.id);
+                    }
+                  }}
                   className="w-full text-left p-4 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-subtle)] hover:border-[var(--color-verdigris)]/50 transition-all shadow-2xs group flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
                 >
                   <div className="space-y-1.5 min-w-0 flex-1">
@@ -466,27 +479,57 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Outcome Status Badge */}
+                  {/* Outcome Status Action Button */}
                   <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
-                    {hasOutcome ? (
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-ui font-medium bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] border border-[var(--color-verdigris)]/30 flex items-center space-x-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span>Outcome Logged {item.actual_utility_rating ? `(${item.actual_utility_rating}/100)` : ''}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const alts = item.structured_decision?.alternatives || [
+                          { id: item.preferred_eu_alt || 'alt-1', name: item.preferred_eu_alt || 'Preferred Alternative' },
+                          { id: 'alt-other', name: 'Other Alternative Option' },
+                        ];
+                        setRetroDecision({
+                          id: item.id,
+                          title: item.decision_statement,
+                          alternatives: alts,
+                        });
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-ui transition-colors flex items-center space-x-1 cursor-pointer ${
+                        hasOutcome
+                          ? 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] border border-[var(--color-verdigris)]/30 hover:bg-[var(--color-verdigris)]/20'
+                          : 'bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)] hover:bg-[var(--bg-surface-raised)]'
+                      }`}
+                      title="Log or Update Retrospective Real-World Outcome"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>
+                        {hasOutcome
+                          ? `Outcome ${item.actual_utility_rating ? `(${item.actual_utility_rating}/100)` : 'Logged'}`
+                          : 'Log Outcome'}
                       </span>
-                    ) : (
-                      <span className="px-2 py-1 rounded-full text-[10px] font-ui text-[var(--text-faint)] bg-[var(--bg-app)] border border-[var(--border-subtle)]">
-                        Pending Outcome
-                      </span>
-                    )}
+                    </button>
 
                     <ChevronRight className="w-4 h-4 text-[var(--text-faint)] group-hover:text-[var(--color-verdigris)] group-hover:translate-x-0.5 transition-all" />
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Decision Retrospective Logging Modal */}
+      {retroDecision && (
+        <DecisionRetrospectiveModal
+          isOpen={Boolean(retroDecision)}
+          onClose={() => setRetroDecision(null)}
+          decisionId={retroDecision.id}
+          decisionTitle={retroDecision.title}
+          alternatives={retroDecision.alternatives}
+          onSuccess={loadData}
+        />
+      )}
     </div>
   );
 };

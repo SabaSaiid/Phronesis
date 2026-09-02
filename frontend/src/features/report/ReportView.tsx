@@ -13,6 +13,9 @@ import { EconomicsExplorer } from './EconomicsExplorer';
 import { PhilosophyMatrixView } from './PhilosophyMatrixView';
 import { CognitivePsychologyView } from './CognitivePsychologyView';
 import { SystemsThinkingView } from './SystemsThinkingView';
+import { DossierNavRail } from './DossierNavRail';
+import { WhatIfSandboxDrawer } from './WhatIfSandboxDrawer';
+import { ExecutivePresentationModal } from './ExecutivePresentationModal';
 import { GlossaryTerm } from '../../components/GlossaryTerm';
 import { useToast } from '../../components/useToast';
 import {
@@ -30,7 +33,9 @@ import {
   History,
   Share2,
   DollarSign,
-  Network
+  Network,
+  Maximize2,
+  Sliders
 } from 'lucide-react';
 
 interface ReportViewProps {
@@ -38,6 +43,7 @@ interface ReportViewProps {
   report: ReportResponse;
   onNewDecision?: () => void;
   onOpenExport?: () => void;
+  onApplySandboxModel?: (updated: any) => void;
 }
 
 export const ReportView: React.FC<ReportViewProps> = ({
@@ -45,10 +51,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
   report,
   onNewDecision,
   onOpenExport,
+  onApplySandboxModel,
 }) => {
   const { showToast } = useToast();
   const [showFullMarkdown, setShowFullMarkdown] = useState(false);
   const [showAdvancedCharts, setShowAdvancedCharts] = useState(false);
+  const [isWhatIfOpen, setIsWhatIfOpen] = useState(false);
+  const [isPresentationOpen, setIsPresentationOpen] = useState(false);
 
   const {
     structured_decision,
@@ -919,10 +928,20 @@ export const ReportView: React.FC<ReportViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8 space-y-8 animate-fade-in">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8 space-y-8 animate-fade-in relative">
+      {/* Sticky Scrollspy Nav Rail for Large Screens */}
+      <DossierNavRail />
+
       {/* Sticky Table of Contents Sub-Nav */}
       <div className="sticky top-14 z-20 py-2 px-3 rounded-2xl bg-[var(--bg-surface-glass)] backdrop-blur-md border border-[var(--border-subtle)] shadow-sm flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
         <div className="flex items-center space-x-1 text-xs font-ui">
+          <button
+            type="button"
+            onClick={() => scrollToSection('sec-executive')}
+            className="px-2.5 py-1 rounded-lg text-[var(--color-verdigris)] hover:bg-[var(--color-verdigris-subtle)] font-medium transition-colors whitespace-nowrap cursor-pointer"
+          >
+            Executive
+          </button>
           <button
             type="button"
             onClick={() => scrollToSection('sec-voi')}
@@ -981,20 +1000,42 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </button>
         </div>
 
-        {onOpenExport && (
+        <div className="flex items-center space-x-1.5 shrink-0">
           <button
             type="button"
-            onClick={onOpenExport}
-            className="px-2.5 py-1 rounded-lg text-xs font-ui font-medium text-[var(--color-ochre)] bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30 hover:bg-[var(--color-ochre)]/20 transition-colors flex items-center space-x-1 whitespace-nowrap cursor-pointer shrink-0"
+            onClick={() => setIsWhatIfOpen(true)}
+            className="px-2.5 py-1 rounded-lg text-xs font-ui font-medium text-[var(--color-ochre)] bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30 hover:bg-[var(--color-ochre)]/20 transition-colors flex items-center space-x-1 whitespace-nowrap cursor-pointer"
+            title="Open What-If Sandbox"
           >
-            <Share2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Export</span>
+            <Sliders className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">What-If</span>
           </button>
-        )}
+
+          <button
+            type="button"
+            onClick={() => setIsPresentationOpen(true)}
+            className="px-2.5 py-1 rounded-lg text-xs font-ui font-medium text-[var(--text-main)] bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:bg-[var(--bg-app)] transition-colors flex items-center space-x-1 whitespace-nowrap cursor-pointer"
+            title="Present Decision Slides"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
+            <span className="hidden md:inline">Present</span>
+          </button>
+
+          {onOpenExport && (
+            <button
+              type="button"
+              onClick={onOpenExport}
+              className="px-2.5 py-1 rounded-lg text-xs font-ui font-medium text-[var(--text-main)] bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:bg-[var(--bg-app)] transition-colors flex items-center space-x-1 whitespace-nowrap cursor-pointer shrink-0"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Editorial Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
+      <div id="sec-executive" className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div>
           <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] text-xs font-ui font-medium mb-1.5">
             <Compass className="w-3.5 h-3.5" />
@@ -1009,7 +1050,22 @@ export const ReportView: React.FC<ReportViewProps> = ({
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
-          <span className="text-[11px] font-ui text-[var(--text-faint)] italic">Scroll up to edit parameters</span>
+          <button
+            type="button"
+            onClick={() => setIsWhatIfOpen(true)}
+            className="px-3 py-1.5 rounded-xl text-xs font-ui font-medium bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30 text-[var(--color-ochre)] hover:bg-[var(--color-ochre)]/20 transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>What-If Sandbox</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsPresentationOpen(true)}
+            className="px-3 py-1.5 rounded-xl text-xs font-ui font-medium bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-main)] hover:bg-[var(--bg-app)] transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-[var(--color-verdigris)]" />
+            <span>Present Slides</span>
+          </button>
         </div>
       </div>
 
@@ -1158,6 +1214,23 @@ export const ReportView: React.FC<ReportViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* What-If Perturbation Sandbox Drawer */}
+      <WhatIfSandboxDrawer
+        isOpen={isWhatIfOpen}
+        onClose={() => setIsWhatIfOpen(false)}
+        model={structured_decision}
+        onApplyToModel={onApplySandboxModel}
+      />
+
+      {/* Executive Slide Deck Presentation Modal */}
+      <ExecutivePresentationModal
+        isOpen={isPresentationOpen}
+        onClose={() => setIsPresentationOpen(false)}
+        decision={structured_decision}
+        report={report}
+        bundle={bundle}
+      />
     </div>
   );
 };

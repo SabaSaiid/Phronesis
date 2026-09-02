@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X,
   Compass,
@@ -10,7 +10,8 @@ import {
   Download,
   Bot,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Search
 } from 'lucide-react';
 import type {
   StructuredDecision,
@@ -25,6 +26,7 @@ import { sendDeliberationMessage } from '../lib/api';
 import { ChatLensSelector, LENSES } from './chat/ChatLensSelector';
 import { ChatMessageCard } from './chat/ChatMessageCard';
 import { ChatInputBar } from './chat/ChatInputBar';
+import { ActionDiffModal, type ProposedDiff } from './chat/ActionDiffModal';
 
 interface SocraticChatDrawerProps {
   isOpen: boolean;
@@ -70,6 +72,10 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [showContextDetails, setShowContextDetails] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [pendingDiff, setPendingDiff] = useState<ProposedDiff | null>(null);
+  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new messages
@@ -90,6 +96,12 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, layoutMode, onClose]);
 
+  const displayedMessages = useMemo(() => {
+    if (!searchQuery.trim()) return messages;
+    const q = searchQuery.toLowerCase();
+    return messages.filter((m) => m.text.toLowerCase().includes(q));
+  }, [messages, searchQuery]);
+
   const handleSendMessage = async (text: string) => {
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -106,25 +118,16 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
     try {
       // Build math summary payload if available
       let mathSummary: Record<string, any> | undefined = undefined;
-      if (bundle && bundle.math_layer) {
+      if (bundle?.math_layer) {
         mathSummary = {
-          preferred_eu_alt:
-            decision?.alternatives.find(
-              (a) => a.id === bundle.math_layer.expected_utility.preferred_alternative_id
-            )?.name || bundle.math_layer.expected_utility.preferred_alternative_id,
-          minimax_regret_choice:
-            decision?.alternatives.find(
-              (a) => a.id === bundle.math_layer.minimax_regret.minimax_regret_choice
-            )?.name || bundle.math_layer.minimax_regret.minimax_regret_choice,
-          inflection_threshold:
-            bundle.math_layer.sensitivity_analysis.inflection_threshold,
+          expected_utility: bundle.math_layer.expected_utility?.utilities,
+          preferred_eu_alt: bundle.math_layer.expected_utility?.preferred_alternative_id,
+          minimax_regret_choice: bundle.math_layer.minimax_regret?.minimax_regret_choice,
+          inflection_threshold: bundle.math_layer.sensitivity_analysis?.inflection_threshold,
         };
       }
 
-      // Collect flagged biases
-      const flaggedBiases = bundle?.bias_layer.flagged_patterns.map((p) => p.name);
-
-      const resp = await sendDeliberationMessage({
+      const response = await sendDeliberationMessage({
         messages: newHistory.map((m) => ({
           id: m.id,
           sender: m.sender,
@@ -132,28 +135,26 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
           timestamp: m.timestamp,
           lens: m.lens,
         })),
-        current_step: currentStep,
         lens: selectedLens,
-        structured_decision: decision || null,
+        current_step: currentStep,
+        structured_decision: decision || undefined,
         math_summary: mathSummary,
-        flagged_biases: flaggedBiases,
         llm_config: llmConfig,
       });
 
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         sender: 'assistant',
-        text: resp.reply_text,
+        text: response.reply_text,
         timestamp: Date.now(),
-        lens: (resp.lens_used as DeliberationLensId) || selectedLens,
-        suggested_action: resp.suggested_action || undefined,
-        suggested_followups: resp.suggested_followups,
-        attribution: resp.attribution || undefined,
+        lens: (response.lens_used as DeliberationLensId) || selectedLens,
+        suggested_followups: response.suggested_followups,
+        suggested_action: response.suggested_action || undefined,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err: any) {
-      console.warn('Deliberation API failed, generating fallback response:', err);
+      console.warn('Deliberation API failed:', err);
       // Fallback local assistant response
       const fallbackMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
@@ -174,10 +175,34 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
   };
 
   const handleExecuteAction = (action: SuggestedAction) => {
-    if (action.action_type === 'insert_alternative' && action.alternative_data && onInsertAlternative) {
-      onInsertAlternative(action.alternative_data);
-    } else if (action.action_type === 'insert_assumption' && action.assumption_data && onInsertAssumption) {
-      onInsertAssumption(action.assumption_data);
+    if (action.action_type === 'insert_alternative' && action.alternative_data && decision) {
+      const altData = action.alternative_data;
+      setPendingDiff({
+        type: 'add_alternative',
+        title: `Add Alternative: "${altData.name}"`,
+        description: altData.description || 'Add suggested alternative to the decision set.',
+        currentValue: decision.alternatives.map((a) => a.name).join(', '),
+        proposedValue: `+ ${altData.name}: ${altData.description || 'New option'}`,
+        apply: (curr) => {
+          if (onInsertAlternative) onInsertAlternative(altData);
+          return curr;
+        },
+      });
+      setIsDiffModalOpen(true);
+    } else if (action.action_type === 'insert_assumption' && action.assumption_data && decision) {
+      const assumpData = action.assumption_data;
+      setPendingDiff({
+        type: 'add_assumption',
+        title: 'Add Testable Assumption',
+        description: 'Incorporate surfaced assumption into the decision model for empirical testing.',
+        currentValue: `${decision.assumptions.length} assumptions registered`,
+        proposedValue: `+ "${assumpData.text}" (${assumpData.type || 'empirical'})`,
+        apply: (curr) => {
+          if (onInsertAssumption) onInsertAssumption(assumpData);
+          return curr;
+        },
+      });
+      setIsDiffModalOpen(true);
     } else if (onInsertText) {
       onInsertText(action.text_to_insert);
     }
@@ -255,6 +280,23 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
 
         {/* Header Action Buttons */}
         <div className="flex items-center space-x-1 shrink-0">
+          {/* Search in Conversation */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsSearchOpen((prev) => !prev);
+              if (isSearchOpen) setSearchQuery('');
+            }}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+              isSearchOpen || searchQuery
+                ? 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)]'
+            }`}
+            title="Search Dialogue"
+          >
+            <Search className="w-3.5 h-3.5" />
+          </button>
+
           {/* Export Transcript */}
           <button
             type="button"
@@ -319,6 +361,30 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
         </div>
       </div>
 
+      {/* Search Input Bar (Dropdown) */}
+      {isSearchOpen && (
+        <div className="p-2.5 bg-[var(--bg-app)] border-b border-[var(--border-subtle)] flex items-center space-x-2 animate-fade-in">
+          <Search className="w-3.5 h-3.5 text-[var(--text-faint)] shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search dialogue keywords..."
+            className="w-full bg-transparent text-xs font-ui text-[var(--text-main)] focus:outline-none placeholder:text-[var(--text-faint)]"
+            autoFocus
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="text-[10px] text-[var(--text-faint)] hover:text-[var(--text-main)] shrink-0"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Active Decision Context Accordion Bar */}
       {decision?.decision_statement && (
         <div className="bg-[var(--bg-app)] border-b border-[var(--border-subtle)] px-3 py-1.5 select-none">
@@ -327,45 +393,33 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
             onClick={() => setShowContextDetails((prev) => !prev)}
             className="w-full flex items-center justify-between text-left cursor-pointer group"
           >
-            <div className="flex items-center space-x-1.5 min-w-0">
-              <span className="text-[var(--color-verdigris)] font-serif text-xs shrink-0">
-                ✦
+            <span className="text-[11px] font-ui text-[var(--text-muted)] group-hover:text-[var(--text-main)] truncate">
+              Context: <strong className="font-semibold">{decision.decision_statement}</strong>
+            </span>
+            <div className="flex items-center space-x-1 shrink-0 ml-2 text-[var(--text-faint)]">
+              <span className="text-[10px] font-mono">
+                {decision.alternatives.length} alts · {decision.states_of_world.length} states
               </span>
-              <span className="text-[10.5px] font-ui font-medium text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-colors truncate">
-                Context: {decision.decision_statement}
-              </span>
-            </div>
-            <div className="flex items-center space-x-1 shrink-0 text-[10px] text-[var(--text-faint)]">
-              <span>{decision.alternatives.length} alts</span>
-              {showContextDetails ? (
-                <ChevronUp className="w-3 h-3" />
-              ) : (
-                <ChevronDown className="w-3 h-3" />
-              )}
+              {showContextDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </div>
           </button>
 
-          {/* Expandable Context Summary */}
           {showContextDetails && (
-            <div className="mt-2 p-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] font-ui space-y-1.5 animate-fade-in">
-              <div className="font-medium text-[var(--text-main)]">
-                Alternatives in Model:
-              </div>
-              <ul className="list-disc list-inside text-[var(--text-muted)] space-y-0.5 pl-1">
-                {decision.alternatives.map((a) => (
-                  <li key={a.id}>
-                    <strong>{a.name}</strong>: {a.description || 'No description'}
-                  </li>
+            <div className="mt-2 pt-2 border-t border-[var(--border-subtle)] text-[11px] space-y-1.5 animate-fade-in">
+              <div className="flex flex-wrap gap-1">
+                <span className="text-[var(--text-faint)] font-ui">Alternatives:</span>
+                {decision.alternatives.map((alt) => (
+                  <span
+                    key={alt.id}
+                    className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-main)] font-ui text-[10px]"
+                  >
+                    {alt.name}
+                  </span>
                 ))}
-              </ul>
-              {bundle?.math_layer && (
-                <div className="pt-1 border-t border-[var(--border-subtle)] text-[10px] font-mono text-[var(--color-verdigris)]">
-                  Top Expected Utility:{' '}
-                  {decision.alternatives.find(
-                    (a) =>
-                      a.id ===
-                      bundle.math_layer.expected_utility.preferred_alternative_id
-                  )?.name || bundle.math_layer.expected_utility.preferred_alternative_id}
+              </div>
+              {decision.assumptions.length > 0 && (
+                <div className="text-[var(--text-muted)]">
+                  <span className="text-[var(--text-faint)] font-ui">Assumptions:</span> {decision.assumptions.length} logged
                 </div>
               )}
             </div>
@@ -381,7 +435,7 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
 
       {/* Messages Stream */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-ui">
-        {messages.map((m) => (
+        {displayedMessages.map((m) => (
           <ChatMessageCard
             key={m.id}
             message={m}
@@ -406,6 +460,39 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Quick Epistemic Action Chips */}
+      <div className="px-3 py-1.5 bg-[var(--bg-surface-raised)] border-t border-[var(--border-subtle)] flex items-center gap-1.5 overflow-x-auto no-scrollbar text-[11px] font-ui">
+        <span className="text-[var(--text-faint)] shrink-0">Quick Action:</span>
+        <button
+          type="button"
+          onClick={() => handleSendMessage('Steelman the strongest counterargument against my currently preferred path.')}
+          className="px-2 py-0.5 rounded-full bg-[var(--bg-app)] hover:bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] whitespace-nowrap transition-colors cursor-pointer"
+        >
+          💡 Steelman Counter-View
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSendMessage('Identify 3 unstated assumptions in this framing and suggest empirical falsification tests.')}
+          className="px-2 py-0.5 rounded-full bg-[var(--bg-app)] hover:bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] whitespace-nowrap transition-colors cursor-pointer"
+        >
+          🔍 Test Assumptions
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSendMessage('Perform a worst-case tail risk stress test. What catastrophic downside is unaccounted for?')}
+          className="px-2 py-0.5 rounded-full bg-[var(--bg-app)] hover:bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] whitespace-nowrap transition-colors cursor-pointer"
+        >
+          🎲 Analyze Tail Risk
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSendMessage('Evaluate this dilemma through John Rawls’s Veil of Ignorance. What is the fairest maximin choice?')}
+          className="px-2 py-0.5 rounded-full bg-[var(--bg-app)] hover:bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] whitespace-nowrap transition-colors cursor-pointer"
+        >
+          ⚖️ Rawlsian Fairness Check
+        </button>
+      </div>
+
       {/* Bottom Smart Input Bar */}
       <ChatInputBar
         onSendMessage={handleSendMessage}
@@ -413,6 +500,20 @@ export const SocraticChatDrawer: React.FC<SocraticChatDrawerProps> = ({
         selectedLens={selectedLens}
         currentStep={currentStep}
       />
+
+      {/* Socratic Model Diff Modal */}
+      {decision && (
+        <ActionDiffModal
+          isOpen={isDiffModalOpen}
+          onClose={() => setIsDiffModalOpen(false)}
+          diff={pendingDiff}
+          currentModel={decision}
+          onApply={() => {
+            setIsDiffModalOpen(false);
+            setPendingDiff(null);
+          }}
+        />
+      )}
     </div>
   );
 

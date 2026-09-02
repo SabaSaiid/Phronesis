@@ -39,52 +39,57 @@ export const CognitivePsychologyView: React.FC<CognitivePsychologyViewProps> = (
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="phronesis-card p-6 relative overflow-hidden bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-sm">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--color-ochre-subtle)] rounded-full blur-3xl pointer-events-none" />
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400">
-            <Brain className="w-6 h-6" />
+          <div className="p-2 bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/30 rounded-xl text-[var(--color-ochre)]">
+            <Brain className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white tracking-tight">Cognitive Psychology & Bias Pattern Engine</h2>
-            <p className="text-xs text-slate-400">
+            <h2 className="text-lg sm:text-xl font-display font-semibold text-[var(--text-main)] tracking-tight">
+              Cognitive Psychology & Bias Pattern Engine
+            </h2>
+            <p className="text-xs font-body text-[var(--text-muted)] mt-0.5">
               Evaluates reasoning against 25 peer-reviewed cognitive patterns with strict Structural Grounding Tiers.
             </p>
           </div>
         </div>
 
         {/* Tier Filter Chips */}
-        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-slate-800/80">
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-[var(--border-subtle)]">
           <button
+            type="button"
             onClick={() => setSelectedTier('all')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+            className={`px-3 py-1 rounded-full text-xs font-ui font-medium transition-all cursor-pointer ${
               selectedTier === 'all'
-                ? 'bg-amber-500 text-slate-950 font-semibold'
-                : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                ? 'bg-[var(--color-ochre)] text-white font-semibold shadow-xs'
+                : 'bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
             }`}
           >
             All Flagged Patterns ({patterns.length})
           </button>
           <button
+            type="button"
             onClick={() => setSelectedTier('explicit_variable')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1 rounded-full text-xs font-ui font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
               selectedTier === 'explicit_variable'
-                ? 'bg-blue-500 text-white font-semibold'
-                : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                ? 'bg-[var(--color-verdigris)] text-white font-semibold shadow-xs'
+                : 'bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
             }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-verdigris)]" />
             Explicit Variable
           </button>
           <button
+            type="button"
             onClick={() => setSelectedTier('narrative_nuance')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1 rounded-full text-xs font-ui font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
               selectedTier === 'narrative_nuance'
-                ? 'bg-purple-500 text-white font-semibold'
-                : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                ? 'bg-[var(--color-ochre)] text-white font-semibold shadow-xs'
+                : 'bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
             }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-ochre)]" />
             Narrative Nuance
           </button>
         </div>
@@ -98,24 +103,24 @@ export const CognitivePsychologyView: React.FC<CognitivePsychologyViewProps> = (
           return (
             <div
               key={pat.id}
-              className={`bg-slate-900 border ${
-                isExplicit ? 'border-blue-500/30' : 'border-purple-500/30'
-              } rounded-xl p-5 flex flex-col justify-between transition-all`}
+              className={`phronesis-card p-5 flex flex-col justify-between transition-all bg-[var(--bg-surface)] border ${
+                isExplicit ? 'border-[var(--color-verdigris)]/40 shadow-xs' : 'border-[var(--border-subtle)]'
+              }`}
             >
               <div>
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <h3 className="text-sm font-bold text-white">{pat.name}</h3>
+                    <h3 className="text-sm font-display font-semibold text-[var(--text-main)]">{pat.name}</h3>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-app)] text-[var(--text-muted)] border border-[var(--border-subtle)]">
                         {pat.field}
                       </span>
                       <span
                         className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
                           isExplicit
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                            : 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                            ? 'bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] border-[var(--color-verdigris)]/30'
+                            : 'bg-[var(--color-ochre-subtle)] text-[var(--color-ochre)] border-[var(--color-ochre)]/30'
                         }`}
                       >
                         {isExplicit ? 'Explicit Variable' : 'Narrative Nuance'}
@@ -125,27 +130,27 @@ export const CognitivePsychologyView: React.FC<CognitivePsychologyViewProps> = (
                 </div>
 
                 {/* Core Idea */}
-                <p className="text-xs text-slate-300 mb-3 leading-relaxed">
+                <p className="text-xs font-body text-[var(--text-muted)] mb-3 leading-relaxed">
                   {pat.core_idea}
                 </p>
 
                 {/* Observed Trigger */}
-                <div className="p-3 bg-slate-950/80 border border-slate-800/80 rounded-lg space-y-2 mb-3">
-                  <div className="text-xs text-slate-400">
-                    <span className="font-semibold text-slate-300">Observed Trigger: </span>
+                <div className="p-3 bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-xl space-y-2 mb-3">
+                  <div className="text-xs font-body text-[var(--text-muted)]">
+                    <span className="font-ui font-semibold text-[var(--text-main)]">Observed Trigger: </span>
                     {pat.observed_trigger}
                   </div>
-                  <div className="text-xs text-slate-400">
-                    <span className="font-semibold text-slate-300">Analytical Caveat: </span>
+                  <div className="text-xs font-body text-[var(--text-muted)]">
+                    <span className="font-ui font-semibold text-[var(--text-main)]">Analytical Caveat: </span>
                     {pat.caveat_analysis}
                   </div>
                 </div>
 
                 {/* Surfaced Socratic Question */}
-                <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                <div className="p-3 bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)]/20 rounded-xl">
                   <div className="flex items-start gap-2">
-                    <HelpCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-xs italic text-amber-200 leading-relaxed">
+                    <HelpCircle className="w-4 h-4 text-[var(--color-ochre)] shrink-0 mt-0.5" />
+                    <p className="text-xs font-body italic text-[var(--text-main)] leading-relaxed">
                       "{pat.question_to_surface}"
                     </p>
                   </div>
@@ -153,30 +158,32 @@ export const CognitivePsychologyView: React.FC<CognitivePsychologyViewProps> = (
               </div>
 
               {/* Footer with Academic Source, Feedback, & Deep-Dive */}
-              <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+              <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] text-[var(--text-faint)]">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="truncate max-w-[140px]" title={pat.source}>
+                  <span className="truncate max-w-[140px] font-ui" title={pat.source}>
                     {pat.source}
                   </span>
-                  <div className="flex items-center gap-1 border-l border-slate-800 pl-2 shrink-0">
+                  <div className="flex items-center gap-1 border-l border-[var(--border-subtle)] pl-2 shrink-0">
                     <button
+                      type="button"
                       onClick={() => handleVote(pat.id, true)}
                       title="Relevant observation"
-                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                      className={`p-1 rounded-md hover:bg-[var(--bg-app)] transition-colors cursor-pointer ${
                         feedbackMap[pat.id] === true
-                          ? 'text-emerald-400 bg-emerald-500/10'
-                          : 'text-slate-500 hover:text-slate-300'
+                          ? 'text-[var(--color-verdigris)] bg-[var(--color-verdigris-subtle)]'
+                          : 'text-[var(--text-faint)] hover:text-[var(--text-main)]'
                       }`}
                     >
                       {feedbackMap[pat.id] === true ? <Check className="w-3.5 h-3.5" /> : <ThumbsUp className="w-3.5 h-3.5" />}
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleVote(pat.id, false)}
                       title="Not relevant / false positive"
-                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                      className={`p-1 rounded-md hover:bg-[var(--bg-app)] transition-colors cursor-pointer ${
                         feedbackMap[pat.id] === false
-                          ? 'text-rose-400 bg-rose-500/10'
-                          : 'text-slate-500 hover:text-slate-300'
+                          ? 'text-rose-500 bg-rose-500/10'
+                          : 'text-[var(--text-faint)] hover:text-[var(--text-main)]'
                       }`}
                     >
                       <ThumbsDown className="w-3.5 h-3.5" />
@@ -185,6 +192,7 @@ export const CognitivePsychologyView: React.FC<CognitivePsychologyViewProps> = (
                 </div>
                 {onDrillDown && (
                   <button
+                    type="button"
                     onClick={() =>
                       onDrillDown({
                         item_type: 'bias',
@@ -193,7 +201,7 @@ export const CognitivePsychologyView: React.FC<CognitivePsychologyViewProps> = (
                         item_context: { trigger: pat.observed_trigger, caveat: pat.caveat_analysis },
                       })
                     }
-                    className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-medium ml-2 shrink-0"
+                    className="text-[var(--color-ochre)] hover:underline flex items-center gap-1 font-ui font-medium ml-2 shrink-0 cursor-pointer"
                   >
                     Deep-Dive <ArrowRight className="w-3 h-3" />
                   </button>

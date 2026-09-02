@@ -1,32 +1,22 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Header } from './components/Header';
-import { Sidebar, type HistoryItem } from './components/Sidebar';
+import { Sidebar } from './components/Sidebar';
 import { ToastProvider } from './components/Toast';
 import { useToast } from './components/useToast';
 import { NarrativeInputView } from './features/input/NarrativeInputView';
 import { CollapsedDescribeCard } from './components/CollapsedDescribeCard';
 import { CollapsedCalibrateCard } from './components/CollapsedCalibrateCard';
 import type {
-  StructuredDecision,
-  AnalysisBundle,
-  ReportResponse,
   BenchmarkItem,
-  FocusConfig,
   ChatLayoutMode,
   LLMConfigOverride,
   EffortLevel,
-  ProjectSummary
+  HistoryItem
 } from './types';
-import {
-  fetchBenchmarks,
-  fetchProjects,
-  createProject,
-  deleteProject,
-  fetchHistoryItem,
-  extractDecision,
-  runDeterministicAnalysis,
-  synthesizeReport
-} from './lib/api';
+import { fetchBenchmarks } from './lib/api';
+import { useDecisionSession } from './lib/hooks/useDecisionSession';
+import { useHistoryStore } from './lib/hooks/useHistoryStore';
+import { useProjectStore } from './lib/hooks/useProjectStore';
 import { AlertCircle, Sparkles, AlertTriangle, X } from 'lucide-react';
 
 // Lazy-loaded secondary views and modal dialogs for bundle code-splitting
@@ -65,46 +55,11 @@ const LegalModal = lazy(() =>
 );
 
 const LOCAL_STORAGE_THEME_KEY = 'phronesis_theme';
-const LOCAL_STORAGE_HISTORY_KEY = 'phronesis_history';
 const LOCAL_STORAGE_SIDEBAR_KEY = 'phronesis_sidebar';
 const LOCAL_STORAGE_CHAT_LAYOUT_KEY = 'phronesis_chat_layout';
 
-function safePersistHistory(items: HistoryItem[]) {
-  try {
-    localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(items));
-  } catch (e: any) {
-    if (e.name === 'QuotaExceededError' || e.code === 22) {
-      const pruned = [
-        ...items.filter((i) => i.isPinned),
-        ...items.filter((i) => !i.isPinned).slice(0, 5),
-      ];
-      try {
-        localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(pruned));
-      } catch (err) {
-        console.warn('Failed to persist history after pruning:', err);
-      }
-    } else {
-      console.warn('Failed to persist history:', e);
-    }
-  }
-}
-
-/**
- * Session stage for the accumulating-sections architecture.
- * - 'input': Only Describe is visible (initial state or benchmarks gallery)
- * - 'editor': Describe collapsed + Calibrate active
- * - 'report': Describe collapsed + Calibrate collapsed + Report active
- * - 'benchmarks': Special standalone gallery view
- */
-type ActiveStage = 'input' | 'editor' | 'report' | 'benchmarks' | 'project';
-
 function AppContent() {
   const { showToast } = useToast();
-
-  // --- Session state: accumulating sections ---
-  const [activeStage, setActiveStage] = useState<ActiveStage>('input');
-  const [submittedNarrative, setSubmittedNarrative] = useState<string>('');
-  const [isEditingDescribe, setIsEditingDescribe] = useState(false);
 
   // Model & Reasoning Effort configuration
   const [modelConfig, setModelConfig] = useState<LLMConfigOverride>(() => {
@@ -125,155 +80,6 @@ function AppContent() {
     }
   });
 
-  // Projects State
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<string | undefined>(undefined);
-  const [activeProjectContext, setActiveProjectContext] = useState<string | undefined>(undefined);
-  const [viewingProjectId, setViewingProjectId] = useState<string | null>(null);
-
-  // Data state
-  const [benchmarks, setBenchmarks] = useState<BenchmarkItem[]>([]);
-  const [decision, setDecision] = useState<StructuredDecision | null>(null);
-  const [bundle, setBundle] = useState<AnalysisBundle | null>(null);
-  const [report, setReport] = useState<ReportResponse | null>(null);
-  const [currentDecisionId, setCurrentDecisionId] = useState<string | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isTemporarySession, setIsTemporarySession] = useState(false);
-
-  // UI state
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [isMethodologyOpen, setIsMethodologyOpen] = useState(false);
-  const [isLegalOpen, setIsLegalOpen] = useState(false);
-  const [legalTab, setLegalTab] = useState<'faq' | 'credits' | 'terms' | 'privacy'>('faq');
-  const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
-  const [externalTextToAppend, setExternalTextToAppend] = useState<string | undefined>(undefined);
-  const [chatLayoutMode, setChatLayoutMode] = useState<ChatLayoutMode>(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_CHAT_LAYOUT_KEY);
-    return (saved as ChatLayoutMode) || 'drawer';
-  });
-
-  // Edit-and-regenerate confirmation dialog
-  const [pendingEditSection, setPendingEditSection] = useState<'describe' | 'calibrate' | null>(null);
-
-  // Section refs for auto-scroll and anchor-nav
-  const describeSectionRef = useRef<HTMLDivElement>(null);
-  const calibrateSectionRef = useRef<HTMLDivElement>(null);
-  const reportSectionRef = useRef<HTMLDivElement>(null);
-
-  // Layout & Theme State
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_THEME_KEY);
-    if (saved) return saved === 'dark';
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_SIDEBAR_KEY);
-    return saved !== null ? saved === 'true' : true;
-  });
-
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-
-  // History State
-  const [history, setHistory] = useState<HistoryItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_HISTORY_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Apply Theme Class to <html>
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem(LOCAL_STORAGE_THEME_KEY, 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem(LOCAL_STORAGE_THEME_KEY, 'light');
-    }
-  }, [isDarkMode]);
-
-  // Persist Sidebar State
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_SIDEBAR_KEY, String(isSidebarOpen));
-  }, [isSidebarOpen]);
-
-  // Initialize Typography & Motion Preferences
-  useEffect(() => {
-    try {
-      const savedFontSize = localStorage.getItem('phronesis_font_size');
-      if (savedFontSize) {
-        document.documentElement.setAttribute('data-font-size', savedFontSize);
-      }
-      const savedReduceMotion = localStorage.getItem('phronesis_reduce_motion');
-      if (savedReduceMotion) {
-        document.documentElement.setAttribute('data-reduce-motion', savedReduceMotion);
-      }
-    } catch {
-      /* noop */
-    }
-  }, []);
-
-  // Fetch Benchmarks and Projects on mount
-  useEffect(() => {
-    fetchBenchmarks()
-      .then(setBenchmarks)
-      .catch((err) => {
-        console.warn('Failed to load benchmarks from API:', err);
-      });
-    
-    fetchProjects()
-      .then(setProjects)
-      .catch((err) => {
-        console.warn('Failed to load projects from API:', err);
-      });
-  }, []);
-
-  const handleToggleTheme = useCallback(() => {
-    setIsDarkMode((prev) => !prev);
-  }, []);
-
-  const handleToggleTemporarySession = useCallback(() => {
-    setIsTemporarySession((prev) => {
-      const next = !prev;
-      showToast({
-        type: next ? 'info' : 'success',
-        title: next ? 'Temporary Deliberation Active' : 'Normal Session Restored',
-        description: next
-          ? 'Decisions and deliberations in this session will not be saved to history.'
-          : 'History persistence is now enabled.',
-      });
-      return next;
-    });
-  }, [showToast]);
-
-  const handleOpenLegal = useCallback((tab: 'faq' | 'credits' | 'terms' | 'privacy' = 'faq') => {
-    setLegalTab(tab);
-    setIsLegalOpen(true);
-  }, []);
-
-  const handleReset = useCallback(() => {
-    setActiveStage('input');
-    setSubmittedNarrative('');
-    setIsEditingDescribe(false);
-    setDecision(null);
-    setBundle(null);
-    setReport(null);
-    setCurrentDecisionId(undefined);
-    setError(null);
-    setPendingEditSection(null);
-    setViewingProjectId(null);
-  }, []);
-
-  // Derive a `step` value for components that still need the legacy type
-  // (Header, Sidebar, SocraticChatDrawer, CommandPalette)
-  const currentStep = activeStage as 'input' | 'editor' | 'report' | 'benchmarks';
-
   const getEffectiveModelConfig = useCallback((): LLMConfigOverride => {
     const base = { ...modelConfig };
     try {
@@ -291,376 +97,114 @@ function AppContent() {
     return base;
   }, [modelConfig]);
 
-  // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘J, ⌘B, ⌘,)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsCommandPaletteOpen((prev) => !prev);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
-        e.preventDefault();
-        setIsChatDrawerOpen((prev) => !prev);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
-        e.preventDefault();
-        setIsSidebarOpen((prev) => !prev);
-      } else if ((e.metaKey || e.ctrlKey) && (e.key === ',' || e.key === '/')) {
-        e.preventDefault();
-        setIsSettingsOpen((prev) => !prev);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'n' && !e.shiftKey) {
-        e.preventDefault();
-        handleReset();
-        showToast({
-          type: 'info',
-          title: 'New Decision',
-          description: 'Cleared workspace for fresh analysis.',
-        });
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleReset, showToast]);
+  // 1. History Store Hook
+  const historyStore = useHistoryStore(showToast);
 
-
-  // --- Auto-scroll to newest section ---
-  const scrollToSection = useCallback((sectionRef: React.RefObject<HTMLDivElement | null>) => {
-    // Small delay to let the DOM mount the new section
-    setTimeout(() => {
-      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  }, []);
-
-  // --- Anchor-nav handler: scroll to section by id ---
-  const handleScrollToSection = useCallback((sectionId: string) => {
-    const el = document.getElementById(sectionId);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, []);
-
-  const handleExtract = async (narrative: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const extracted = await extractDecision(
-        narrative,
-        getEffectiveModelConfig(),
-        activeProjectId,
-        activeProjectContext
-      );
-      setSubmittedNarrative(narrative);
-      setDecision(extracted);
-      setBundle(null);
-      setReport(null);
-      setCurrentDecisionId(undefined);
-      setIsEditingDescribe(false);
-      setActiveStage('editor');
-      scrollToSection(calibrateSectionRef);
-      showToast({
-        type: 'success',
-        title: 'Model Extracted',
-        description: 'Alternatives and probability matrices initialized.',
-      });
-    } catch (err: any) {
-      setError(err.message || 'Extraction failed. Please try again.');
-      showToast({
-        type: 'error',
-        title: 'Extraction Error',
-        description: err.message || 'Failed to extract decision parameters.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSelectBenchmark = async (bm: BenchmarkItem) => {
-    setError(null);
-    setSubmittedNarrative(bm.narrative || bm.title);
-    setDecision(bm.structured_decision);
-    setBundle(null);
-    setReport(null);
-    setCurrentDecisionId(bm.id);
-    setIsEditingDescribe(false);
-    setActiveStage('editor');
-    scrollToSection(calibrateSectionRef);
-    showToast({
-      type: 'info',
-      title: 'Canonical Dilemma Loaded',
-      description: `Loaded "${bm.title}" into the calibration workbench.`,
-    });
-  };
-
-  const [isOrientationOpen, setIsOrientationOpen] = useState<boolean>(() => {
-    return localStorage.getItem('phronesis_orientation_dismissed') !== 'true';
+  // 2. Decision Session Hook
+  const session = useDecisionSession({
+    getEffectiveModelConfig,
+    effortLevel,
+    onAnalysisComplete: historyStore.addHistoryItem,
+    showToast,
   });
-  const [loadingStage, setLoadingStage] = useState<string>('');
 
-  const handleRunAnalysis = async (focusConfig?: FocusConfig) => {
-    if (!decision) return;
-    setIsLoading(true);
-    setError(null);
-    setLoadingStage('Computing closed-form expected utility & regret matrices...');
-    try {
-      // 1. Run deterministic engines
-      setLoadingStage('Scanning 15 cognitive bias patterns & 4 philosophical frameworks...');
-      decision.project_id = activeProjectId;
-      const analysisBundle = await runDeterministicAnalysis(decision);
-      if (focusConfig) {
-        analysisBundle.focus_config = focusConfig;
-      }
-      analysisBundle.effort_level = effortLevel;
-      analysisBundle.project_id = activeProjectId;
-      analysisBundle.project_context = activeProjectContext;
-      setBundle(analysisBundle);
+  // 3. Project Store Hook
+  const projectStore = useProjectStore({
+    showToast,
+    onDecisionLoadedFromProject: ({ decision, bundle, report, decisionId, narrative }) => {
+      session.setDecision(decision);
+      session.setBundle(bundle);
+      session.setReport(report);
+      session.setCurrentDecisionId(decisionId);
+      session.setSubmittedNarrative(narrative);
+      session.setActiveStage('report');
+    },
+    onResetSession: session.handleReset,
+  });
 
-      // 2. Synthesize report
-      setLoadingStage('Synthesizing auditable reasoning dossier with Value of Information...');
-      const rep = await synthesizeReport(analysisBundle, getEffectiveModelConfig());
-      setReport(rep);
-
-      // 3. Save to history (only if not temporary session)
-      const historyId = rep.decision_id || `dec-${Date.now()}`;
-      setCurrentDecisionId(historyId);
-
-      if (!isTemporarySession) {
-        const newHistoryItem: HistoryItem = {
-          id: historyId,
-          title: decision.decision_statement.length > 50 
-            ? `${decision.decision_statement.slice(0, 48)}...` 
-            : decision.decision_statement,
-          timestamp: Date.now(),
-          previewText: decision.decision_statement,
-          isPinned: false,
-          data: {
-            decision,
-            bundle: analysisBundle,
-            report: rep,
-          },
-        };
-
-        setHistory((prev) => {
-          const updated = [newHistoryItem, ...prev.filter((item) => item.title !== newHistoryItem.title)].slice(0, 20);
-          safePersistHistory(updated);
-          return updated;
-        });
-      }
-
-      // Refresh project counts if inside a project
-      fetchProjects().then(setProjects).catch(console.warn);
-
-      setActiveStage('report');
-      scrollToSection(reportSectionRef);
-      showToast({
-        type: 'success',
-        title: 'Audit Complete',
-        description: 'Deterministic solvers and 4-lens philosophy dossier ready.',
-      });
-    } catch (err: any) {
-      setError(err.message || 'Analysis run failed.');
-      showToast({
-        type: 'error',
-        title: 'Audit Error',
-        description: err.message || 'Reasoning audit encountered an issue.',
-      });
-    } finally {
-      setIsLoading(false);
-      setLoadingStage('');
-    }
-  };
-
-  // ──────────────────────────────────────────────
-  // Projects Management Handlers
-  // ──────────────────────────────────────────────
-  const handleSelectProject = useCallback((projectId: string) => {
-    setViewingProjectId(projectId);
-    setActiveStage('project');
+  // Data state: benchmarks
+  const [benchmarks, setBenchmarks] = useState<BenchmarkItem[]>([]);
+  useEffect(() => {
+    fetchBenchmarks().then(setBenchmarks).catch(console.warn);
   }, []);
 
-  const handleCreateProject = useCallback(async (name: string) => {
-    const p = await createProject({ name });
-    const updated = await fetchProjects();
-    setProjects(updated);
-    showToast({
-      type: 'success',
-      title: 'Project Created',
-      description: `Created project container "${p.name}".`,
-    });
-  }, [showToast]);
-
-  const handleDeleteProject = useCallback(async (projectId: string) => {
-    await deleteProject(projectId);
-    const updated = await fetchProjects();
-    setProjects(updated);
-    if (activeProjectId === projectId) {
-      setActiveProjectId(undefined);
-      setActiveProjectContext(undefined);
-    }
-    showToast({
-      type: 'info',
-      title: 'Project Deleted',
-      description: 'Project container deleted. Dossiers remain preserved in history.',
-    });
-  }, [activeProjectId, showToast]);
-
-  const handleNewDecisionInProject = useCallback((projectId: string, projectContext: string) => {
-    setActiveProjectId(projectId);
-    setActiveProjectContext(projectContext);
-    setViewingProjectId(null);
-    handleReset();
-    showToast({
-      type: 'info',
-      title: 'Project Context Active',
-      description: 'New decision will be grouped under this project and receive its shared constraints.',
-    });
-  }, [handleReset, showToast]);
-
-  const handleSelectDecisionFromProject = useCallback(async (decisionId: string) => {
+  // UI state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isMethodologyOpen, setIsMethodologyOpen] = useState(false);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState<'faq' | 'credits' | 'terms' | 'privacy'>('faq');
+  const [isOrientationOpen, setIsOrientationOpen] = useState(() => {
     try {
-      setIsLoading(true);
-      const item = await fetchHistoryItem(decisionId);
-      if (item) {
-        setDecision(item.structured_decision);
-        setBundle(item.analysis_bundle);
-        setReport({
-          report_markdown: item.report_markdown || '',
-          key_sensitive_variable: item.key_sensitive_variable || '',
-          proposed_experiment: item.proposed_experiment || '',
-          attributed_sources: item.attributed_sources || [],
-          focus_config: item.focus_config || undefined,
-          longitudinal_summary: item.longitudinal_summary || '',
-          math_summary: {
-            expected_utility: item.analysis_bundle?.math_layer?.expected_utility?.utilities || {},
-            preferred_eu_alt: item.preferred_eu_alt || '',
-            minimax_regret_choice: item.minimax_regret_choice || '',
-            inflection_threshold: item.analysis_bundle?.math_layer?.sensitivity_analysis?.inflection_threshold || 0,
-          },
-        });
-        setCurrentDecisionId(decisionId);
-        setSubmittedNarrative(item.decision_statement);
-        setActiveStage('report');
-      }
-    } catch (err: any) {
-      console.error('Failed to load project decision:', err);
-      showToast({
-        type: 'error',
-        title: 'Load Failed',
-        description: 'Could not load decision record.',
-      });
-    } finally {
-      setIsLoading(false);
+      return localStorage.getItem('phronesis_orientation_dismissed') !== 'true';
+    } catch {
+      return true;
     }
-  }, [showToast]);
+  });
+
+  const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
+  const [externalTextToAppend, setExternalTextToAppend] = useState<string | undefined>(undefined);
+  const [chatLayoutMode, setChatLayoutMode] = useState<ChatLayoutMode>(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_CHAT_LAYOUT_KEY);
+    return (saved as ChatLayoutMode) || 'drawer';
+  });
+
+  // Layout & Theme State
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_THEME_KEY);
+    if (saved) return saved === 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_SIDEBAR_KEY);
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Sync theme
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDarkMode) {
+      root.classList.add('dark');
+      localStorage.setItem(LOCAL_STORAGE_THEME_KEY, 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem(LOCAL_STORAGE_THEME_KEY, 'light');
+    }
+  }, [isDarkMode]);
+
+  const handleToggleTheme = () => setIsDarkMode((prev) => !prev);
+
+  const handleOpenLegal = useCallback((tab: 'faq' | 'credits' | 'terms' | 'privacy' = 'faq') => {
+    setLegalTab(tab);
+    setIsLegalOpen(true);
+  }, []);
 
   const handleSelectHistoryItem = (item: HistoryItem) => {
     if (item.data) {
-      setDecision(item.data.decision || null);
-      setBundle(item.data.bundle || null);
-      setReport(item.data.report || null);
-      setCurrentDecisionId(item.id);
-      setIsEditingDescribe(false);
-      setPendingEditSection(null);
+      session.setDecision(item.data.decision || null);
+      session.setBundle(item.data.bundle || null);
+      session.setReport(item.data.report || null);
+      session.setCurrentDecisionId(item.id);
+      session.setIsEditingDescribe(false);
 
-      // For history items, set the narrative from the decision statement
       if (item.data.decision) {
-        setSubmittedNarrative(item.previewText || item.data.decision.decision_statement);
+        session.setSubmittedNarrative(item.previewText || item.data.decision.decision_statement);
       }
 
       if (item.data.bundle && item.data.report) {
-        setActiveStage('report');
+        session.setActiveStage('report');
       } else if (item.data.decision) {
-        setActiveStage('editor');
+        session.setActiveStage('editor');
       }
       showToast({
         type: 'info',
         title: 'Dossier Loaded',
         description: `Opened "${item.title}".`,
       });
-    }
-  };
-
-  const handleClearHistory = () => {
-    setHistory([]);
-    try {
-      localStorage.removeItem(LOCAL_STORAGE_HISTORY_KEY);
-    } catch (e) {
-      console.warn('Failed to clear history:', e);
-    }
-    showToast({
-      type: 'info',
-      title: 'History Cleared',
-      description: 'All past local decision records removed.',
-    });
-  };
-
-  const handleDeleteHistoryItem = (id: string) => {
-    setHistory((prev) => {
-      const updated = prev.filter((item) => item.id !== id);
-      safePersistHistory(updated);
-      return updated;
-    });
-    if (currentDecisionId === id) {
-      setCurrentDecisionId(undefined);
-    }
-  };
-
-  const handleTogglePinHistoryItem = (id: string) => {
-    setHistory((prev) => {
-      const updated = prev.map((item) =>
-        item.id === id ? { ...item, isPinned: !item.isPinned } : item
-      );
-      safePersistHistory(updated);
-      return updated;
-    });
-  };
-
-  const handleRenameHistoryItem = (id: string, newTitle: string) => {
-    setHistory((prev) => {
-      const updated = prev.map((item) =>
-        item.id === id ? { ...item, title: newTitle } : item
-      );
-      safePersistHistory(updated);
-      return updated;
-    });
-  };
-
-  const handleDuplicateHistoryItem = (item: HistoryItem) => {
-    const duplicated: HistoryItem = {
-      ...item,
-      id: `dec-${Date.now()}`,
-      title: `${item.title} (copy)`,
-      timestamp: Date.now(),
-      isPinned: false,
-    };
-    setHistory((prev) => {
-      const updated = [duplicated, ...prev].slice(0, 20);
-      safePersistHistory(updated);
-      return updated;
-    });
-    showToast({
-      type: 'info',
-      title: 'Dossier Duplicated',
-      description: `"${duplicated.title}" created.`,
-    });
-  };
-
-  const handleExportSingleHistoryItem = (item: HistoryItem) => {
-    try {
-      const payload = { id: item.id, title: item.title, timestamp: item.timestamp, data: item.data };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `phronesis_${item.title.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40)}_${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast({
-        type: 'success',
-        title: 'Exported',
-        description: `"${item.title}" saved as JSON.`,
-      });
-    } catch (err) {
-      console.warn('Export failed:', err);
     }
   };
 
@@ -671,7 +215,7 @@ function AppContent() {
       name: alt.name,
       description: alt.description || '',
     };
-    setDecision((prev) => {
+    session.setDecision((prev) => {
       if (!prev) {
         return {
           decision_statement: 'New Socratic Decision',
@@ -702,15 +246,15 @@ function AppContent() {
         payoff_matrix: [...prev.payoff_matrix, ...newCells],
       };
     });
-    if (activeStage === 'input') {
-      setActiveStage('editor');
+    if (session.activeStage === 'input') {
+      session.setActiveStage('editor');
     }
     showToast({
       type: 'success',
       title: 'Alternative Added',
       description: `Added "${alt.name}" to your decision model.`,
     });
-  }, [activeStage, showToast]);
+  }, [session, showToast]);
 
   const handleInsertAssumption = useCallback((assump: { text: string; type?: string; testable?: boolean }) => {
     const newAssumption = {
@@ -719,7 +263,7 @@ function AppContent() {
       type: assump.type || 'empirical',
       testable: assump.testable !== false,
     };
-    setDecision((prev) => {
+    session.setDecision((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
@@ -731,7 +275,7 @@ function AppContent() {
       title: 'Assumption Added',
       description: 'Added testable assumption to calibration workbench.',
     });
-  }, [showToast]);
+  }, [session, showToast]);
 
   const handleChangeChatLayoutMode = useCallback((mode: ChatLayoutMode) => {
     setChatLayoutMode(mode);
@@ -742,66 +286,56 @@ function AppContent() {
     }
   }, []);
 
-  // --- Edit-and-regenerate handlers ---
-  const handleRequestEditDescribe = useCallback(() => {
-    // If we're still at input stage, nothing downstream to regenerate
-    if (activeStage === 'input') return;
-    // Show confirmation dialog
-    setPendingEditSection('describe');
-  }, [activeStage]);
+  // Global Keyboard Shortcuts (⌘K, ⌘N, ⌘J, ⌘B, ⌘,)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
+        e.preventDefault();
+        setIsChatDrawerOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        setIsSidebarOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === ',' || e.key === '/')) {
+        e.preventDefault();
+        setIsSettingsOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'n' && !e.shiftKey) {
+        e.preventDefault();
+        session.handleReset();
+        projectStore.clearActiveProject();
+        showToast({
+          type: 'info',
+          title: 'New Decision',
+          description: 'Cleared workspace for fresh analysis.',
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [session, projectStore, showToast]);
 
-  const handleRequestEditCalibrate = useCallback(() => {
-    // If we're still at editor stage, just let them keep editing (it's already active)
-    if (activeStage === 'editor') return;
-    // Show confirmation dialog for regenerating report
-    setPendingEditSection('calibrate');
-  }, [activeStage]);
-
-  const handleConfirmEdit = useCallback(() => {
-    if (pendingEditSection === 'describe') {
-      // Re-expand Describe, clear downstream
-      setIsEditingDescribe(true);
-      setDecision(null);
-      setBundle(null);
-      setReport(null);
-      setActiveStage('input');
-      setPendingEditSection(null);
-      scrollToSection(describeSectionRef);
-      showToast({
-        type: 'info',
-        title: 'Editing Description',
-        description: 'Modify your dilemma and resubmit to regenerate downstream analysis.',
-      });
-    } else if (pendingEditSection === 'calibrate') {
-      // Re-expand Calibrate, clear report
-      setBundle(null);
-      setReport(null);
-      setActiveStage('editor');
-      setPendingEditSection(null);
-      scrollToSection(calibrateSectionRef);
-      showToast({
-        type: 'info',
-        title: 'Editing Calibration',
-        description: 'Adjust your model parameters and re-run the reasoning audit.',
-      });
+  // Section anchor scroll
+  const handleScrollToSection = useCallback((sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [pendingEditSection, scrollToSection, showToast]);
-
-  const handleCancelEdit = useCallback(() => {
-    setPendingEditSection(null);
   }, []);
 
-  // Determine what sections to show
-  const showDescribeActive = activeStage === 'input';
-  const showDescribeCollapsed = activeStage === 'editor' || activeStage === 'report';
-  const showCalibrate = activeStage === 'editor' || activeStage === 'report';
-  const showCalibrateCollapsed = activeStage === 'report';
-  const showCalibrateActive = activeStage === 'editor';
-  const showReport = activeStage === 'report';
-  const showBenchmarks = activeStage === 'benchmarks';
-  const showProject = activeStage === 'project' && !!viewingProjectId;
+  // Step and section visibility
+  const currentStep = session.activeStage as 'input' | 'editor' | 'report' | 'benchmarks';
+  const showDescribeActive = session.activeStage === 'input';
+  const showDescribeCollapsed = session.activeStage === 'editor' || session.activeStage === 'report';
+  const showCalibrate = session.activeStage === 'editor' || session.activeStage === 'report';
+  const showCalibrateCollapsed = session.activeStage === 'report';
+  const showCalibrateActive = session.activeStage === 'editor';
+  const showReport = session.activeStage === 'report';
+  const showBenchmarks = session.activeStage === 'benchmarks';
+  const showProject = session.activeStage === 'project' && !!projectStore.viewingProjectId;
 
-  const activeProjectObj = projects.find((p) => p.id === activeProjectId);
+  const activeProjectObj = projectStore.projects.find((p) => p.id === projectStore.activeProjectId);
 
   return (
     <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex">
@@ -811,27 +345,30 @@ function AppContent() {
         onToggle={() => setIsSidebarOpen((prev) => !prev)}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        history={history}
+        history={historyStore.history}
         benchmarks={benchmarks}
-        projects={projects}
-        activeProjectId={viewingProjectId || activeProjectId}
-        onSelectProject={handleSelectProject}
-        onCreateProject={handleCreateProject}
-        onDeleteProject={handleDeleteProject}
+        projects={projectStore.projects}
+        activeProjectId={projectStore.viewingProjectId || projectStore.activeProjectId}
+        onSelectProject={projectStore.handleSelectProject}
+        onCreateProject={projectStore.handleCreateProject}
+        onDeleteProject={projectStore.handleDeleteProject}
         onSelectHistoryItem={handleSelectHistoryItem}
-        onSelectBenchmark={handleSelectBenchmark}
-        onOpenBenchmarksGallery={() => setActiveStage('benchmarks')}
+        onSelectBenchmark={session.handleSelectBenchmark}
+        onOpenBenchmarksGallery={() => session.setActiveStage('benchmarks')}
         onOpenMethodology={() => setIsMethodologyOpen(true)}
-        onNewDecision={handleReset}
-        onDeleteHistoryItem={handleDeleteHistoryItem}
-        onTogglePinHistoryItem={handleTogglePinHistoryItem}
-        onRenameHistoryItem={handleRenameHistoryItem}
-        onDuplicateHistoryItem={handleDuplicateHistoryItem}
-        onExportHistoryItem={handleExportSingleHistoryItem}
-        onClearHistory={handleClearHistory}
+        onNewDecision={() => {
+          session.handleReset();
+          projectStore.clearActiveProject();
+        }}
+        onDeleteHistoryItem={historyStore.handleDeleteHistoryItem}
+        onTogglePinHistoryItem={historyStore.handleTogglePinHistoryItem}
+        onRenameHistoryItem={historyStore.handleRenameHistoryItem}
+        onDuplicateHistoryItem={historyStore.handleDuplicateHistoryItem}
+        onExportHistoryItem={historyStore.handleExportSingleHistoryItem}
+        onClearHistory={historyStore.handleClearHistory}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}
-        currentDecisionId={currentDecisionId}
+        currentDecisionId={session.currentDecisionId}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onOpenLegal={handleOpenLegal}
@@ -842,28 +379,31 @@ function AppContent() {
         {/* Primary Reading & Interaction Column Area */}
         <div className="flex-1 flex flex-col min-w-0">
           <Header
-            onReset={handleReset}
+            onReset={() => {
+              session.handleReset();
+              projectStore.clearActiveProject();
+            }}
             currentStep={currentStep}
-            activeStage={activeStage}
+            activeStage={session.activeStage}
             onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
             isDarkMode={isDarkMode}
             onToggleTheme={handleToggleTheme}
-            onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
+            onOpenExport={session.bundle && session.report ? () => setIsExportModalOpen(true) : undefined}
             onToggleChat={() => setIsChatDrawerOpen((prev) => !prev)}
             isChatOpen={isChatDrawerOpen}
             onScrollToSection={handleScrollToSection}
-            hasDecision={!!decision}
-            hasReport={!!(bundle && report)}
-            isTemporarySession={isTemporarySession}
-            onToggleTemporarySession={handleToggleTemporarySession}
+            hasDecision={!!session.decision}
+            hasReport={!!(session.bundle && session.report)}
+            isTemporarySession={historyStore.isTemporarySession}
+            onToggleTemporarySession={historyStore.handleToggleTemporarySession}
           />
 
           <main className="flex-1 pb-16">
-            {error && (
+            {session.error && (
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 mt-4">
                 <div className="p-3.5 rounded-xl bg-[var(--color-ochre-subtle)] border border-[var(--color-ochre)] text-xs text-[var(--text-main)] flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 text-[var(--color-ochre)] shrink-0" />
-                  <span className="font-ui">{error}</span>
+                  <span className="font-ui">{session.error}</span>
                 </div>
               </div>
             )}
@@ -873,57 +413,54 @@ function AppContent() {
               <div className="space-y-6 py-4">
 
                 {/* SECTION 1: Describe */}
-                <div ref={describeSectionRef}>
-                  {showDescribeCollapsed && !isEditingDescribe && submittedNarrative && (
+                <div ref={session.describeSectionRef}>
+                  {showDescribeCollapsed && !session.isEditingDescribe && session.submittedNarrative && (
                     <CollapsedDescribeCard
-                      narrative={submittedNarrative}
-                      onEdit={handleRequestEditDescribe}
-                      isEditDisabled={isLoading}
+                      narrative={session.submittedNarrative}
+                      onEdit={session.handleRequestEditDescribe}
+                      isEditDisabled={session.isLoading}
                     />
                   )}
 
-                  {(showDescribeActive || isEditingDescribe) && (
+                  {(showDescribeActive || session.isEditingDescribe) && (
                     <NarrativeInputView
-                      onExtract={handleExtract}
-                      isLoading={isLoading}
+                      onExtract={session.handleExtract}
+                      isLoading={session.isLoading}
                       externalTextToAppend={externalTextToAppend}
                       onClearExternalText={() => setExternalTextToAppend(undefined)}
-                      initialNarrative={isEditingDescribe ? submittedNarrative : undefined}
-                      isReEdit={isEditingDescribe}
+                      initialNarrative={session.isEditingDescribe ? session.submittedNarrative : undefined}
+                      isReEdit={session.isEditingDescribe}
                       modelConfig={modelConfig}
                       onModelConfigChange={setModelConfig}
                       effortLevel={effortLevel}
                       onEffortLevelChange={setEffortLevel}
-                      activeProjectId={activeProjectId}
+                      activeProjectId={projectStore.activeProjectId}
                       activeProjectName={activeProjectObj?.name}
-                      onClearActiveProject={() => {
-                        setActiveProjectId(undefined);
-                        setActiveProjectContext(undefined);
-                      }}
-                      onOpenBenchmarksGallery={() => setActiveStage('benchmarks')}
+                      onClearActiveProject={projectStore.clearActiveProject}
+                      onOpenBenchmarksGallery={() => session.setActiveStage('benchmarks')}
                     />
                   )}
                 </div>
 
                 {/* SECTION 2: Calibrate */}
                 {showCalibrate && (
-                  <div ref={calibrateSectionRef}>
-                    {showCalibrateCollapsed && decision && (
+                  <div ref={session.calibrateSectionRef}>
+                    {showCalibrateCollapsed && session.decision && (
                       <CollapsedCalibrateCard
-                        decision={decision}
-                        onEdit={handleRequestEditCalibrate}
-                        isEditDisabled={isLoading}
+                        decision={session.decision}
+                        onEdit={session.handleRequestEditCalibrate}
+                        isEditDisabled={session.isLoading}
                       />
                     )}
 
-                    {showCalibrateActive && decision && (
+                    {showCalibrateActive && session.decision && (
                       <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading calibration view...</div>}>
                         <section id="section-calibrate">
                           <ModelEditorView
-                            decision={decision}
-                            onUpdateDecision={setDecision}
-                            onRunAnalysis={handleRunAnalysis}
-                            isLoading={isLoading}
+                            decision={session.decision}
+                            onUpdateDecision={session.setDecision}
+                            onRunAnalysis={session.handleRunAnalysis}
+                            isLoading={session.isLoading}
                           />
                         </section>
                       </Suspense>
@@ -932,15 +469,29 @@ function AppContent() {
                 )}
 
                 {/* SECTION 3: Audit Report */}
-                {showReport && bundle && report && (
-                  <div ref={reportSectionRef}>
+                {showReport && session.bundle && session.report && (
+                  <div ref={session.reportSectionRef}>
                     <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading report view...</div>}>
                       <section id="section-report">
                         <ReportView
-                          bundle={bundle}
-                          report={report}
-                          onNewDecision={handleReset}
+                          bundle={session.bundle}
+                          report={session.report}
+                          onNewDecision={() => {
+                            session.handleReset();
+                            projectStore.clearActiveProject();
+                          }}
                           onOpenExport={() => setIsExportModalOpen(true)}
+                          onApplySandboxModel={(updated) => {
+                            session.setDecision(updated);
+                            session.setBundle(null);
+                            session.setReport(null);
+                            session.setActiveStage('editor');
+                            showToast({
+                              type: 'info',
+                              title: 'Perturbations Applied',
+                              description: 'Model updated with sandbox parameters. Re-run reasoning audit to refresh dossier.',
+                            });
+                          }}
                         />
                       </section>
                     </Suspense>
@@ -950,20 +501,20 @@ function AppContent() {
             )}
 
             {/* Project Workspace View */}
-            {showProject && viewingProjectId && (
+            {showProject && projectStore.viewingProjectId && (
               <Suspense fallback={<div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">Loading project view...</div>}>
                 <ProjectView
-                  projectId={viewingProjectId}
-                  onNewDecisionInProject={handleNewDecisionInProject}
-                  onSelectDecision={handleSelectDecisionFromProject}
+                  projectId={projectStore.viewingProjectId}
+                  onNewDecisionInProject={projectStore.handleNewDecisionInProject}
+                  onSelectDecision={projectStore.handleSelectDecisionFromProject}
                   onCloseProjectView={() => {
-                    setViewingProjectId(null);
-                    setActiveStage('input');
+                    projectStore.setViewingProjectId(null);
+                    session.setActiveStage('input');
                   }}
                   onProjectDeleted={() => {
-                    fetchProjects().then(setProjects);
-                    setViewingProjectId(null);
-                    setActiveStage('input');
+                    projectStore.refreshProjects();
+                    projectStore.setViewingProjectId(null);
+                    session.setActiveStage('input');
                   }}
                 />
               </Suspense>
@@ -974,8 +525,8 @@ function AppContent() {
               {showBenchmarks && (
                 <CanonicalDilemmasView
                   benchmarks={benchmarks}
-                  onSelectBenchmark={handleSelectBenchmark}
-                  onBackToInput={() => setActiveStage('input')}
+                  onSelectBenchmark={session.handleSelectBenchmark}
+                  onBackToInput={() => session.setActiveStage('input')}
                 />
               )}
             </Suspense>
@@ -994,8 +545,8 @@ function AppContent() {
               isOpen={isChatDrawerOpen}
               onClose={() => setIsChatDrawerOpen(false)}
               currentStep={currentStep}
-              decision={decision}
-              bundle={bundle}
+              decision={session.decision}
+              bundle={session.bundle}
               layoutMode={chatLayoutMode}
               onChangeLayoutMode={handleChangeChatLayoutMode}
               llmConfig={getEffectiveModelConfig()}
@@ -1021,8 +572,8 @@ function AppContent() {
             isOpen={isChatDrawerOpen}
             onClose={() => setIsChatDrawerOpen(false)}
             currentStep={currentStep}
-            decision={decision}
-            bundle={bundle}
+            decision={session.decision}
+            bundle={session.bundle}
             layoutMode={chatLayoutMode}
             onChangeLayoutMode={handleChangeChatLayoutMode}
             llmConfig={getEffectiveModelConfig()}
@@ -1041,7 +592,7 @@ function AppContent() {
       )}
 
       {/* Pipeline Progress Indicator (During Reasoning Audit) */}
-      {isLoading && loadingStage && (
+      {session.isLoading && session.loadingStage && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 p-4 rounded-2xl bg-[var(--bg-surface-glass)] backdrop-blur-md border border-[var(--color-verdigris)]/50 shadow-2xl flex items-center space-x-3 animate-fade-in max-w-md w-full mx-4">
           <div className="p-2 rounded-xl bg-[var(--color-verdigris-subtle)] text-[var(--color-verdigris)] shrink-0">
             <Sparkles className="w-5 h-5 animate-spin" />
@@ -1056,14 +607,14 @@ function AppContent() {
               </span>
             </div>
             <p className="font-body text-xs text-[var(--text-main)] truncate animate-pulse">
-              {loadingStage}
+              {session.loadingStage}
             </p>
           </div>
         </div>
       )}
 
       {/* --- Edit-and-Regenerate Confirmation Modal --- */}
-      {pendingEditSection && (
+      {session.pendingEditSection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
           <div className="bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
             <div className="flex items-start space-x-3">
@@ -1072,19 +623,19 @@ function AppContent() {
               </div>
               <div className="space-y-1.5 flex-1">
                 <h3 className="font-display font-semibold text-base text-[var(--text-main)]">
-                  {pendingEditSection === 'describe'
+                  {session.pendingEditSection === 'describe'
                     ? 'Edit Dilemma Description?'
                     : 'Edit Model Calibration?'}
                 </h3>
                 <p className="font-body text-sm text-[var(--text-muted)] leading-relaxed">
-                  {pendingEditSection === 'describe'
+                  {session.pendingEditSection === 'describe'
                     ? 'Editing the description will regenerate both the Calibration and Audit Report sections below. Your current calibration settings and report will be cleared.'
                     : 'Editing the calibration will regenerate the Audit Report section below. Your current report will be cleared.'}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={handleCancelEdit}
+                onClick={session.handleCancelEdit}
                 className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-app)] transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -1094,17 +645,17 @@ function AppContent() {
             <div className="flex items-center justify-end space-x-3 pt-2">
               <button
                 type="button"
-                onClick={handleCancelEdit}
+                onClick={session.handleCancelEdit}
                 className="px-4 py-2 rounded-xl text-sm font-ui font-medium text-[var(--text-main)] bg-[var(--bg-app)] hover:bg-[var(--bg-surface-raised)] border border-[var(--border-medium)] transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleConfirmEdit}
+                onClick={session.handleConfirmEdit}
                 className="px-4 py-2 rounded-xl text-sm font-ui font-medium text-white bg-[var(--color-ochre)] hover:opacity-90 transition-all cursor-pointer shadow-sm"
               >
-                {pendingEditSection === 'describe' ? 'Edit & Regenerate' : 'Edit & Re-audit'}
+                {session.pendingEditSection === 'describe' ? 'Edit & Regenerate' : 'Edit & Re-audit'}
               </button>
             </div>
           </div>
@@ -1137,7 +688,7 @@ function AppContent() {
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
           onHistoryPurged={() => {
-            handleClearHistory();
+            historyStore.handleClearHistory();
           }}
           onOpenMethodology={() => setIsMethodologyOpen(true)}
           onOpenLegal={handleOpenLegal}
@@ -1149,20 +700,23 @@ function AppContent() {
         <CommandPalette
           isOpen={isCommandPaletteOpen}
           onClose={() => setIsCommandPaletteOpen(false)}
-          history={history}
+          history={historyStore.history}
           benchmarks={benchmarks}
           onSelectHistoryItem={handleSelectHistoryItem}
-          onSelectBenchmark={handleSelectBenchmark}
-          onOpenBenchmarksGallery={() => setActiveStage('benchmarks')}
+          onSelectBenchmark={session.handleSelectBenchmark}
+          onOpenBenchmarksGallery={() => session.setActiveStage('benchmarks')}
           onOpenMethodology={() => setIsMethodologyOpen(true)}
-          onNewDecision={handleReset}
+          onNewDecision={() => {
+            session.handleReset();
+            projectStore.clearActiveProject();
+          }}
           onToggleTheme={handleToggleTheme}
           onOpenSettings={() => setIsSettingsOpen(true)}
-          onOpenExport={bundle && report ? () => setIsExportModalOpen(true) : undefined}
-          onEditModel={decision ? () => setActiveStage('editor') : undefined}
+          onOpenExport={session.bundle && session.report ? () => setIsExportModalOpen(true) : undefined}
+          onEditModel={session.decision ? () => session.setActiveStage('editor') : undefined}
           onOpenLegal={handleOpenLegal}
           isDarkMode={isDarkMode}
-          hasActiveReport={!!(bundle && report)}
+          hasActiveReport={!!(session.bundle && session.report)}
         />
 
         {/* Legal, Help & Governance Modal */}
@@ -1173,12 +727,12 @@ function AppContent() {
         />
 
         {/* Export & Sharing Modal */}
-        {bundle && report && (
+        {session.bundle && session.report && (
           <ExportModal
             isOpen={isExportModalOpen}
             onClose={() => setIsExportModalOpen(false)}
-            bundle={bundle}
-            report={report}
+            bundle={session.bundle}
+            report={session.report}
           />
         )}
       </Suspense>

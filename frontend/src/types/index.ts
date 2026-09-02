@@ -535,4 +535,15 @@ export interface TestKeyResponse {
   message: string;
 }
 
+export type ActiveStage = 'input' | 'editor' | 'report' | 'benchmarks' | 'project';
+
+export interface HistoryItem {
+  id: string;
+  title: string;
+  timestamp: number;
+  previewText: string;
+  isPinned?: boolean;
+  data: any;
+}
+
 

@@ -45,6 +45,7 @@ import {
   fetchModels,
   testApiKey
 } from '../lib/api';
+import { DayNightToggle } from './DayNightToggle';
 
 export type SettingsTab =
   | 'ai'
@@ -1127,10 +1128,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 {/* Theme Mode Cards */}
-                <div className="space-y-2">
-                  <label className="font-ui font-semibold text-xs text-[var(--text-muted)] uppercase tracking-wider block">
-                    Color Theme
-                  </label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="font-ui font-semibold text-xs text-[var(--text-muted)] uppercase tracking-wider block">
+                        Color Theme
+                      </label>
+                      <span className="text-[11px] text-[var(--text-faint)] font-ui">
+                        {isDarkMode ? 'Dark Mode (Obsidian Stone)' : 'Light Mode (Clean Parchment)'}
+                      </span>
+                    </div>
+                    <DayNightToggle
+                      size="md"
+                      checked={isDarkMode}
+                      onChange={onToggleTheme}
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import type { BenchmarkItem, ProjectSummary } from '../types';
 import { groupByDate } from '../lib/formatTime';
+import { DayNightToggle } from './DayNightToggle';
 
 // ──────────────────────────────────────────────
 // Types & Interfaces
@@ -729,20 +730,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
 
                   {/* Theme Switcher Toggle inside Profile */}
-                  <button
-                    type="button"
+                  <div
                     onClick={onToggleTheme}
-                    className="chatgpt-popover-item"
+                    className="chatgpt-popover-item cursor-pointer flex items-center justify-between"
                   >
-                    {isDarkMode ? (
-                      <Sun className="w-4 h-4 text-[var(--color-ochre)]" />
-                    ) : (
-                      <Moon className="w-4 h-4 text-[var(--color-verdigris)]" />
-                    )}
-                    <div className="flex-1 text-left font-ui">
-                      {isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    <div className="flex items-center space-x-2 font-ui">
+                      {isDarkMode ? (
+                        <Moon className="w-4 h-4 text-[var(--color-verdigris)]" />
+                      ) : (
+                        <Sun className="w-4 h-4 text-[var(--color-ochre)]" />
+                      )}
+                      <span>{isDarkMode ? 'Dark Theme' : 'Light Theme'}</span>
                     </div>
-                  </button>
+                    <DayNightToggle
+                      size="sm"
+                      checked={isDarkMode}
+                      onChange={onToggleTheme}
+                    />
+                  </div>
 
                   {/* Methodology Modal Trigger */}
                   {onOpenMethodology && (

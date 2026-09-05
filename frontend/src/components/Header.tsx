@@ -1,5 +1,6 @@
 import React from 'react';
 import { Menu, Share2, Plus, MessageSquareQuote, PenTool, Sliders, LineChart, Check, RotateCcw } from 'lucide-react';
+import { DayNightToggle } from './DayNightToggle';
 
 interface HeaderProps {
   onReset: () => void;
@@ -23,6 +24,8 @@ export const Header: React.FC<HeaderProps> = ({
   currentStep,
   activeStage,
   onToggleMobileSidebar,
+  isDarkMode = false,
+  onToggleTheme,
   onOpenExport,
   onToggleChat,
   isChatOpen,
@@ -119,8 +122,18 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-1" />
         )}
 
-        {/* Right: Temporary Deliberation Mode (ChatGPT-style), Export, Socratic Deliberate, New Button */}
-        <div className="flex items-center space-x-2">
+        {/* Right: Day/Night Animated Switch, Temporary Deliberation, Export, Socratic Deliberate, New Button */}
+        <div className="flex items-center space-x-2.5">
+          {/* Animated Day / Night Mode Toggle */}
+          {onToggleTheme && (
+            <DayNightToggle
+              size="sm"
+              checked={isDarkMode}
+              onChange={onToggleTheme}
+              ariaLabel={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            />
+          )}
+
           {/* Temporary Deliberation / Ephemeral Mode Toggle */}
           {onToggleTemporarySession && (
             <button

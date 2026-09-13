@@ -1,0 +1,254 @@
+[
+  {
+    "id": "career_regret_minimization",
+    "framework_name": "Regret Minimization Framework",
+    "domain": "career_transition",
+    "field": "decision_psychology",
+    "source": "Jeff Bezos (1994), Decision Analysis of Amazon Founding; Kahneman (2011), Thinking, Fast and Slow",
+    "core_idea": "Project yourself to age 80 looking back on your life. Decisions evaluated through this lens minimize path-dependent existential regret rather than short-term social embarrassment, title loss, or temporary discomfort.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Ego vs. Existential Regret",
+        "risk_flag": "Hesitation driven primarily by immediate fear of social embarrassment or prestige loss rather than fundamental misalignment.",
+        "probing_question": "At age 80, will you regret attempting this and failing more than you would regret never trying and wondering what might have happened?"
+      },
+      {
+        "check_item": "Active Omission Asymmetry",
+        "risk_flag": "Tolerating chronic low-grade dissatisfaction because staying feels passive and safe, even when long-term regret of inaction is near certain.",
+        "probing_question": "If you remain on your current trajectory for 5 more years, what will your cumulative regret look like looking back?"
+      }
+    ],
+    "keywords": ["career", "job", "quit", "offer", "salary", "promotion", "leave company", "role", "boss", "work", "stay or leave"]
+  },
+  {
+    "id": "two_way_door_reversibility",
+    "framework_name": "Two-Way Door Reversibility & Option Value",
+    "domain": "career_transition",
+    "field": "operational_strategy",
+    "source": "Jeff Bezos (1997-2015 Shareholder Letters); Dixit & Pindyck (1994), Investment Under Uncertainty",
+    "core_idea": "Decisions fall into two categories: Type 1 (one-way doors: irreversible or extremely costly to reverse, requiring slow deliberation) and Type 2 (two-way doors: reversible with low friction, requiring rapid execution).",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Backtracking Cost Audit",
+        "risk_flag": "Treating a reversible Type 2 experiment as an existential irreversible Type 1 commitment.",
+        "probing_question": "If this move fails completely within 9-12 months, what is the exact economic and professional cost to return to your prior baseline?"
+      },
+      {
+        "check_item": "Bridge Preservation",
+        "risk_flag": "Burning relational bridges or contractual standing during departure, turning an otherwise reversible transition into a permanent lock-out.",
+        "probing_question": "What explicit steps can you take right now to ensure your relationship with current mentors and leadership remains intact?"
+      }
+    ],
+    "keywords": ["reversible", "burn bridge", "leave", "quit", "sabbatical", "contract", "safe option", "walk away", "fallback"]
+  },
+  {
+    "id": "equity_illiquidity_discount",
+    "framework_name": "Comp-vs-Equity Illiquidity Discounting",
+    "domain": "career_transition",
+    "field": "corporate_finance",
+    "source": "Aswath Damodaran (NYU Stern), Marketability and Illiquidity Discounts in Private Firm Valuation (2005-2023)",
+    "core_idea": "Private early-stage equity compensation lacks market liquidity and carries heavy seniority liquidation preferences. Rationally, paper startup options must be discounted by 70% to 90% relative to guaranteed liquid cash compensation.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Paper Wealth Conflation",
+        "risk_flag": "Treating theoretical fully-diluted paper startup equity valuations as equivalent to liquid cash salary and 401(k) contributions.",
+        "probing_question": "Does this career pivot remain financially viable and personally fulfilling if your startup equity is worth exactly $0 at the end of 4 years?"
+      },
+      {
+        "check_item": "Exercise & Tax Cliff Risk",
+        "risk_flag": "Failing to budget for option strike prices and AMT (Alternative Minimum Tax) liabilities upon departure.",
+        "probing_question": "What is the post-termination exercise window, and will you have liquid capital to purchase vested shares if you leave before an IPO/exit?"
+      }
+    ],
+    "keywords": ["rsu", "equity", "stock options", "vesting", "strike price", "valuation", "paper wealth", "startup comp", "grant"]
+  },
+  {
+    "id": "default_alive_runway",
+    "framework_name": "Default Alive vs. Default Dead Runway Analysis",
+    "domain": "startup_and_venture",
+    "field": "venture_strategy",
+    "source": "Paul Graham (Y Combinator, 2015), 'Default Alive or Default Dead?'",
+    "core_idea": "A startup is 'Default Alive' if its current revenue growth rate and burn rate allow it to reach profitability before running out of remaining bank balance without raising additional capital.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "External Capital Dependence",
+        "risk_flag": "Operating under a burn rate where survival is 100% dependent on future venture capital rounds in an uncertain macroeconomic environment.",
+        "probing_question": "If venture capital markets freeze completely for the next 24 months, does your plan reach cashflow break-even on current capital?"
+      },
+      {
+        "check_item": "Fatal Runway Horizon (<6 Months)",
+        "risk_flag": "Allocating resources to non-revenue speculative expansions while cash runway is below the 6-month survival threshold.",
+        "probing_question": "What core activities can be paused immediately to extend operating runway past 18 months?"
+      }
+    ],
+    "keywords": ["startup", "runway", "seed", "burn rate", "fundraising", "venture", "investors", "cash burn", "default alive", "capital raise"]
+  },
+  {
+    "id": "seniority_waterfall_dilution",
+    "framework_name": "Seniority Waterfall & Liquidation Preference Audit",
+    "domain": "startup_and_venture",
+    "field": "venture_capital",
+    "source": "Brad Feld & Jason Mendelson (2019), Venture Deals: Be Smarter Than Your Lawyer and Venture Capitalist",
+    "core_idea": "Preferred investors hold liquidation preferences (1x-3x, participating or non-participating). In modest or moderate acquisition scenarios, preferred capital is returned first, often resulting in common stock receiving near-zero proceeds.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Downside Proceeds Waterfall",
+        "risk_flag": "Assuming common equity shares proportional pro-rata value in low-to-mid exit outcomes without calculating the preferred liquidation hurdle.",
+        "probing_question": "In a $15M or $30M exit, how many dollars of senior preferred capital must be paid out before common shares receive a single dollar?"
+      },
+      {
+        "check_item": "Down-Round Dilution Protection",
+        "risk_flag": "Unvetted anti-dilution provisions (full ratchet vs. weighted average) that wipe out founding common equity in subsequent bridge rounds.",
+        "probing_question": "Are your equity protections standard broad-based weighted average, and what veto rights do investors hold over future financings?"
+      }
+    ],
+    "keywords": ["liquidation preference", "preferred stock", "common stock", "waterfall", "exit", "acquisition", "dilution", "term sheet", "cap table"]
+  },
+  {
+    "id": "burn_multiple_efficiency",
+    "framework_name": "Burn Multiple Capital Efficiency",
+    "domain": "startup_and_venture",
+    "field": "saas_economics",
+    "source": "David Sacks (Craft Ventures, 2020), 'The Burn Multiple: How to Measure Capital Efficiency in SaaS'",
+    "core_idea": "Burn Multiple = Net Burn / Net New ARR. A score <1.0 is exceptional; 1.0-1.5 is good; >2.0 indicates unsustainable capital subsidization of top-line growth.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Growth Subsidization Trap",
+        "risk_flag": "Confusing revenue growth achieved by burning $2.50 per $1.00 of new ARR with genuine organic product-market fit.",
+        "probing_question": "If sales and marketing spend is reduced by 50%, what happens to retention and customer acquisition?"
+      },
+      {
+        "check_item": "Payback Period Drift",
+        "risk_flag": "Customer acquisition cost (CAC) payback period extending beyond 18-24 months without long-term multi-year cash pre-payments.",
+        "probing_question": "Are gross margins sufficient to recover sales acquisition expense within 12 months?"
+      }
+    ],
+    "keywords": ["burn multiple", "arr", "efficiency", "saas metrics", "cac", "ltv", "capital efficiency", "mrr", "gross margin"]
+  },
+  {
+    "id": "conways_law_alignment",
+    "framework_name": "Conway's Law & Architecture Coupling",
+    "domain": "software_and_engineering",
+    "field": "software_architecture",
+    "source": "Melvin Conway (1968), 'How Do Committees Invent?'; Martin Fowler, Microservice Architecture Patterns",
+    "core_idea": "Organizations design systems whose architecture mirrors their internal communication channels. Fragmenting code into microservices without organizing autonomous, decoupled teams creates distributed monoliths with high coordination overhead.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Cross-Service Release Synchronization",
+        "risk_flag": "Decomposing into microservices while still requiring simultaneous synchronized deployments across multiple engineers or teams.",
+        "probing_question": "Can service teams deploy independently to production without coordinating pull requests across repositories?"
+      },
+      {
+        "check_item": "Distributed Network Latency & Failure Modes",
+        "risk_flag": "Replacing in-memory function calls with remote network RPC calls without designing for network partitions, timeouts, and cascading failure.",
+        "probing_question": "What happens to the entire system when the slowest downstream dependency suffers a 5-second latency spike?"
+      }
+    ],
+    "keywords": ["architecture", "microservices", "monolith", "refactor", "team structure", "cross-team", "engineering organization", "distributed systems"]
+  },
+  {
+    "id": "galls_law_evolution",
+    "framework_name": "Gall's Law of Evolutionary Systems",
+    "domain": "software_and_engineering",
+    "field": "systems_philosophy",
+    "source": "John Gall (1975), Systemantics: How Systems Work and Especially How They Fail; Joel Spolsky (2000), 'Things You Should Never Do'",
+    "core_idea": "A complex system that works is invariably found to have evolved from a simple working system. A complex system designed from scratch never works and cannot be patched to make it work.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Ground-Up Rewrite Illusion",
+        "risk_flag": "Attempting a total clean-slate rewrite of legacy software, underestimating the thousands of edge-case bugfixes encoded in the existing codebase.",
+        "probing_question": "Can this architectural migration be achieved incrementally using the Strangler Fig pattern rather than a binary big-bang cutover?"
+      },
+      {
+        "check_item": "Parity Chasing Delays",
+        "risk_flag": "Building the new system while the legacy system continues evolving, creating an endless game of feature-parity catch-up.",
+        "probing_question": "Have you locked legacy feature scope, or is the new architecture doomed to chase a moving target?"
+      }
+    ],
+    "keywords": ["rewrite", "ground up", "re-platform", "legacy", "migration", "clean slate", "v2 architecture", "strangler fig"]
+  },
+  {
+    "id": "cap_theorem_tradeoffs",
+    "framework_name": "CAP Theorem & Storage Consistency Tradeoffs",
+    "domain": "software_and_engineering",
+    "field": "distributed_computing",
+    "source": "Eric Brewer (2000), CAP Conjecture; Martin Kleppmann (2017), Designing Data-Intensive Applications",
+    "core_idea": "Under distributed network partitions (P), a storage and database system must choose between strict linearizable Consistency (C) or uninterrupted Availability (A). Claiming both during a partition is structurally impossible.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Silent Consistency Drift",
+        "risk_flag": "Adopting eventual consistency to optimize write throughput without mechanisms to reconcile conflicting asynchronous updates.",
+        "probing_question": "When two conflicting writes occur simultaneously in different regions, what is your deterministic conflict resolution protocol?"
+      },
+      {
+        "check_item": "Blast Radius Isolation",
+        "risk_flag": "Coupling high-throughput real-time critical paths to transactional relational databases without read-replica caching or rate-limiting.",
+        "probing_question": "If the primary database encounters read lock contention, does the core user flow fail catastrophically or degrade gracefully?"
+      }
+    ],
+    "keywords": ["distributed", "consistency", "latency", "availability", "database", "cache", "partition", "scale", "cap theorem", "data loss"]
+  },
+  {
+    "id": "margin_of_safety_capital",
+    "framework_name": "Margin of Safety & Downside Buffer",
+    "domain": "finance_and_capital",
+    "field": "value_investing",
+    "source": "Benjamin Graham (1949), The Intelligent Investor; Seth Klarman (1991), Margin of Safety",
+    "core_idea": "The secret of sound investment is the margin of safety: a significant discount between purchase price and conservatively estimated value, designed to render accurate forecasting unnecessary.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Fragility to Adverse Shocks",
+        "risk_flag": "A financial or business plan that only breaks even if revenues, occupancy, or market pricing meet 100% of optimistic forecasts.",
+        "probing_question": "If net operating revenues or compensation fall 30% below your baseline projection, can you service all liabilities without distress?"
+      },
+      {
+        "check_item": "Unaccounted Capital Expenditure / Float",
+        "risk_flag": "Evaluating cash yields without reserving 15-25% of gross cashflow for capital expenditures, structural maintenance, and vacancy.",
+        "probing_question": "Have you modeled cash reserves for non-routine capital repairs, legal expenses, and unexpected regulatory compliance costs?"
+      }
+    ],
+    "keywords": ["investment", "margin of safety", "valuation", "leverage", "downside", "capital", "debt", "buffer", "solvency"]
+  },
+  {
+    "id": "kelly_criterion_exposure",
+    "framework_name": "Kelly Criterion & Capital Ruin Avoidance",
+    "domain": "finance_and_capital",
+    "field": "information_theory_finance",
+    "source": "John L. Kelly Jr. (1956), 'A New Interpretation of Information Rate'; Edward Thorp (1966), Beat the Dealer",
+    "core_idea": "The Kelly formula dictates the mathematically optimal fraction of wealth to commit to favorable bets to maximize log-wealth compounding while mathematically reducing the probability of permanent ruin to zero.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Over-Betting Ruin Risk",
+        "risk_flag": "Allocating more than 25-30% of total personal liquid net worth into an illiquid, high-volatility speculative venture or concentrated asset.",
+        "probing_question": "Does a total loss of capital in this single venture impair your ability to meet essential family living expenses and debt payments?"
+      },
+      {
+        "check_item": "Half-Kelly Prudence",
+        "risk_flag": "Assuming edge without factoring estimation error; practical financial engineering mandates betting at 'Fractional Kelly' (half or quarter Kelly).",
+        "probing_question": "Have you scaled down your committed capital position to buffer against parameter estimation error in your expected payoff?"
+      }
+    ],
+    "keywords": ["bet size", "allocation", "all in", "leverage", "liquidity", "portfolio", "ruin", "kelly criterion", "concentration risk"]
+  },
+  {
+    "id": "fixed_cost_leverage_rigidity",
+    "framework_name": "Fixed-Cost Rigidity & Operating Leverage",
+    "domain": "finance_and_capital",
+    "field": "behavioral_finance",
+    "source": "Nassim Nicholas Taleb (2012), Antifragile: Things That Gain from Disorder; Merton Miller (1958), Capital Structure",
+    "core_idea": "Debt and high fixed operating overhead introduce structural fragility: while they magnify returns on the upside, they transform mild linear revenue declines into non-linear catastrophic default.",
+    "diagnostic_checklist": [
+      {
+        "check_item": "Fixed Obligation Burden",
+        "risk_flag": "Taking on substantial recurring monthly debt or lease obligations that cannot be downscaled if business conditions deteriorate.",
+        "probing_question": "What percentage of your ongoing costs can be eliminated within 30 days if incoming cashflow contracts by 50%?"
+      },
+      {
+        "check_item": "Refinancing / Maturity Wall",
+        "risk_flag": "Relying on short-term adjustable debt or balloon payments assuming low interest rates or easy refinancing will always persist.",
+        "probing_question": "What is the consequence if interest rates rise 300 basis points when your debt facility or mortgage renews?"
+      }
+    ],
+    "keywords": ["debt", "mortgage", "fixed cost", "overhead", "loan", "interest rate", "cash buffer", "monthly payment", "leverage", "fixed overhead"]
+  }
+]

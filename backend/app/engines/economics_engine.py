@@ -78,7 +78,8 @@ class EconomicsEngine(BaseDeterministicEngine):
         payoff_min = min(payoff_values) if payoff_values else 20.0
 
         # --- 1. Value of Information (EVPI / EVSI) ---
-        evpi_result = compute_evpi(probabilities, utility_matrix, alt_ids, state_ids)
+        context_text = f"{decision.decision_statement} {' '.join(decision.goals)} {' '.join(decision.constraints)} {decision.domain or ''}"
+        evpi_result = compute_evpi(probabilities, utility_matrix, alt_ids, state_ids, context_text=context_text)
         evsi_result = compute_evsi(probabilities, utility_matrix, alt_ids, state_ids)
 
         # --- 2. Prospect Theory & Risk Preferences ---

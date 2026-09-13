@@ -5,7 +5,16 @@
     "source": "Dealroom / PitchBook / CB Insights Venture Benchmarks (2020-2025)",
     "empirical_base_rate_percentage": 22.0,
     "description": "Approximately 18% to 25% of seed-funded tech startups successfully raise a priced Series A within 18-24 months.",
-    "keywords": ["startup", "seed", "pre-seed", "series a", "equity", "runway", "founding engineer", "co-founder"]
+    "keywords": [
+      "startup",
+      "seed",
+      "pre-seed",
+      "series a",
+      "equity",
+      "runway",
+      "founding engineer",
+      "co-founder"
+    ]
   },
   {
     "reference_class": "Senior / Staff Tech Re-employment Timeframe (<90 Days)",
@@ -13,7 +22,14 @@
     "source": "Bureau of Labor Statistics / Tech Hiring Mobility Index (2024-2025)",
     "empirical_base_rate_percentage": 78.0,
     "description": "78% of experienced senior software engineers re-secure equivalent or better compensation within 90 days of active search.",
-    "keywords": ["job search", "staff engineer", "layoff", "re-employment", "hiring market", "tech market"]
+    "keywords": [
+      "job search",
+      "staff engineer",
+      "layoff",
+      "re-employment",
+      "hiring market",
+      "tech market"
+    ]
   },
   {
     "reference_class": "Internal Enterprise Innovation Project Commercialization",
@@ -21,7 +37,14 @@
     "source": "Harvard Business Review / Christensen Innovation Benchmarks",
     "empirical_base_rate_percentage": 14.0,
     "description": "Only 12% to 15% of bottom-up enterprise innovation side-projects achieve sustained executive budget allocation beyond year 1.",
-    "keywords": ["internal project", "side project", "enterprise innovation", "20% time", "pitch internal", "skunkworks"]
+    "keywords": [
+      "internal project",
+      "side project",
+      "enterprise innovation",
+      "20% time",
+      "pitch internal",
+      "skunkworks"
+    ]
   },
   {
     "reference_class": "Executive & Director Leadership Transition Success (>18 Months)",
@@ -29,7 +52,15 @@
     "source": "Corporate Executive Board / Center for Creative Leadership Studies",
     "empirical_base_rate_percentage": 62.0,
     "description": "62% of external executive hires and transitions sustain their role beyond 18 months without involuntary departure or restructuring.",
-    "keywords": ["executive", "director", "vp", "c-suite", "head of", "leadership transition", "promotion"]
+    "keywords": [
+      "executive",
+      "director",
+      "vp",
+      "c-suite",
+      "head of",
+      "leadership transition",
+      "promotion"
+    ]
   },
   {
     "reference_class": "Career Field Pivot Salary Parity (Within 12 Months)",
@@ -37,7 +68,14 @@
     "source": "Bureau of Labor Statistics Occupational Mobility Longitudinal Data (2023-2025)",
     "empirical_base_rate_percentage": 54.0,
     "description": "54% of professionals pivoting into a distinct occupational discipline achieve compensation parity with their prior role within 12 months.",
-    "keywords": ["career change", "pivot field", "new industry", "retrain", "career shift", "new discipline"]
+    "keywords": [
+      "career change",
+      "pivot field",
+      "new industry",
+      "retrain",
+      "career shift",
+      "new discipline"
+    ]
   },
   {
     "reference_class": "Residential Home Renovation Budget Adherence (<= Budget)",
@@ -45,7 +83,14 @@
     "source": "Houzz & Home Overview / Harvard Joint Center for Housing Studies",
     "empirical_base_rate_percentage": 32.0,
     "description": "Only 32% of residential renovation projects finish at or below initial budget estimates; 68% experience cost overruns >= 20%.",
-    "keywords": ["renovation", "remodel", "contractor", "home build", "property upgrade", "construction"]
+    "keywords": [
+      "renovation",
+      "remodel",
+      "contractor",
+      "home build",
+      "property upgrade",
+      "construction"
+    ]
   },
   {
     "reference_class": "Active Retail Stock Picking / Trading (5-Year Index Outperformance)",
@@ -53,7 +98,15 @@
     "source": "S&P Indices Versus Active (SPIVA) Scorecard (2024)",
     "empirical_base_rate_percentage": 8.0,
     "description": "Only 8% of active retail stock pickers outperform the broad S&P 500 total return index net of fees over a 5-year investment horizon.",
-    "keywords": ["day trading", "stock picking", "angel investment", "beat market", "crypto trading", "individual stocks", "mortgage vs invest"]
+    "keywords": [
+      "day trading",
+      "stock picking",
+      "angel investment",
+      "beat market",
+      "crypto trading",
+      "individual stocks",
+      "mortgage vs invest"
+    ]
   },
   {
     "reference_class": "Large Legacy Software Full Rewrite Schedule Adherence",
@@ -61,7 +114,14 @@
     "source": "Standish Group CHAOS Report Benchmarks / IEEE Software Case Studies",
     "empirical_base_rate_percentage": 16.0,
     "description": "Only 16% of 'ground-up' complete software rewrites deliver core functionality within the originally allocated timeline.",
-    "keywords": ["rewrite", "re-platform", "legacy migration", "complete overhaul", "ground up rewrite", "refactor"]
+    "keywords": [
+      "rewrite",
+      "re-platform",
+      "legacy migration",
+      "complete overhaul",
+      "ground up rewrite",
+      "refactor"
+    ]
   },
   {
     "reference_class": "Early-Stage B2B SaaS Median Annual Logo Retention",
@@ -69,7 +129,13 @@
     "source": "OpenView / KeyBanc Capital Markets SaaS Survey Benchmarks",
     "empirical_base_rate_percentage": 82.0,
     "description": "Median early-stage B2B SaaS software businesses retain 82% of customer logos annually (18% annual logo churn).",
-    "keywords": ["b2b saas", "churn rate", "software subscription", "customer retention", "saas product"]
+    "keywords": [
+      "b2b saas",
+      "churn rate",
+      "software subscription",
+      "customer retention",
+      "saas product"
+    ]
   },
   {
     "reference_class": "Self-Directed Habit Maintenance (>6 Months)",
@@ -77,7 +143,15 @@
     "source": "Lally et al. (2010), European Journal of Social Psychology (Habit Formation Studies)",
     "empirical_base_rate_percentage": 22.0,
     "description": "22% of individuals initiating self-directed lifestyle or productivity habits sustain adherence past 6 months without external accountability.",
-    "keywords": ["habit", "routine", "daily practice", "workout", "writing habit", "discipline", "self-directed"]
+    "keywords": [
+      "habit",
+      "routine",
+      "daily practice",
+      "workout",
+      "writing habit",
+      "discipline",
+      "self-directed"
+    ]
   },
   {
     "reference_class": "Long-Distance Domestic Relocation Satisfaction (>2 Years)",
@@ -85,7 +159,15 @@
     "source": "US Census Bureau Geographic Mobility Studies / Allied Van Lines Surveys",
     "empirical_base_rate_percentage": 69.0,
     "description": "69% of individuals relocating long-distance for lifestyle reasons remain in their destination city past 24 months without voluntary return.",
-    "keywords": ["relocate", "move city", "new country", "migration", "moving abroad", "relocating", "new town"]
+    "keywords": [
+      "relocate",
+      "move city",
+      "new country",
+      "migration",
+      "moving abroad",
+      "relocating",
+      "new town"
+    ]
   },
   {
     "reference_class": "Brick-and-Mortar Retail / Hospitality Year-1 Survival",
@@ -93,7 +175,15 @@
     "source": "Bureau of Labor Statistics Business Employment Dynamics Table 7",
     "empirical_base_rate_percentage": 72.0,
     "description": "72% of new physical commercial establishments survive their first 12 months of operation; 50% survive past year 5.",
-    "keywords": ["retail store", "restaurant", "physical location", "commercial lease", "brick and mortar", "cafe", "storefront"]
+    "keywords": [
+      "retail store",
+      "restaurant",
+      "physical location",
+      "commercial lease",
+      "brick and mortar",
+      "cafe",
+      "storefront"
+    ]
   },
   {
     "reference_class": "AI / Deep Tech Venture Seed-to-Product Revenue (18 Months)",
@@ -101,7 +191,15 @@
     "source": "Sequoia Capital Partner Reports; Scale AI / Andreessen Horowitz AI State of AI Benchmarks (2024-2025)",
     "empirical_base_rate_percentage": 18.0,
     "description": "Only 18% of AI/ML deep-tech seed-stage ventures generate meaningful product revenue within 18 months of founding, largely due to infrastructure costs, enterprise sales cycles, and regulatory friction.",
-    "keywords": ["ai startup", "machine learning", "deep tech", "llm product", "artificial intelligence", "foundation model", "ml infrastructure"]
+    "keywords": [
+      "ai startup",
+      "machine learning",
+      "deep tech",
+      "llm product",
+      "artificial intelligence",
+      "foundation model",
+      "ml infrastructure"
+    ]
   },
   {
     "reference_class": "Sabbatical / Career Break Re-entry to Equivalent Compensation (12 Months)",
@@ -109,7 +207,15 @@
     "source": "LinkedIn Workforce Insights (2024); Bureau of Labor Statistics Re-entry Longitudinal Study",
     "empirical_base_rate_percentage": 61.0,
     "description": "61% of professionals returning from an intentional career break (sabbatical, parental leave, or voluntary departure) successfully re-enter at equivalent or higher compensation within 12 months of active search, contingent on maintaining professional network engagement.",
-    "keywords": ["sabbatical", "career break", "gap year", "take time off", "leave of absence", "burnout recovery", "rest and return"]
+    "keywords": [
+      "sabbatical",
+      "career break",
+      "gap year",
+      "take time off",
+      "leave of absence",
+      "burnout recovery",
+      "rest and return"
+    ]
   },
   {
     "reference_class": "Bootstrapped SaaS reaching $1M ARR (Without Institutional Funding)",
@@ -117,7 +223,16 @@
     "source": "Indie Hackers / Baremetrics Benchmarks; Sahil Lavingia / Gumroad Revenue Studies (2023-2025)",
     "empirical_base_rate_percentage": 4.0,
     "description": "Approximately 4% of bootstrapped SaaS ventures founded by solo or small teams (1-3 founders, no institutional capital) reach $1M Annual Recurring Revenue within 3 years.",
-    "keywords": ["bootstrapped", "indie hacker", "no funding", "solo founder", "self-funded", "saas product", "mrr", "arr target"]
+    "keywords": [
+      "bootstrapped",
+      "indie hacker",
+      "no funding",
+      "solo founder",
+      "self-funded",
+      "saas product",
+      "mrr",
+      "arr target"
+    ]
   },
   {
     "reference_class": "First-Time Homebuyer Transaction Satisfaction (2+ Years Post-Purchase)",
@@ -125,6 +240,554 @@
     "source": "National Association of Realtors Annual Survey; Gallup American Housing Satisfaction Index (2023-2025)",
     "empirical_base_rate_percentage": 67.0,
     "description": "67% of first-time homebuyers report overall satisfaction with their purchase decision at the 2-year mark, with dissatisfaction drivers primarily relating to unexpected maintenance costs (73%) and location regret (41%).",
-    "keywords": ["buy house", "first home", "homebuyer", "mortgage", "property purchase", "real estate", "own a home"]
+    "keywords": [
+      "buy house",
+      "first home",
+      "homebuyer",
+      "mortgage",
+      "property purchase",
+      "real estate",
+      "own a home"
+    ]
+  },
+  {
+    "reference_class": "Series A to Series B Conversion (Tech Startups)",
+    "domain": "venture_capital",
+    "source": "PitchBook / NVCA Venture Monitor (2020-2025)",
+    "empirical_base_rate_percentage": 48.0,
+    "description": "Approximately 48% of tech startups that raise a priced Series A successfully close a Series B within 24-30 months.",
+    "keywords": [
+      "series b",
+      "series a",
+      "growth stage",
+      "venture round",
+      "scale up",
+      "growth round"
+    ]
+  },
+  {
+    "reference_class": "Seed-Stage Founder Equity Dilution to Series A (>20% Dilution)",
+    "domain": "venture_capital",
+    "source": "Carta State of Startup Compensation & Equity Benchmarks (2024)",
+    "empirical_base_rate_percentage": 83.0,
+    "description": "83% of founding teams experience greater than 20% aggregate equity dilution through their combined Seed and Series A financing cycles.",
+    "keywords": [
+      "dilution",
+      "cap table",
+      "equity split",
+      "founder equity",
+      "options pool",
+      "valuation dilution"
+    ]
+  },
+  {
+    "reference_class": "Venture-Backed Startup Liquidation / Zero Return to Common Stock",
+    "domain": "venture_capital",
+    "source": "Shikhar Ghosh, Harvard Business School Venture Failure Study (2012-2024)",
+    "empirical_base_rate_percentage": 75.0,
+    "description": "75% of venture-backed startups fail to return initial capital to common stockholders, largely absorbed by preferred liquidation preferences.",
+    "keywords": [
+      "liquidation preference",
+      "common stock",
+      "down round",
+      "venture failure",
+      "startup shutdown",
+      "acqui-hire"
+    ]
+  },
+  {
+    "reference_class": "B2B SaaS Net Revenue Retention >110% (Growth Stage)",
+    "domain": "venture_capital",
+    "source": "KeyBanc Capital Markets / OpenView SaaS Benchmarks (2023-2025)",
+    "empirical_base_rate_percentage": 38.0,
+    "description": "Only 38% of venture-backed growth B2B SaaS companies maintain sustained Net Revenue Retention (NRR) exceeding 110% year-over-year.",
+    "keywords": [
+      "net revenue retention",
+      "nrr",
+      "expansion revenue",
+      "saas growth",
+      "upsell",
+      "churn rate"
+    ]
+  },
+  {
+    "reference_class": "Hardware / IoT Physical Product On-Time Delivery",
+    "domain": "business_operations",
+    "source": "Kickstarter & Hardware Club Manufacturing Delay Benchmarks",
+    "empirical_base_rate_percentage": 17.0,
+    "description": "Only 17% of initial hardware and IoT commercial production runs deliver finished units to customers within the original scheduled timeline.",
+    "keywords": [
+      "hardware",
+      "manufacturing",
+      "iot",
+      "tooling",
+      "supply chain",
+      "prototype delivery",
+      "physical product"
+    ]
+  },
+  {
+    "reference_class": "Post-Acquisition Key Employee Retention (>2 Years)",
+    "domain": "labor_economics",
+    "source": "McKinsey & Company Post-Merger Talent Integration Studies (2022-2025)",
+    "empirical_base_rate_percentage": 33.0,
+    "description": "Only 33% of identified key engineering and product talent remain at an acquiring company past the 24-month mark post-closing.",
+    "keywords": [
+      "acquisition",
+      "retention bonus",
+      "golden handcuffs",
+      "m&a",
+      "acquired",
+      "vesting schedule",
+      "earn out"
+    ]
+  },
+  {
+    "reference_class": "Freelance / Solo Consulting Income Parity (>18 Months)",
+    "domain": "labor_economics",
+    "source": "Upwork & Freelancers Union Annual Independent Workforce Study",
+    "empirical_base_rate_percentage": 42.0,
+    "description": "42% of professionals leaving full-time salaried roles for independent consulting achieve stable income parity within 18 months.",
+    "keywords": [
+      "freelance",
+      "consulting",
+      "solo practice",
+      "agency",
+      "contractor",
+      "consultant",
+      "independent work"
+    ]
+  },
+  {
+    "reference_class": "Executive External Hire Involuntary Departure (<24 Months)",
+    "domain": "organizational_behavior",
+    "source": "Corporate Executive Board / Harvard Business Review Leadership Retention",
+    "empirical_base_rate_percentage": 40.0,
+    "description": "40% of external senior executives hired from outside the organization involuntarily leave or step down within 24 months.",
+    "keywords": [
+      "vp hire",
+      "executive hire",
+      "c-level",
+      "cultural fit",
+      "leadership transition",
+      "involuntary departure"
+    ]
+  },
+  {
+    "reference_class": "Career Change / Industry Transition Promotion Rate (2 Years)",
+    "domain": "labor_economics",
+    "source": "Bureau of Labor Statistics Longitudinal Career Mobility Database (2024)",
+    "empirical_base_rate_percentage": 28.0,
+    "description": "28% of mid-career professionals transitioning into a completely new industry achieve a promotion within their first 24 months.",
+    "keywords": [
+      "career switch",
+      "new domain",
+      "industry change",
+      "lateral move",
+      "re-skill",
+      "career ladder"
+    ]
+  },
+  {
+    "reference_class": "Job Search Offer Duration Over 40 Years Old (>180 Days)",
+    "domain": "labor_economics",
+    "source": "AARP Public Policy Institute & BLS Tech Hiring Mobility Index (2024)",
+    "empirical_base_rate_percentage": 58.0,
+    "description": "58% of tech and executive job seekers over age 40 require more than 180 days of active pipeline engagement to secure acceptable offers.",
+    "keywords": [
+      "senior search",
+      "job pipeline",
+      "search duration",
+      "interview cycle",
+      "layoff recovery",
+      "hiring freeze"
+    ]
+  },
+  {
+    "reference_class": "Remote-to-In-Person Mandate Voluntary Resignation Surge",
+    "domain": "organizational_behavior",
+    "source": "Stanford University WFH Research Initiative (Bloom et al., 2023-2025)",
+    "empirical_base_rate_percentage": 15.0,
+    "description": "Strict return-to-office mandates trigger an average 15% voluntary attrition surge among senior engineers and high performers within 6 months.",
+    "keywords": [
+      "return to office",
+      "rto",
+      "remote work",
+      "hybrid mandate",
+      "commute",
+      "flexible work"
+    ]
+  },
+  {
+    "reference_class": "Monolith to Microservices Architecture Migration Schedule Overrun",
+    "domain": "software_engineering",
+    "source": "O'Reilly Microservices Survey & DORA State of DevOps (2022-2025)",
+    "empirical_base_rate_percentage": 68.0,
+    "description": "68% of enterprise engineering teams migrating monolithic architectures to distributed microservices exceed their initial project timeline by >50%.",
+    "keywords": [
+      "microservices",
+      "monolith",
+      "refactor",
+      "distributed systems",
+      "architecture migration",
+      "tech debt"
+    ]
+  },
+  {
+    "reference_class": "Third-Party Closed API Deprecation / Breaking Change (3 Years)",
+    "domain": "software_engineering",
+    "source": "Stripe Developer Coefficient & IEEE Software Lifecycle Case Studies",
+    "empirical_base_rate_percentage": 44.0,
+    "description": "44% of systems heavily dependent on third-party proprietary vendor APIs experience at least one critical breaking deprecation within 36 months.",
+    "keywords": [
+      "api dependency",
+      "vendor lock-in",
+      "third party api",
+      "deprecat",
+      "breaking change",
+      "llm api wrapper"
+    ]
+  },
+  {
+    "reference_class": "Enterprise Cloud Migration Budget Overrun (>25% Over Budget)",
+    "domain": "software_engineering",
+    "source": "Gartner Cloud Adoption Benchmarks & Flexera State of the Cloud (2024)",
+    "empirical_base_rate_percentage": 61.0,
+    "description": "61% of on-premises to cloud infrastructure migrations exceed initial projected annual operational run-rates by 25% or more.",
+    "keywords": [
+      "cloud migration",
+      "aws",
+      "gcp",
+      "azure",
+      "infrastructure cost",
+      "finops",
+      "server bill"
+    ]
+  },
+  {
+    "reference_class": "Open Source Project Sustainability / Active Maintenance (>3 Years)",
+    "domain": "software_engineering",
+    "source": "Linux Foundation Core Infrastructure Initiative & GitHub Open Source Census",
+    "empirical_base_rate_percentage": 12.0,
+    "description": "Only 12% of open-source software libraries launched by solo creators or small groups sustain active maintenance and commits beyond 3 years.",
+    "keywords": [
+      "open source",
+      "github repo",
+      "oss project",
+      "maintainer burnout",
+      "open source sustainability"
+    ]
+  },
+  {
+    "reference_class": "AI Wrapper / Thin LLM API App Moat Degradation (<12 Months)",
+    "domain": "software_engineering",
+    "source": "Andreessen Horowitz State of AI & Y Combinator Founder Post-Mortems (2024)",
+    "empirical_base_rate_percentage": 72.0,
+    "description": "72% of AI products built primarily as thin API wrappers around foundation models lose pricing power or defensibility within 12 months.",
+    "keywords": [
+      "ai wrapper",
+      "llm product",
+      "thin wrapper",
+      "openai wrapper",
+      "prompt engineering app",
+      "defensibility"
+    ]
+  },
+  {
+    "reference_class": "Data Engineering Pipeline Schema Drift Breakage Frequency (Annual)",
+    "domain": "software_engineering",
+    "source": "Monte Carlo State of Data Quality & Reliability Benchmark (2024)",
+    "empirical_base_rate_percentage": 81.0,
+    "description": "81% of production data pipelines encounter unplanned downtime or silent corruption annually due to unannounced upstream schema drift.",
+    "keywords": [
+      "data pipeline",
+      "etl",
+      "schema drift",
+      "data downtime",
+      "analytics pipeline",
+      "data engineering"
+    ]
+  },
+  {
+    "reference_class": "Large M&A Corporate Acquisition Shareholder Value Destruction",
+    "domain": "corporate_strategy",
+    "source": "Bain & Company / McKinsey & Company M&A Performance Long-Term Studies",
+    "empirical_base_rate_percentage": 70.0,
+    "description": "70% to 90% of large corporate mergers and acquisitions fail to achieve their stated financial synergy targets or destroy buyer shareholder value.",
+    "keywords": [
+      "merger",
+      "acquisition",
+      "m&a",
+      "synergy",
+      "buyout",
+      "corporate buyout",
+      "takeover"
+    ]
+  },
+  {
+    "reference_class": "Strategic Alliance / Joint Venture Dissolution (<5 Years)",
+    "domain": "corporate_strategy",
+    "source": "Harvard Business Review Strategic Alliances Longitudinal Review",
+    "empirical_base_rate_percentage": 52.0,
+    "description": "52% of cross-company commercial strategic alliances and joint ventures dissolve or terminate within 5 years due to misalignment.",
+    "keywords": [
+      "joint venture",
+      "strategic alliance",
+      "partnership agreement",
+      "co-marketing",
+      "jv"
+    ]
+  },
+  {
+    "reference_class": "Enterprise Agile / OKR Transformation Cultural Reversion (2 Years)",
+    "domain": "corporate_strategy",
+    "source": "McKinsey Organizational Health Index (OHI) Transformation Benchmarks",
+    "empirical_base_rate_percentage": 59.0,
+    "description": "59% of large enterprise operational agile or OKR transformations revert to previous bureaucratic processes within 24 months.",
+    "keywords": [
+      "agile transformation",
+      "okrs",
+      "reorg",
+      "change management",
+      "company restructure",
+      "process overhaul"
+    ]
+  },
+  {
+    "reference_class": "New Consumer Brand Launch Market Share Target Adherence",
+    "domain": "corporate_strategy",
+    "source": "Nielsen Breakthrough Innovation Annual Report",
+    "empirical_base_rate_percentage": 15.0,
+    "description": "Only 15% of new consumer packaged or digital direct brand launches achieve their year-1 market penetration and revenue projections.",
+    "keywords": [
+      "brand launch",
+      "consumer product",
+      "go to market",
+      "gtm",
+      "product launch",
+      "new brand"
+    ]
+  },
+  {
+    "reference_class": "Enterprise Software Pilot-to-Production Rollout Adherence",
+    "domain": "corporate_strategy",
+    "source": "Gartner IT Enterprise Software Adoption Survey",
+    "empirical_base_rate_percentage": 34.0,
+    "description": "Only 34% of enterprise software pilots transition to company-wide commercial deployment within the contractual timeline.",
+    "keywords": [
+      "enterprise sales",
+      "poc",
+      "pilot customer",
+      "software rollout",
+      "enterprise contract",
+      "procurement"
+    ]
+  },
+  {
+    "reference_class": "Commercial Real Estate Cap Rate Compression Cycle Duration (>5 Years)",
+    "domain": "personal_finance",
+    "source": "CBRE Capital Markets & Real Capital Analytics Historical Cycle Data",
+    "empirical_base_rate_percentage": 25.0,
+    "description": "Only 25% of commercial real estate asset holding periods sustain aggressive cap-rate compression over a 5-year investment window.",
+    "keywords": [
+      "commercial real estate",
+      "cap rate",
+      "multifamily",
+      "property investment",
+      "commercial lease",
+      "syndication"
+    ]
+  },
+  {
+    "reference_class": "Active Retail Options Trader Long-Term Net Profitability",
+    "domain": "personal_finance",
+    "source": "FINRA Investor Education Foundation & SEC Trading Activity Studies",
+    "empirical_base_rate_percentage": 11.0,
+    "description": "Only 11% of active retail options traders generate positive net returns after accounting for fees, bid-ask spreads, and theta decay over 24 months.",
+    "keywords": [
+      "options trading",
+      "covered calls",
+      "margin trading",
+      "derivatives",
+      "day trader",
+      "speculation"
+    ]
+  },
+  {
+    "reference_class": "Individual Debt Consolidation Long-Term Default Rate",
+    "domain": "personal_finance",
+    "source": "Federal Reserve Bank of New York Consumer Credit Panel (2020-2024)",
+    "empirical_base_rate_percentage": 39.0,
+    "description": "39% of consumers who consolidate credit card debt via personal loans re-accumulate equivalent or higher revolving balances within 3 years.",
+    "keywords": [
+      "debt consolidation",
+      "personal loan",
+      "credit card balance",
+      "debt payoff",
+      "refinance debt"
+    ]
+  },
+  {
+    "reference_class": "High-Yield Speculative Asset 5-Year Drawdown Exceeding 50%",
+    "domain": "personal_finance",
+    "source": "Morningstar Quantitative Equity Risk & Volatility Benchmark",
+    "empirical_base_rate_percentage": 64.0,
+    "description": "64% of high-beta speculative equities and crypto assets experience a maximum peak-to-trough drawdown exceeding 50% over a 5-year cycle.",
+    "keywords": [
+      "crypto",
+      "speculative growth",
+      "drawdown",
+      "volatility",
+      "high beta",
+      "risk tolerance",
+      "portfolio loss"
+    ]
+  },
+  {
+    "reference_class": "Residential Rental Property Positive Net Operating Cashflow (Year 1)",
+    "domain": "personal_finance",
+    "source": "National Association of Residential Property Managers (NARPM) Survey",
+    "empirical_base_rate_percentage": 46.0,
+    "description": "46% of first-time residential real estate rental properties experience negative or zero net cashflow in Year 1 due to unexpected maintenance and vacancies.",
+    "keywords": [
+      "rental property",
+      "landlord",
+      "tenant",
+      "cashflow",
+      "property management",
+      "buy to rent"
+    ]
+  },
+  {
+    "reference_class": "Private Angel Investment Total Capital Loss (<1x Return)",
+    "domain": "personal_finance",
+    "source": "Angel Resource Institute / Wiltbank Returns Study",
+    "empirical_base_rate_percentage": 65.0,
+    "description": "65% of individual angel investments fail to return the principal capital invested (net return < 1.0x).",
+    "keywords": [
+      "angel investing",
+      "seed check",
+      "private investment",
+      "syndicate check",
+      "startup investing"
+    ]
+  },
+  {
+    "reference_class": "Humanities / Social Science PhD Tenure-Track Placement Rate",
+    "domain": "higher_education_academia",
+    "source": "American Historical Association & NSF Survey of Earned Doctorates",
+    "empirical_base_rate_percentage": 19.0,
+    "description": "Only 19% of humanities and qualitative social science doctoral graduates secure full-time tenure-track faculty appointments within 3 years.",
+    "keywords": [
+      "phd",
+      "tenure track",
+      "professor",
+      "academia",
+      "postdoc",
+      "academic job market",
+      "dissertation"
+    ]
+  },
+  {
+    "reference_class": "STEM Postdoctoral Fellow Transition to Principal Investigator (<5 Years)",
+    "domain": "higher_education_academia",
+    "source": "Nature Career Survey & NIH Biomedical Workforce Longitudinal Data",
+    "empirical_base_rate_percentage": 21.0,
+    "description": "21% of STEM postdoctoral researchers successfully transition to independent tenure-track Principal Investigator (PI) laboratory roles within 5 years.",
+    "keywords": [
+      "stem postdoc",
+      "principal investigator",
+      "pi",
+      "lab head",
+      "nih grant",
+      "academic research"
+    ]
+  },
+  {
+    "reference_class": "Law School Graduate BigLaw Starting Salary Retention (>3 Years)",
+    "domain": "higher_education_academia",
+    "source": "National Association for Law Placement (NALP) Associate Retention Survey",
+    "empirical_base_rate_percentage": 44.0,
+    "description": "Only 44% of new associate attorneys at major commercial law firms remain at their original firm past year 3, primarily departing due to billable burnout.",
+    "keywords": [
+      "biglaw",
+      "law firm",
+      "associate attorney",
+      "billable hours",
+      "legal career",
+      "partner track"
+    ]
+  },
+  {
+    "reference_class": "Medical Specialty Fellowship Match Success Rate",
+    "domain": "higher_education_academia",
+    "source": "National Resident Matching Program (NRMP) Fellowship Match Outcomes",
+    "empirical_base_rate_percentage": 74.0,
+    "description": "74% of resident physicians applying to competitive subspecialty fellowships match with an accredited clinical program.",
+    "keywords": [
+      "medical residency",
+      "fellowship match",
+      "physician",
+      "specialty training",
+      "medical career"
+    ]
+  },
+  {
+    "reference_class": "Executive MBA Compensation Multiplier (>2x ROI within 4 Years)",
+    "domain": "higher_education_academia",
+    "source": "Financial Times Executive MBA Global Longitudinal Rankings Analysis",
+    "empirical_base_rate_percentage": 48.0,
+    "description": "48% of executive MBA graduates achieve a compensation trajectory that fully recoups tuition, fees, and opportunity cost within 48 months.",
+    "keywords": [
+      "executive mba",
+      "emba",
+      "business school",
+      "mba degree",
+      "tuition roi"
+    ]
+  },
+  {
+    "reference_class": "Startup Co-Founder Team Equity or Vision Split (<3 Years)",
+    "domain": "organizational_behavior",
+    "source": "Noam Wasserman, The Founder's Dilemmas (Harvard Business Press)",
+    "empirical_base_rate_percentage": 43.0,
+    "description": "43% of early-stage founding teams experience significant co-founder departures, equity renegotiations, or deadlocks within the first 36 months.",
+    "keywords": [
+      "co-founder",
+      "founder dispute",
+      "vesting",
+      "equity split",
+      "founding team",
+      "early stage partners"
+    ]
+  },
+  {
+    "reference_class": "Major Dietary / Lifestyle Weight Maintenance Beyond 2 Years",
+    "domain": "behavioral_science",
+    "source": "NIH National Institute of Diabetes and Digestive and Kidney Diseases Studies",
+    "empirical_base_rate_percentage": 18.0,
+    "description": "Only 18% of individuals achieving significant voluntary lifestyle or dietary weight reduction sustain their target weight beyond 24 months.",
+    "keywords": [
+      "diet",
+      "weight loss",
+      "lifestyle change",
+      "health habit",
+      "health goal",
+      "fitness resolution"
+    ]
+  },
+  {
+    "reference_class": "Long-Distance Domestic Relocation Regret / Return Rate (<12 Months)",
+    "domain": "lifestyle",
+    "source": "Pew Research Center / US Census Geographic Mobility Analysis",
+    "empirical_base_rate_percentage": 24.0,
+    "description": "24% of individuals relocating to a new metropolitan area for lifestyle or remote work voluntarily move back or relocate again within 12 months.",
+    "keywords": [
+      "move back",
+      "relocation regret",
+      "new city",
+      "moving home",
+      "neighborhood regret"
+    ]
   }
 ]

@@ -150,6 +150,7 @@ export interface EVPIResult {
   algebraic_derivation: string;
   prior_eu_max: number;
   posterior_eu_max: number;
+  suggested_experiments?: Array<Record<string, any>>;
 }
 
 export interface EVSIResult {
@@ -263,6 +264,36 @@ export interface SystemsLayerResult {
   systems_synthesis_narrative: string;
 }
 
+// Domain-Specific Framework Types
+export interface DomainChecklistItem {
+  check_item: string;
+  risk_flag: string;
+  probing_question: string;
+}
+
+export interface DomainFrameworkMatch {
+  id: string;
+  framework_name: string;
+  domain: string;
+  field: string;
+  source: string;
+  core_idea: string;
+  matched_checklist: DomainChecklistItem[];
+}
+
+export interface DomainLayerResult {
+  matched_frameworks: DomainFrameworkMatch[];
+  primary_domain: string;
+  domain_insights_summary: string;
+}
+
+export interface AttachedDoc {
+  filename: string;
+  size: number;
+  content_base64?: string;
+  content_text?: string;
+}
+
 export interface LongitudinalPatternContext {
   total_decisions_logged: number;
   recurring_bias_counts: Record<string, number>;
@@ -341,6 +372,7 @@ export interface AnalysisBundle {
   critical_thinking_layer: CriticalThinkingLayerResult;
   economics_layer?: EconomicsLayerResult;
   systems_layer?: SystemsLayerResult;
+  domain_layer?: DomainLayerResult;
   longitudinal_context?: LongitudinalPatternContext;
   focus_config?: FocusConfig;
   effort_level?: EffortLevel;

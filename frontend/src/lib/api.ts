@@ -129,6 +129,33 @@ export async function extractDecision(
   return data.structured_decision;
 }
 
+export async function extractDecisionFromDocument(
+  file: { filename: string; content_base64?: string; content_text?: string },
+  narrative?: string,
+  llmConfig?: LLMConfigOverride,
+  projectId?: string
+): Promise<StructuredDecision> {
+  const res = await fetch(`${API_BASE}/extract/document`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filename: file.filename,
+      content_base64: file.content_base64,
+      content_text: file.content_text,
+      narrative: narrative || '',
+      project_id: projectId,
+      provider: llmConfig?.provider,
+      model: llmConfig?.model,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to extract decision from document');
+  }
+  const data = await res.json();
+  return data.structured_decision;
+}
+
 export async function runDeterministicAnalysis(decision: StructuredDecision): Promise<AnalysisBundle> {
   const res = await fetch(`${API_BASE}/analyze/deterministic`, {
     method: 'POST',

@@ -8,10 +8,12 @@ import type {
   FocusConfig,
   EffortLevel,
   LLMConfigOverride,
-  HistoryItem
+  HistoryItem,
+  AttachedDoc
 } from '../../types';
 import {
   extractDecision,
+  extractDecisionFromDocument,
   runDeterministicAnalysis,
   synthesizeReport
 } from '../api';
@@ -124,17 +126,27 @@ export function useDecisionSession({
     }
   }, []);
 
-  const handleExtract = async (narrative: string) => {
+  const handleExtract = async (narrative: string, doc?: AttachedDoc) => {
     setIsLoading(true);
     setError(null);
     try {
-      const extracted = await extractDecision(
-        narrative,
-        getEffectiveModelConfig(),
-        activeProjectId,
-        activeProjectContext
-      );
-      setSubmittedNarrative(narrative);
+      let extracted: StructuredDecision;
+      if (doc) {
+        extracted = await extractDecisionFromDocument(
+          doc,
+          narrative,
+          getEffectiveModelConfig(),
+          activeProjectId
+        );
+      } else {
+        extracted = await extractDecision(
+          narrative,
+          getEffectiveModelConfig(),
+          activeProjectId,
+          activeProjectContext
+        );
+      }
+      setSubmittedNarrative(doc ? `${narrative}\n[Attached: ${doc.filename}]`.trim() : narrative);
       setDecision(extracted);
       setBundle(null);
       setReport(null);
@@ -144,8 +156,10 @@ export function useDecisionSession({
       scrollToSection(calibrateSectionRef);
       showToast({
         type: 'success',
-        title: 'Model Extracted',
-        description: 'Alternatives and probability matrices initialized.',
+        title: doc ? 'Document Analyzed' : 'Model Extracted',
+        description: doc
+          ? `Extracted variables from "${doc.filename}".`
+          : 'Alternatives and probability matrices initialized.',
       });
     } catch (err: any) {
       setError(err.message || 'Extraction failed. Please try again.');

@@ -16,9 +16,24 @@ Literature Foundation:
 CORE AXIOM: These metrics are diagnostic heuristics exposing the upper bound on
 the value of information acquisition. They never prescribe a decision.
 """
+import os
+import json
+import functools
 import numpy as np
-from typing import List, Dict, Optional
-from dataclasses import dataclass
+from typing import List, Dict, Optional, Any
+from dataclasses import dataclass, field
+
+
+@functools.lru_cache(maxsize=1)
+def get_voi_experiments() -> List[dict]:
+    kb_path = os.path.join(os.path.dirname(__file__), "..", "knowledge", "voi_experiments.json")
+    if not os.path.exists(kb_path):
+        return []
+    try:
+        with open(kb_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
 
 
 @dataclass
@@ -37,6 +52,7 @@ class EVPIResult:
     algebraic_derivation: str      # Explicit formula substitution for auditability
     prior_eu_max: float            # Current max expected utility without information
     posterior_eu_max: float        # Expected max utility under perfect information
+    suggested_experiments: List[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -58,6 +74,7 @@ def compute_evpi(
     utility_matrix: List[List[float]],
     alt_ids: List[str],
     state_ids: List[str],
+    context_text: Optional[str] = None,
 ) -> EVPIResult:
     """
     Computes EVPI exactly via the Raiffa-Schlaifer (1961) formulation:
@@ -70,9 +87,10 @@ def compute_evpi(
         utility_matrix: U[i][j] where i=alternative index, j=state index.
         alt_ids: Alternative identifier list for narrative generation.
         state_ids: State identifier list for narrative generation.
+        context_text: Optional text from decision narrative/goals for VoI protocol matching.
 
     Returns:
-        EVPIResult with exact EVPI, fractional bound, and derivation string.
+        EVPIResult with exact EVPI, fractional bound, derivation string, and matched experiments.
     """
     p = np.array(probabilities, dtype=float)
     p_sum = p.sum()
@@ -110,6 +128,22 @@ def compute_evpi(
         f"     = {round(evpi, 3)} utility units"
     )
 
+    # Match suggested low-cost experiments from VoI playbook
+    matched_experiments: List[Dict[str, Any]] = []
+    experiments_pool = get_voi_experiments()
+    if experiments_pool:
+        search_corpus = f"{' '.join(alt_ids)} {' '.join(state_ids)} {context_text or ''}".lower()
+        scored_exps = []
+        for exp in experiments_pool:
+            score = sum(1.0 for kw in exp.get("keywords", []) if kw in search_corpus)
+            scored_exps.append((score, exp))
+        scored_exps.sort(key=lambda x: x[0], reverse=True)
+        # Select top 2 if score > 0, otherwise default to first 1
+        top_picks = [e for s, e in scored_exps if s > 0][:2]
+        if not top_picks and experiments_pool:
+            top_picks = [experiments_pool[0]]
+        matched_experiments = top_picks
+
     # Narrative ceiling interpretation
     if evpi < 0.5:
         narrative = (
@@ -140,6 +174,7 @@ def compute_evpi(
         algebraic_derivation=algebraic,
         prior_eu_max=round(prior_eu_max, 3),
         posterior_eu_max=round(posterior_eu_max, 3),
+        suggested_experiments=matched_experiments,
     )
 
 

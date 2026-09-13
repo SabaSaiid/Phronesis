@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Union
+from app.core.doc_parser import parse_uploaded_document
 
 from app.schemas.decision import (
     StructuredDecision,
@@ -42,6 +43,7 @@ from app.engines.philosophy_engine import PhilosophyEngine
 from app.engines.critical_thinking_engine import CriticalThinkingEngine
 from app.engines.economics_engine import EconomicsEngine
 from app.engines.systems_engine import SystemsEngine
+from app.engines.domain_engine import DomainEngine
 from app.core.storage import LocalStorage
 
 router = APIRouter()
@@ -159,6 +161,72 @@ async def extract_decision(req: ExtractRequest):
         "project_id": req.project_id
     }
 
+import base64
+
+class ExtractDocumentRequest(BaseModel):
+    filename: str
+    content_base64: Optional[str] = None
+    content_text: Optional[str] = None
+    narrative: Optional[str] = ""
+    project_id: Optional[str] = None
+    provider: Optional[str] = None
+    model: Optional[str] = None
+
+@router.post("/extract/document", response_model=Dict[str, Any])
+async def extract_decision_from_document(req: ExtractDocumentRequest):
+    if not req.content_base64 and not req.content_text:
+        raise HTTPException(status_code=400, detail="Either content_base64 or content_text must be provided.")
+
+    if req.content_base64:
+        # Strip data URL prefix if present (e.g. data:application/pdf;base64,...)
+        b64_str = req.content_base64
+        if "," in b64_str:
+            b64_str = b64_str.split(",", 1)[1]
+        try:
+            content_bytes = base64.b64decode(b64_str)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid base64 payload: {e}")
+    else:
+        content_bytes = (req.content_text or "").encode("utf-8")
+
+    doc_text, doc_type = parse_uploaded_document(req.filename, content_bytes)
+    if not doc_text.strip():
+        raise HTTPException(status_code=400, detail=f"Could not extract readable text from {req.filename}.")
+
+    user_note = (req.narrative or "").strip()
+    combined_narrative = (
+        f"{user_note}\n\n"
+        f"[ATTACHED CONTEXT DOCUMENT: {req.filename} ({doc_type})]\n"
+        f"{doc_text}\n"
+        f"[END ATTACHED CONTEXT DOCUMENT]"
+    ).strip()
+
+    llm_cfg = None
+    if req.provider or req.model:
+        llm_cfg = LLMConfigOverride(provider=req.provider, model=req.model)
+
+    project_ctx = None
+    if req.project_id:
+        p = LocalStorage.get_project(req.project_id)
+        if p and p.get("background_note"):
+            project_ctx = p["background_note"]
+
+    decision = await ExtractionService.extract_structured_decision(
+        narrative=combined_narrative,
+        llm_config=llm_cfg,
+        project_context=project_ctx
+    )
+
+    return {
+        "status": "success",
+        "structured_decision": decision.model_dump(),
+        "extraction_confidence": 0.96,
+        "document_filename": req.filename,
+        "document_type": doc_type,
+        "document_char_count": len(doc_text),
+        "project_id": req.project_id
+    }
+
 @router.post("/analyze/deterministic", response_model=AnalysisBundle)
 async def analyze_deterministic(decision: StructuredDecision):
     # Launch async rubric matching task concurrently
@@ -181,7 +249,10 @@ async def analyze_deterministic(decision: StructuredDecision):
     # 5. Systems Thinking & Game Theory Layer (Feedback Loops, Signaling, Rawlsian Audit)
     systems_result = SystemsEngine.evaluate(decision)
 
-    # 6. Longitudinal Context (Threshold-gated: N >= 5)
+    # 6. Domain-Specific Frameworks Layer (Operational Mental Models & Checklists)
+    domain_result = DomainEngine.evaluate(decision)
+
+    # 7. Longitudinal Context (Threshold-gated: N >= 5)
     longitudinal_ctx = LocalStorage.get_longitudinal_summary(
         decision.domain,
         project_id=decision.project_id
@@ -199,6 +270,7 @@ async def analyze_deterministic(decision: StructuredDecision):
         critical_thinking_layer=critical_result,
         economics_layer=economics_result,
         systems_layer=systems_result,
+        domain_layer=domain_result,
         longitudinal_context=longitudinal_ctx,
         project_id=decision.project_id
     )

@@ -1,0 +1,162 @@
+[
+  {
+    "id": "presale_landing_page_smoke_test",
+    "name": "48-Hour Landing Page Smoke Test",
+    "domain": "startup_and_venture",
+    "uncertainty_type": "market_demand",
+    "typical_cost": "<$50",
+    "typical_duration_hours": 48,
+    "falsifiability_signal": "Fewer than 4% of visitors click the pre-order / signup CTA across 150 targeted clicks, signaling insufficient organic demand.",
+    "step_by_step_protocol": [
+      "1. Build a 1-page landing page on Carrd or Framer describing the core product value proposition and pricing.",
+      "2. Insert an active 'Pre-Order / Request Early Access' CTA button that links to an email collection and survey form.",
+      "3. Allocate $35 in targeted LinkedIn/Meta or Google search ads driving 100-150 niche prospective buyers.",
+      "4. Measure email capture conversion rate and willingness to prepay before writing a single line of production code."
+    ],
+    "keywords": ["startup", "saas", "app", "product", "launch", "demand", "customers", "users", "market fit"]
+  },
+  {
+    "id": "backchannel_reference_triangulation",
+    "name": "Backchannel Reference Triangulation Protocol",
+    "domain": "career_transition",
+    "uncertainty_type": "personal_fit",
+    "typical_cost": "$0",
+    "typical_duration_hours": 24,
+    "falsifiability_signal": "2 out of 3 former employees cite chronic leadership instability, uncompensated on-call overload, or arbitrary comp changes.",
+    "step_by_step_protocol": [
+      "1. Use LinkedIn search to identify 2-3 former team members who left the target department within the last 6-18 months.",
+      "2. Send a courteous 2-sentence note requesting a brief 10-minute confidential informational call about department culture.",
+      "3. Ask two specific calibrating questions: 'What was the single most surprising friction after joining?' and 'Under what conditions would you return?'",
+      "4. Compare their unfiltered testimony against the hiring manager's pitch."
+    ],
+    "keywords": ["job offer", "new company", "culture", "manager", "quit", "join team", "executive", "career move"]
+  },
+  {
+    "id": "paid_weekend_consulting_trial",
+    "name": "Paid 10-Hour Advisory/Consulting Trial",
+    "domain": "career_transition",
+    "uncertainty_type": "personal_fit",
+    "typical_cost": "$0 (Earns $)",
+    "typical_duration_hours": 20,
+    "falsifiability_signal": "Working relationship friction, chaotic feedback loops, or realization that daily tasks feel draining rather than energizing.",
+    "step_by_step_protocol": [
+      "1. Propose a discrete, time-boxed 10-hour weekend advisory contract on a specific technical or strategic deliverable prior to signing a full-time offer.",
+      "2. Observe how the team handles asynchronous communication, requirement ambiguity, and revisions.",
+      "3. Evaluate your genuine intrinsic energy levels during deep execution.",
+      "4. Use the working rapport to calibrate whether full-time transition risk is justified."
+    ],
+    "keywords": ["co-founder", "founding engineer", "advisory", "contract", "full time", "career pivot", "join startup"]
+  },
+  {
+    "id": "concierge_mvp_manual_service",
+    "name": "Concierge / Wizard-of-Oz Manual Service Test",
+    "domain": "startup_and_venture",
+    "uncertainty_type": "market_demand",
+    "typical_cost": "<$25",
+    "typical_duration_hours": 36,
+    "falsifiability_signal": "Target customers refuse to pay manual invoice or stop using the manual output after 1 iteration, indicating nice-to-have problem.",
+    "step_by_step_protocol": [
+      "1. Instead of building automation software, manually execute the service for 3 prospective paying clients using spreadsheets and emails.",
+      "2. Send a real Stripe payment link or invoice before delivering finished work.",
+      "3. Measure whether the client pays and whether the time spent delivering value is economically sustainable.",
+      "4. Document the exact manual steps that software will later replace."
+    ],
+    "keywords": ["mvp", "automation", "software product", "service", "b2b", "agency", "customer value"]
+  },
+  {
+    "id": "isolated_architecture_spike",
+    "name": "4-Hour Isolated Architecture Prototype Spike",
+    "domain": "software_engineering",
+    "uncertainty_type": "technical_feasibility",
+    "typical_cost": "$0",
+    "typical_duration_hours": 4,
+    "falsifiability_signal": "Selected framework or database fails throughput or latency SLA at 10x scale, or requires >3 complex undocumented workarounds.",
+    "step_by_step_protocol": [
+      "1. Build a bare-minimum repository implementing only the single most contentious technical operation (e.g. distributed write lock, complex query).",
+      "2. Run a synthetic load generator (e.g., k6 or vegeta) modeling anticipated peak concurrency.",
+      "3. Measure tail latency (p99) and resource consumption under failure injection.",
+      "4. Make architectural commit decision based on empirical benchmark logs rather than conference talk hype."
+    ],
+    "keywords": ["architecture", "microservices", "rewrite", "database", "distributed", "tech stack", "framework", "refactor"]
+  },
+  {
+    "id": "recruiter_pipeline_audit",
+    "name": "Discreet Recruiter Market Pipeline Audit",
+    "domain": "labor_economics",
+    "uncertainty_type": "financial_viability",
+    "typical_cost": "$0",
+    "typical_duration_hours": 72,
+    "falsifiability_signal": "Zero inbound interview requests at target compensation tier after 15 targeted outreach pings to top-tier specialized recruiters.",
+    "step_by_step_protocol": [
+      "1. Update resume and LinkedIn headline with specific senior accomplishments and modern keywords.",
+      "2. Discreetly reach out to 3-5 specialized recruiters in your metropolitan/remote market asking for active comp bands for your profile.",
+      "3. Assess actual employer demand and realistic pipeline velocity before voluntarily resigning from stable current role.",
+      "4. Benchmark your runway needs against current real-world average time-to-offer (60-120 days)."
+    ],
+    "keywords": ["quit job", "resign", "market value", "salary", "job search", "hiring freeze", "compensation", "sabbatical"]
+  },
+  {
+    "id": "liquid_reserve_stress_test",
+    "name": "12-Month Zero-Income Living Expense Stress Test",
+    "domain": "personal_finance",
+    "uncertainty_type": "financial_viability",
+    "typical_cost": "$0",
+    "typical_duration_hours": 2,
+    "falsifiability_signal": "Liquid runway covers fewer than 9 months of fixed non-discretionary expenses under worst-case baseline.",
+    "step_by_step_protocol": [
+      "1. Export last 6 months of bank and credit statements into a spreadsheet.",
+      "2. Categorize all expenses into strictly 'non-negotiable fixed' (rent/mortgage, debt, groceries, healthcare) vs 'discretionary'.",
+      "3. Calculate pure monthly burn and divide total liquid (cash + short-term Treasury) reserves by this number.",
+      "4. If runway is under 12 months, establish a formal spending pause or secondary income bridge before taking speculative risk."
+    ],
+    "keywords": ["runway", "savings", "burn rate", "quit without job", "emergency fund", "cash buffer", "invest savings"]
+  },
+  {
+    "id": "shadow_tenancy_neighborhood_audit",
+    "name": "72-Hour Trial Residency & Noise Audit",
+    "domain": "lifestyle",
+    "uncertainty_type": "personal_fit",
+    "typical_cost": "<$300",
+    "typical_duration_hours": 72,
+    "falsifiability_signal": "Unacceptable ambient traffic noise, lack of walkable amenities, or excessive peak commute duration during rush hour.",
+    "step_by_step_protocol": [
+      "1. Book an Airbnb or short-term stay within 2 blocks of the prospective residential property over both a weekday and weekend.",
+      "2. Execute the exact commute to office/school during peak morning (8:00 AM) and evening (5:30 PM) rush hours.",
+      "3. Walk the neighborhood at 10:00 PM and 7:00 AM to assess real noise levels, safety, and local density.",
+      "4. Talk to 2 local residents about HOA management or neighborhood friction points before signing a 30-year mortgage."
+    ],
+    "keywords": ["buy house", "relocate", "neighborhood", "mortgage", "move city", "property", "rent vs buy"]
+  },
+  {
+    "id": "contract_clawback_redline_audit",
+    "name": "1-Hour Professional Contract & IP Clawback Audit",
+    "domain": "career_transition",
+    "uncertainty_type": "execution_friction",
+    "typical_cost": "<$250",
+    "typical_duration_hours": 24,
+    "falsifiability_signal": "Non-compete, non-solicit, or broad IP assignment clauses that restrict side projects or future employment options.",
+    "step_by_step_protocol": [
+      "1. Review the Proprietary Information and Inventions Agreement (PIIA) and offer letter for non-compete clauses and post-employment covenants.",
+      "2. If clauses claim 24/7 intellectual property assignment outside work hours, request an explicit written carve-out schedule.",
+      "3. Verify accelerated vesting triggers (single-trigger vs double-trigger change-of-control).",
+      "4. Consult a specialized employment attorney for a 30-minute review before signing."
+    ],
+    "keywords": ["employment agreement", "non compete", "piia", "ip assignment", "offer letter", "contract", "equity vesting"]
+  },
+  {
+    "id": "customer_discovery_5_call_sprint",
+    "name": "5-Interview Pain Point Validation Sprint",
+    "domain": "startup_and_venture",
+    "uncertainty_type": "market_demand",
+    "typical_cost": "$0",
+    "typical_duration_hours": 48,
+    "falsifiability_signal": "Fewer than 2 out of 5 interviewees have actively spent money or time trying to solve this problem in the last 90 days (The Mom Test).",
+    "step_by_step_protocol": [
+      "1. Identify 5 target users through your existing network or LinkedIn.",
+      "2. Schedule 20-minute interviews structured around past behavior: 'How do you currently solve X?' and 'When was the last time you did that?'",
+      "3. Never ask 'Would you buy this?' (hypothetical optimism bias); ask 'What did you pay the last time this broke?'",
+      "4. If no current makeshift solution or budget exists, pivot the problem definition immediately."
+    ],
+    "keywords": ["customer discovery", "the mom test", "idea validation", "user interviews", "startup idea", "pain point"]
+  }
+]

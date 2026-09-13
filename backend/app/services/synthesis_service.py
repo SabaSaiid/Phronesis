@@ -83,6 +83,17 @@ class SynthesisService:
 
         # Sourced attributions collection
         attributions: List[SourceAttribution] = []
+        domain_layer = getattr(bundle, "domain_layer", None)
+        if domain_layer and domain_layer.matched_frameworks:
+            for df in domain_layer.matched_frameworks:
+                attributions.append(
+                    SourceAttribution(
+                        field=df.field,
+                        source=df.source,
+                        referenced_item=df.framework_name
+                    )
+                )
+
         for pat in b.flagged_patterns:
             attributions.append(
                 SourceAttribution(
@@ -207,6 +218,7 @@ class SynthesisService:
             "critical_thinking": ct.model_dump(),
             "economics_layer": econ.model_dump() if econ else None,
             "systems_layer": systems.model_dump() if systems else None,
+            "domain_layer": domain_layer.model_dump() if domain_layer else None,
             "longitudinal_context": longitudinal.model_dump() if longitudinal else None,
             "project_context": project_context,
             "depth_directives": {
@@ -246,11 +258,17 @@ class SynthesisService:
             else:
                 final_report = raw_report
 
-        # Extract primary experiment
+        # Extract primary experiment from VoI playbook if available
         sensitive_var = m.sensitivity_analysis.critical_parameter
         proposed_exp = (
             f"Run a 48-hour low-cost verification test on '{sensitive_var}' before committing capital or tenure."
         )
+        if econ and econ.evpi and econ.evpi.suggested_experiments:
+            best_exp = econ.evpi.suggested_experiments[0]
+            exp_name = best_exp.get("name", "VoI Test")
+            exp_signal = best_exp.get("falsifiability_signal", "")
+            exp_cost = best_exp.get("typical_cost", "<$100")
+            proposed_exp = f"{exp_name} ({exp_cost}): {exp_signal}"
 
         math_summary = {
             "expected_utility": m.expected_utility.utilities,

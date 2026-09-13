@@ -9,15 +9,16 @@ import {
   FileText,
   BookOpen,
   FlaskConical,
-  Compass
+  Compass,
+  Paperclip
 } from 'lucide-react';
-import type { BenchmarkItem, LLMConfigOverride, EffortLevel } from '../../types';
+import type { BenchmarkItem, LLMConfigOverride, EffortLevel, AttachedDoc } from '../../types';
 import { ModelSelector } from '../../components/ModelSelector';
 import { EffortSelector } from '../../components/EffortSelector';
 
 interface NarrativeInputViewProps {
   benchmarks?: BenchmarkItem[];
-  onExtract: (narrative: string) => Promise<void>;
+  onExtract: (narrative: string, doc?: AttachedDoc) => Promise<void>;
   onSelectBenchmark?: (bm: BenchmarkItem) => void;
   isLoading: boolean;
   externalTextToAppend?: string;
@@ -78,9 +79,39 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
   const [narrative, setNarrative] = useState(initialNarrative || '');
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+  const [attachedDoc, setAttachedDoc] = useState<AttachedDoc | null>(null);
 
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isPdf = file.name.toLowerCase().endsWith('.pdf');
+    const reader = new FileReader();
+
+    if (isPdf) {
+      reader.onload = () => {
+        setAttachedDoc({
+          filename: file.name,
+          size: file.size,
+          content_base64: reader.result as string,
+        });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      reader.onload = () => {
+        setAttachedDoc({
+          filename: file.name,
+          size: file.size,
+          content_text: reader.result as string,
+        });
+      };
+      reader.readAsText(file);
+    }
+    e.target.value = '';
+  };
 
   // Close plus menu on outside click
   useEffect(() => {
@@ -125,8 +156,8 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (narrative.trim().length >= 10 && !isLoading) {
-      onExtract(narrative);
+    if ((narrative.trim().length >= 10 || !!attachedDoc) && !isLoading) {
+      onExtract(narrative, attachedDoc || undefined);
     }
   };
 
@@ -137,7 +168,7 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
     }
   };
 
-  const canSubmit = narrative.trim().length >= 10 && !isLoading;
+  const canSubmit = (narrative.trim().length >= 10 || !!attachedDoc) && !isLoading;
 
   return (
     <section id="section-describe" className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-7 animate-fade-in flex flex-col items-center justify-center min-h-[65vh]">
@@ -224,6 +255,36 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
               />
             </div>
 
+            {/* Attached Context Document Chip */}
+            {attachedDoc && (
+              <div className="mx-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-app)] border border-[var(--color-verdigris)]/40 flex items-center justify-between text-xs animate-fade-in shadow-xs">
+                <div className="flex items-center space-x-2 truncate">
+                  <FileText className="w-3.5 h-3.5 text-[var(--color-verdigris)] shrink-0" />
+                  <span className="font-ui font-medium text-[var(--text-main)] truncate max-w-xs">{attachedDoc.filename}</span>
+                  <span className="text-[10px] text-[var(--color-verdigris)] shrink-0">
+                    ({(attachedDoc.size / 1024).toFixed(1)} KB)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttachedDoc(null)}
+                  className="p-1 text-[var(--text-muted)] hover:text-red-400 rounded transition-colors cursor-pointer"
+                  title="Remove attached document"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Hidden File Input for Document Attachment */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.txt,.md,.csv,.json"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+
             {/* Bottom Controls Row: Left [+] Action Button, Right [Model/Effort, Mic, Send Button] */}
             <div className="flex items-center justify-between pt-1">
               {/* Left: [+] Context Action Menu Button (Screenshot 2) */}
@@ -244,6 +305,21 @@ export const NarrativeInputView: React.FC<NarrativeInputViewProps> = ({
                     <div className="px-2.5 py-1 text-[10px] font-ui font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                       Deliberation Tools
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        fileInputRef.current?.click();
+                      }}
+                      className="chatgpt-popover-item"
+                    >
+                      <Paperclip className="w-4 h-4 text-[var(--color-verdigris)] shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-ui font-medium leading-tight">Attach Context Document</div>
+                        <div className="text-[11px] text-[var(--text-muted)] truncate">Upload contract, term sheet, PDF, or specs</div>
+                      </div>
+                    </button>
 
                     <button
                       type="button"

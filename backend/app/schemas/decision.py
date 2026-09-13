@@ -144,6 +144,7 @@ class EVPIResultSchema(BaseModel):
     algebraic_derivation: str
     prior_eu_max: float
     posterior_eu_max: float
+    suggested_experiments: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
 
 class EVSIResultSchema(BaseModel):
     evsi_utility: float
@@ -245,6 +246,26 @@ class SystemsLayerResult(BaseModel):
     rawlsian_audit: RawlsianAuditResultSchema
     systems_synthesis_narrative: str
 
+# Domain-Specific Framework Schemas
+class DomainChecklistItem(BaseModel):
+    check_item: str
+    risk_flag: str
+    probing_question: str
+
+class DomainFrameworkMatch(BaseModel):
+    id: str
+    framework_name: str
+    domain: str
+    field: str
+    source: str
+    core_idea: str
+    matched_checklist: List[DomainChecklistItem] = Field(default_factory=list)
+
+class DomainLayerResult(BaseModel):
+    matched_frameworks: List[DomainFrameworkMatch] = Field(default_factory=list)
+    primary_domain: str = "general"
+    domain_insights_summary: str = ""
+
 class LongitudinalPatternContext(BaseModel):
     total_decisions_logged: int = 0
     recurring_bias_counts: Dict[str, int] = Field(default_factory=dict)
@@ -313,6 +334,7 @@ class AnalysisBundle(BaseModel):
     critical_thinking_layer: CriticalThinkingLayerResult
     economics_layer: Optional[EconomicsLayerResult] = None
     systems_layer: Optional[SystemsLayerResult] = None
+    domain_layer: Optional[DomainLayerResult] = None
     longitudinal_context: Optional[LongitudinalPatternContext] = None
     focus_config: Optional[FocusConfig] = None
     effort_level: Optional[str] = Field(default="standard", description="quick, standard, or thorough")

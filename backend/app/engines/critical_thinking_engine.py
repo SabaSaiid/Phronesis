@@ -68,7 +68,8 @@ class CriticalThinkingEngine(BaseDeterministicEngine):
                 )
             )
 
-        # 2. Base-Rate Check against 16 Reference Classes
+        # 2. Base-Rate Check against 50+ Reference Classes
+        domain_str = (decision.domain or "").lower().strip()
         all_text = (
             decision.decision_statement + " " +
             " ".join(a.description for a in decision.alternatives) + " " +
@@ -76,21 +77,26 @@ class CriticalThinkingEngine(BaseDeterministicEngine):
             " ".join(decision.goals) + " " +
             " ".join(decision.constraints) + " " +
             " ".join(assump.text for assump in decision.assumptions) + " " +
-            (decision.domain or "")
+            domain_str
         ).lower()
 
-        # Match highest keyword overlap
+        # Match highest domain-weighted keyword overlap
         best_match = None
-        best_overlap_count = 0
+        best_score = 0.0
 
         for br in base_rates:
-            kw_matches = sum(1 for k in br.get("keywords", []) if k in all_text)
-            if kw_matches > best_overlap_count:
-                best_overlap_count = kw_matches
+            br_domain = br.get("domain", "").lower()
+            # Domain bonus if domain strings overlap
+            domain_bonus = 2.5 if (domain_str and (domain_str in br_domain or br_domain in domain_str)) else 0.0
+            kw_matches = sum(1.0 for k in br.get("keywords", []) if k in all_text)
+            total_score = domain_bonus + kw_matches
+            if total_score > best_score:
+                best_score = total_score
                 best_match = br
 
-        if not best_match and base_rates:
-            best_match = base_rates[0]
+        # If zero match score, default to None rather than forcing an unrelated benchmark
+        if best_score < 1.0:
+            best_match = None
 
         base_rate_item = None
         bayesian_narrative = None
